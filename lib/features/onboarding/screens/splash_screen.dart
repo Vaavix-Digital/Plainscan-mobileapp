@@ -152,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   
                   // Slogan
                   const Text(
-                    '49+ TOOLS  •  ONE WORKSPACE',
+                    '28 TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,

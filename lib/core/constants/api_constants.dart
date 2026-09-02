@@ -34,4 +34,16 @@ class ApiConstants {
   // Required on Android to obtain the idToken for backend verification.
   // Replace with the actual Web Client ID from Google Cloud Console.
   static const String googleServerClientId = 'YOUR_GOOGLE_SIGN_IN_WEB_CLIENT_ID.apps.googleusercontent.com';
+
+    static const String uploadFile =
+      'files/upload';
+
+  static String createJob(String toolSlug) =>
+      'tools/$toolSlug/jobs';
+
+  static String jobStatus(String jobId) =>
+      'jobs/$jobId';
+
+  static String downloadFile(String fileId) =>
+      'files/$fileId/download';
 }

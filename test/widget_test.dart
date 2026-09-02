@@ -7,6 +7,7 @@ void main() {
     await tester.pumpWidget(const PlainScanApp());
 
     // Verify that the splash screen shows the app title.
-    expect(find.text('PlainScan'), findsOneWidget);
+    expect(find.text('Plain'), findsOneWidget);
+    expect(find.text('scan'), findsOneWidget);
   });
 }

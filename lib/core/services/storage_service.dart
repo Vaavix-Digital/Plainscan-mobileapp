@@ -91,4 +91,22 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyIsOnboarded, value);
   }
+
+  static const String _keyRecentTools = 'recent_tools';
+
+  static Future<List<String>> getRecentToolIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyRecentTools) ?? [];
+  }
+
+  static Future<void> addRecentToolId(String toolId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyRecentTools) ?? [];
+    list.remove(toolId);
+    list.insert(0, toolId);
+    if (list.length > 10) {
+      list.removeRange(10, list.length);
+    }
+    await prefs.setStringList(_keyRecentTools, list);
+  }
 }
