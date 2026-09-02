@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/dashboard_controller.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
+import 'package:plainscan/features/home/widgets/dashboard_carousel_slider.dart';
 import 'package:plainscan/features/home/widgets/dashboard_header.dart';
 import 'package:plainscan/features/home/widgets/dashboard_quick_tools.dart';
 import 'package:plainscan/features/home/widgets/dashboard_recent_tools.dart';
 import 'package:plainscan/features/home/widgets/dashboard_search_bar.dart';
-import 'package:plainscan/features/home/widgets/dashboard_stats_banner.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -28,7 +28,7 @@ class DashboardPage extends StatelessWidget {
               const SizedBox(height: 24),
               buildDashboardSearchBar(),
               const SizedBox(height: 24),
-              buildDashboardStatsBanner(),
+              buildDashboardCarouselSlider(),
               buildAdBanner(),
               const SizedBox(height: 28),
               buildDashboardQuickTools(),

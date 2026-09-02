@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
-import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
@@ -31,13 +30,13 @@ class ToolExecutorPage extends StatelessWidget {
               tool.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.key_outlined),
-                tooltip: 'API Token Settings',
-                onPressed: () => _showTokenSettingsDialog(context, controller),
-              ),
-            ],
+            // actions: [
+            //   IconButton(
+            //     icon: const Icon(Icons.key_outlined),
+            //     tooltip: 'API Token Settings',
+            //     onPressed: () => _showTokenSettingsDialog(context, controller),
+            //   ),
+            // ],
             backgroundColor: Colors.transparent,
             elevation: 0,
           ),
@@ -342,25 +341,25 @@ class ToolExecutorPage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () =>
-                    _showScansSelectorBottomSheet(context, controller, true),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                icon: const Icon(Icons.folder_open, size: 14),
-                label: const Text(
-                  'Add from Scans',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+            // Expanded(
+            //   child: OutlinedButton.icon(
+            //     onPressed: () =>
+            //         _showScansSelectorBottomSheet(context, controller, true),
+            //     style: OutlinedButton.styleFrom(
+            //       foregroundColor: AppColors.primary,
+            //       side: const BorderSide(color: AppColors.primary),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(8),
+            //       ),
+            //       padding: const EdgeInsets.symmetric(vertical: 10),
+            //     ),
+            //     icon: const Icon(Icons.folder_open, size: 14),
+            //     label: const Text(
+            //       'Add from Scans',
+            //       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ],
@@ -430,123 +429,123 @@ class ToolExecutorPage extends StatelessWidget {
     );
   }
 
-  void _showScansSelectorBottomSheet(
-    BuildContext context,
-    ToolExecutorController controller,
-    bool isMulti,
-  ) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Select from Scans',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.45,
-              ),
-              child: controller.scanController.scannedFiles.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.0),
-                        child: Text('No scanned files found.'),
-                      ),
-                    )
-                  : Obx(
-                      () => ListView.builder(
-                        shrinkWrap: true,
-                        itemCount:
-                            controller.scanController.scannedFiles.length,
-                        itemBuilder: (context, index) {
-                          final file =
-                              controller.scanController.scannedFiles[index];
-                          if (isMulti) {
-                            final isSelected = controller.selectedFiles.any(
-                              (f) => f.id == file.id,
-                            );
-                            return CheckboxListTile(
-                              value: isSelected,
-                              title: Text(
-                                file.name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '${file.fileType} • ${(file.sizeKb / 1024).toStringAsFixed(1)} MB',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                              activeColor: AppColors.primary,
-                              onChanged: (val) {
-                                controller.toggleSelectedFileFromScans(
-                                  file,
-                                  val,
-                                );
-                              },
-                            );
-                          } else {
-                            return ListTile(
-                              leading: Icon(
-                                file.fileType == 'PDF'
-                                    ? Icons.picture_as_pdf
-                                    : Icons.image,
-                                color: file.fileType == 'PDF'
-                                    ? AppColors.coral
-                                    : AppColors.blue,
-                              ),
-                              title: Text(
-                                file.name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                '${file.fileType} • ${(file.sizeKb / 1024).toStringAsFixed(1)} MB',
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                              onTap: () {
-                                controller.selectSingleFileFromScans(file);
-                              },
-                            );
-                          }
-                        },
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
+  // void _showScansSelectorBottomSheet(
+  //   BuildContext context,
+  //   ToolExecutorController controller,
+  //   bool isMulti,
+  // ) {
+  //   Get.bottomSheet(
+  //     Container(
+  //       padding: const EdgeInsets.all(20),
+  //       decoration: const BoxDecoration(
+  //         color: Colors.white,
+  //         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //       ),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //             children: [
+  //               const Text(
+  //                 'Select from Scans',
+  //                 style: TextStyle(
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: AppColors.text,
+  //                 ),
+  //               ),
+  //               TextButton(
+  //                 onPressed: () => Get.back(),
+  //                 child: const Text(
+  //                   'Done',
+  //                   style: TextStyle(fontWeight: FontWeight.bold),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           const SizedBox(height: 12),
+  //           ConstrainedBox(
+  //             constraints: BoxConstraints(
+  //               maxHeight: MediaQuery.of(context).size.height * 0.45,
+  //             ),
+  //             child: controller.scanController.scannedFiles.isEmpty
+  //                 ? const Center(
+  //                     child: Padding(
+  //                       padding: EdgeInsets.symmetric(vertical: 24.0),
+  //                       child: Text('No scanned files found.'),
+  //                     ),
+  //                   )
+  //                 : Obx(
+  //                     () => ListView.builder(
+  //                       shrinkWrap: true,
+  //                       itemCount:
+  //                           controller.scanController.scannedFiles.length,
+  //                       itemBuilder: (context, index) {
+  //                         final file =
+  //                             controller.scanController.scannedFiles[index];
+  //                         if (isMulti) {
+  //                           final isSelected = controller.selectedFiles.any(
+  //                             (f) => f.id == file.id,
+  //                           );
+  //                           return CheckboxListTile(
+  //                             value: isSelected,
+  //                             title: Text(
+  //                               file.name,
+  //                               style: const TextStyle(
+  //                                 fontSize: 13,
+  //                                 fontWeight: FontWeight.bold,
+  //                               ),
+  //                             ),
+  //                             subtitle: Text(
+  //                               '${file.fileType} • ${(file.sizeKb / 1024).toStringAsFixed(1)} MB',
+  //                               style: const TextStyle(fontSize: 11),
+  //                             ),
+  //                             activeColor: AppColors.primary,
+  //                             onChanged: (val) {
+  //                               controller.toggleSelectedFileFromScans(
+  //                                 file,
+  //                                 val,
+  //                               );
+  //                             },
+  //                           );
+  //                         } else {
+  //                           return ListTile(
+  //                             leading: Icon(
+  //                               file.fileType == 'PDF'
+  //                                   ? Icons.picture_as_pdf
+  //                                   : Icons.image,
+  //                               color: file.fileType == 'PDF'
+  //                                   ? AppColors.coral
+  //                                   : AppColors.blue,
+  //                             ),
+  //                             title: Text(
+  //                               file.name,
+  //                               style: const TextStyle(
+  //                                 fontSize: 13,
+  //                                 fontWeight: FontWeight.bold,
+  //                               ),
+  //                             ),
+  //                             subtitle: Text(
+  //                               '${file.fileType} • ${(file.sizeKb / 1024).toStringAsFixed(1)} MB',
+  //                               style: const TextStyle(fontSize: 11),
+  //                             ),
+  //                             onTap: () {
+  //                               controller.selectSingleFileFromScans(file);
+  //                             },
+  //                           );
+  //                         }
+  //                       },
+  //                     ),
+  //                   ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //     isScrollControlled: true,
+  //   );
+  // }
 
   Widget _buildOptionsCard(ToolExecutorController controller, String slug) {
     Widget child = Container();
@@ -1530,78 +1529,78 @@ class ToolExecutorPage extends StatelessWidget {
     );
   }
 
-  void _showTokenSettingsDialog(
-    BuildContext context,
-    ToolExecutorController controller,
-  ) {
-    final tokenInputController = TextEditingController();
-    StorageService.getToken().then((token) {
-      if (token != null) {
-        tokenInputController.text = token;
-      }
-    });
+  // void _showTokenSettingsDialog(
+  //   BuildContext context,
+  //   ToolExecutorController controller,
+  // ) {
+  //   final tokenInputController = TextEditingController();
+  //   StorageService.getToken().then((token) {
+  //     if (token != null) {
+  //       tokenInputController.text = token;
+  //     }
+  //   });
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Access Token Settings'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter your Plainscan API/Access Token to authorize requests.',
-                style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: tokenInputController,
-                decoration: const InputDecoration(
-                  labelText: 'Access Token',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.secondaryText),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final token = tokenInputController.text.trim();
-                await controller.saveToken(token);
-                Get.back();
-                Get.rawSnackbar(
-                  messageText: const Text(
-                    'Access Token updated successfully!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  backgroundColor: AppColors.primary,
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-              ),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: const Text('Access Token Settings'),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             const Text(
+  //               'Enter your Plainscan API/Access Token to authorize requests.',
+  //               style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+  //             ),
+  //             const SizedBox(height: 12),
+  //             TextField(
+  //               controller: tokenInputController,
+  //               decoration: const InputDecoration(
+  //                 labelText: 'Access Token',
+  //                 border: OutlineInputBorder(),
+  //                 focusedBorder: OutlineInputBorder(
+  //                   borderSide: BorderSide(color: AppColors.primary),
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Get.back(),
+  //             child: const Text(
+  //               'Cancel',
+  //               style: TextStyle(color: AppColors.secondaryText),
+  //             ),
+  //           ),
+  //           ElevatedButton(
+  //             onPressed: () async {
+  //               final token = tokenInputController.text.trim();
+  //               await controller.saveToken(token);
+  //               Get.back();
+  //               Get.rawSnackbar(
+  //                 messageText: const Text(
+  //                   'Access Token updated successfully!',
+  //                   style: TextStyle(
+  //                     color: Colors.white,
+  //                     fontWeight: FontWeight.w600,
+  //                   ),
+  //                 ),
+  //                 backgroundColor: AppColors.primary,
+  //                 snackPosition: SnackPosition.BOTTOM,
+  //               );
+  //             },
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: AppColors.primary,
+  //             ),
+  //             child: const Text('Save', style: TextStyle(color: Colors.white)),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   Widget _buildConvertedFileCard(
     BuildContext context,
