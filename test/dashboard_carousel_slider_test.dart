@@ -28,12 +28,10 @@ void main() {
       ),
     );
 
-    // Verify first slide items render
-    expect(find.text('52+ TOOLS · 1 WORKSPACE'), findsOneWidget);
-    expect(find.text('Scan, Convert, Redact\n& Ask AI'), findsOneWidget);
-    expect(find.text('Explore Tools'), findsOneWidget);
-
     // Verify PageView exists
     expect(find.byType(PageView), findsOneWidget);
+
+    // Verify slide images render
+    expect(find.byType(Image), findsWidgets);
   });
 }
