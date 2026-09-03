@@ -1,4 +1,4 @@
-package com.example.plainscan
+package com.plainscan.app
 
 import io.flutter.embedding.android.FlutterActivity
 

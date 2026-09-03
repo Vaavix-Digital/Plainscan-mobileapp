@@ -5,8 +5,12 @@ import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/features/home/widgets/dashboard_carousel_slider.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
   setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     Get.testMode = true;
     Get.put(AllToolsController());
     Get.put(ScanController());
