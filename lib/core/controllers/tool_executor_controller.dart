@@ -7,9 +7,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/jobflow_services.dart';
+import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +85,8 @@ class ToolExecutorController extends GetxController {
   FileModel? selectedFile;
   final List<FileModel> selectedFiles = [];
   FileModel? convertedFile;
+  FileModel? existingOriginalFile;
+  bool isOriginalFileReplaced = false;
 
   // Job execution states
   bool isRunning = false;
@@ -596,6 +601,15 @@ class ToolExecutorController extends GetxController {
   }
 
   Future<void> executeJobFlow() async {
+    final isFree = tool.isFree ?? true;
+    if (!isFree) {
+      final isPro = await StorageService.isProUser();
+      if (!isPro) {
+        ProfileController.showUpgradeSnackbar(tool.name);
+        return;
+      }
+    }
+
     // Display interstitial ad when the user submits/runs the job
     showInterstitialAdIfAvailable();
 
@@ -624,6 +638,7 @@ class ToolExecutorController extends GetxController {
     currentStep = 'uploading';
     errorMessage = '';
     pollingCount = 0;
+    final notificationId = tool.name.hashCode.abs() % 100000 + 1000;
     update();
 
     try {
@@ -635,7 +650,21 @@ class ToolExecutorController extends GetxController {
       List<String> uploadedFileIds = [];
       String singleUploadedFileId = '';
 
-      // STEP 1: Upload File(s) (unless it is a text-only call)
+      // STEP 1: Uploading input
+      if (Get.isRegistered<NotificationService>()) {
+        final initialDetail = isTextOnly
+            ? 'Text content'
+            : (isMulti
+                ? '${selectedFiles.length} file(s)'
+                : (selectedFile?.name ?? ''));
+        NotificationService.to.updateToolProgressNotification(
+          id: notificationId,
+          toolName: tool.name,
+          step: ToolExecutionStep.uploading,
+          detail: initialDetail,
+        );
+      }
+
       if (!isTextOnly) {
         if (isMulti) {
           if (selectedFiles.isEmpty) {
@@ -646,6 +675,16 @@ class ToolExecutorController extends GetxController {
             currentStep = 'uploading';
             errorMessage = 'Uploading file ${i + 1}/${selectedFiles.length}: ${fModel.name}';
             update();
+
+            if (Get.isRegistered<NotificationService>()) {
+              NotificationService.to.updateToolProgressNotification(
+                id: notificationId,
+                toolName: tool.name,
+                step: ToolExecutionStep.uploading,
+                detail: '${i + 1}/${selectedFiles.length}: ${fModel.name}',
+              );
+            }
+
             final physicalFile = await getOrCreatePhysicalFile(fModel);
             final fileId = await services.uploadFile(physicalFile);
             uploadedFileIds.add(fileId);
@@ -657,15 +696,34 @@ class ToolExecutorController extends GetxController {
           currentStep = 'uploading';
           errorMessage = 'Uploading ${selectedFile!.name}...';
           update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.uploading,
+              detail: selectedFile!.name,
+            );
+          }
+
           final physicalFile = await getOrCreatePhysicalFile(selectedFile!);
           singleUploadedFileId = await services.uploadFile(physicalFile);
         }
       }
 
-      // STEP 2: Create Job
+      // STEP 2: Create job
       currentStep = 'creating';
       errorMessage = 'Submitting job details...';
       update();
+
+      if (Get.isRegistered<NotificationService>()) {
+        NotificationService.to.updateToolProgressNotification(
+          id: notificationId,
+          toolName: tool.name,
+          step: ToolExecutionStep.createJob,
+          detail: 'Submitting job details...',
+        );
+      }
 
       final options = getOptionsJson();
       String jobIdLocal = '';
@@ -688,12 +746,21 @@ class ToolExecutorController extends GetxController {
       currentStep = 'polling';
       update();
 
-      // STEP 3: Poll Status
+      // STEP 3: Poll job status
       Map<String, dynamic> jobResult = {};
       while (true) {
         pollingCount++;
         errorMessage = 'Waiting for job completion (Attempt $pollingCount)...';
         update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.polling,
+            detail: 'Polling attempt $pollingCount',
+          );
+        }
 
         final statusResponse = await services.getJobStatus(jobIdLocal);
         final status = statusResponse['status'];
@@ -708,7 +775,7 @@ class ToolExecutorController extends GetxController {
         await Future.delayed(const Duration(seconds: 2));
       }
 
-      // STEP 4: Download Output File
+      // STEP 4: Download Output File / Complete
       currentStep = 'downloading';
       errorMessage = 'Downloading completed output...';
       update();
@@ -733,6 +800,17 @@ class ToolExecutorController extends GetxController {
         savePath: outPath,
       );
 
+      // Check if input matches an existing file in scannedFiles
+      existingOriginalFile = selectedFile != null
+          ? scanController.scannedFiles.firstWhereOrNull(
+              (f) =>
+                  f.id == selectedFile!.id ||
+                  (f.path != null && f.path == selectedFile!.path) ||
+                  f.name == selectedFile!.name,
+            )
+          : null;
+      isOriginalFileReplaced = false;
+
       // Save to Files Manager
       scanController.addScan(
         outPath,
@@ -747,19 +825,36 @@ class ToolExecutorController extends GetxController {
 
       convertedFile = newFile;
       currentStep = 'success';
-      errorMessage = 'Success! File added to Files Manager.';
+      errorMessage = 'Success! File processed with ${tool.name}.';
       outputFileName = outName;
       isRunning = false;
       update();
 
-      Get.rawSnackbar(
-        messageText: Text(
-          'Tool execution complete! Saved: $outName',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: AppColors.primary,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      // STEP 4: Completed Notification (Update persistent notification)
+      if (Get.isRegistered<NotificationService>()) {
+        NotificationService.to.updateToolProgressNotification(
+          id: notificationId,
+          toolName: tool.name,
+          step: ToolExecutionStep.completed,
+          detail: outName,
+        );
+
+        // Also add to in-app notification history
+        NotificationService.to.addNotification(
+          title: '${tool.name} Completed',
+          message: existingOriginalFile != null
+              ? 'Successfully updated "${existingOriginalFile!.name}" with ${tool.name}.'
+              : 'Processed "$outName" with ${tool.name}.',
+          type: NotificationType.toolUpdate,
+          toolName: tool.name,
+          fileName: outName,
+          filePath: outPath,
+          showToast: false,
+        );
+      }
+
+      // Show alert dialog for user to choose to replace original or keep copy
+      showToolUpdateAlertDialog(outPath, outName, extension.toUpperCase());
     } catch (e) {
       String errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (e is DioException) {
@@ -776,6 +871,16 @@ class ToolExecutorController extends GetxController {
       errorMessage = errorMsg;
       isRunning = false;
       update();
+
+      // STEP 4: Failed Notification (Update persistent notification)
+      if (Get.isRegistered<NotificationService>()) {
+        NotificationService.to.updateToolProgressNotification(
+          id: notificationId,
+          toolName: tool.name,
+          step: ToolExecutionStep.failed,
+          detail: errorMsg,
+        );
+      }
     }
   }
 
@@ -982,6 +1087,278 @@ class ToolExecutorController extends GetxController {
   void setCompareMode(String mode) {
     compareMode = mode;
     update();
+  }
+
+  void replaceOriginalWithUpdated(String outPath, String outName, String fileType) {
+    if (existingOriginalFile == null) return;
+
+    // Remove the temporary new copy added by default so we replace in place
+    if (convertedFile != null) {
+      scanController.deleteFile(convertedFile!.id);
+    }
+
+    final updated = scanController.updateExistingScan(
+      existingOriginalFile!.id,
+      newPath: outPath,
+      newName: outName,
+      newFileType: fileType,
+    );
+
+    if (updated != null) {
+      convertedFile = updated;
+      isOriginalFileReplaced = true;
+      errorMessage = 'Original file "${existingOriginalFile!.name}" updated successfully!';
+      update();
+
+      Get.rawSnackbar(
+        titleText: const Text(
+          'Original File Updated',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        messageText: Text(
+          'Replaced "${existingOriginalFile!.name}" with the updated file.',
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
+      );
+    }
+  }
+
+  void showToolUpdateAlertDialog(String outPath, String outName, String fileType) {
+    final hasOriginal = existingOriginalFile != null;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(22.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Success Header
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF10B981),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${tool.name} Complete',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'File updated successfully',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // File comparison card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (hasOriginal) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.history, size: 14, color: AppColors.secondaryText),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Original: ',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.secondaryText,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              existingOriginalFile!.name,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      const SizedBox(height: 6),
+                    ],
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Processed: ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            outName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Actions
+              if (hasOriginal) ...[
+                const Text(
+                  'Would you like to update the original document?',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Get.back();
+                      replaceOriginalWithUpdated(outPath, outName, fileType);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.sync_rounded, size: 16),
+                    label: const Text(
+                      'Update Original File',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.text,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.secondaryText),
+                    label: const Text(
+                      'Keep Both (Save as Copy)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        child: const Text(
+                          'Dismiss',
+                          style: TextStyle(color: AppColors.secondaryText),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          Get.toNamed(AppRoutes.home);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'View in Files',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 
   @override

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
+import 'package:plainscan/core/services/permission_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -40,13 +41,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void _checkSessionAndNavigate() async {
     final hasSession = await StorageService.hasSession();
     final isOnboarded = await StorageService.isOnboarded();
+
+    // When user installs and opens the app for the first time,
+    // ask for notification and essential permissions upfront
+    if (!isOnboarded) {
+      AppPermissionService.requestAppOpenPermissions();
+    }
     
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        if (hasSession) {
-          Get.offNamed(AppRoutes.home);
-        } else if (!isOnboarded) {
+        if (!isOnboarded) {
           Get.offNamed(AppRoutes.onboarding);
+        } else if (hasSession) {
+          Get.offNamed(AppRoutes.home);
         } else {
           Get.offNamed(AppRoutes.auth);
         }

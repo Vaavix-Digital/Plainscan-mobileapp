@@ -20,14 +20,18 @@ class FileModel {
   FileModel copyWith({
     String? name,
     bool? isFavorite,
+    DateTime? createdDate,
+    double? sizeKb,
+    String? fileType,
+    String? path,
   }) {
     return FileModel(
       id: id,
       name: name ?? this.name,
-      createdDate: createdDate,
-      sizeKb: sizeKb,
-      fileType: fileType,
-      path: path,
+      createdDate: createdDate ?? this.createdDate,
+      sizeKb: sizeKb ?? this.sizeKb,
+      fileType: fileType ?? this.fileType,
+      path: path ?? this.path,
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }

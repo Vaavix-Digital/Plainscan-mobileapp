@@ -85,9 +85,11 @@ class AuthService {
         final token = data['accessToken'] ?? '';
         final refreshToken = data['refreshToken'] ?? '';
         final userName = data['user']?['name'] ?? 'User';
+        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
+        await StorageService.savePlan(plan.toString());
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else {
@@ -143,9 +145,11 @@ class AuthService {
         final token = data['accessToken'] ?? '';
         final refreshToken = data['refreshToken'] ?? '';
         final userName = data['user']?['name'] ?? 'User';
+        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
+        await StorageService.savePlan(plan.toString());
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else if (response.statusCode == 202) {
@@ -212,9 +216,11 @@ class AuthService {
         final refreshTokenVal = data['refreshToken'] ?? '';
         final email = data['user']?['email'] ?? '';
         final name = data['user']?['name'] ?? 'User';
+        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
         await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
         await StorageService.saveUser(email: email, name: name);
+        await StorageService.savePlan(plan.toString());
 
         return AuthResult(success: true, token: tokenVal, refreshToken: refreshTokenVal);
       } else {
@@ -259,6 +265,38 @@ class AuthService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getProfile() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null || token.isEmpty) return null;
+
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.profile}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          final plan = data['plan_id'] ?? data['plan'] ?? 'free';
+          await StorageService.savePlan(plan.toString());
+          final name = data['name']?.toString();
+          if (name != null && name.isNotEmpty) {
+            final email = data['email']?.toString() ?? await StorageService.getEmail() ?? '';
+            await StorageService.saveUser(email: email, name: name);
+          }
+          return data;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> logout() async {
     try {
       await _client.post(
@@ -269,11 +307,82 @@ class AuthService {
     await StorageService.logout();
   }
 
+  static String parseError(String body) => _parseError(body);
+
   static String _parseError(String body) {
     try {
       final parsed = jsonDecode(body);
-      return parsed['error'] ?? parsed['message'] ?? 'An unknown error occurred.';
+      if (parsed is Map) {
+        // 1. FastAPI detail field (string, list of validation errors, or object)
+        if (parsed['detail'] != null) {
+          final detail = parsed['detail'];
+          if (detail is String && detail.trim().isNotEmpty) {
+            return detail.trim();
+          } else if (detail is List && detail.isNotEmpty) {
+            final messages = detail
+                .map((item) {
+                  if (item is Map) {
+                    return (item['msg'] ?? item['message'] ?? item['detail'] ?? item.toString()).toString();
+                  }
+                  return item.toString();
+                })
+                .where((m) => m.isNotEmpty)
+                .toList();
+            if (messages.isNotEmpty) {
+              return messages.join('\n');
+            }
+          } else if (detail is Map) {
+            return (detail['msg'] ?? detail['message'] ?? detail['error'] ?? detail.toString()).toString();
+          }
+        }
+
+        // 2. Standard message field
+        if (parsed['message'] != null && parsed['message'].toString().trim().isNotEmpty) {
+          return parsed['message'].toString().trim();
+        }
+
+        // 3. Error field (string or map with message)
+        if (parsed['error'] != null) {
+          final error = parsed['error'];
+          if (error is String && error.trim().isNotEmpty) {
+            return error.trim();
+          } else if (error is Map && error['message'] != null) {
+            return error['message'].toString().trim();
+          }
+        }
+
+        // 4. Short msg field
+        if (parsed['msg'] != null && parsed['msg'].toString().trim().isNotEmpty) {
+          return parsed['msg'].toString().trim();
+        }
+
+        // 5. Errors field (list or map)
+        if (parsed['errors'] != null) {
+          final errors = parsed['errors'];
+          if (errors is List && errors.isNotEmpty) {
+            return errors
+                .map((item) => item is Map ? (item['msg'] ?? item['message'] ?? item.toString()) : item.toString())
+                .join('\n');
+          } else if (errors is Map && errors.isNotEmpty) {
+            final firstVal = errors.values.first;
+            if (firstVal is List && firstVal.isNotEmpty) {
+              return firstVal.first.toString();
+            }
+            return firstVal.toString();
+          }
+        }
+      } else if (parsed is List && parsed.isNotEmpty) {
+        return parsed
+            .map((item) => item is Map ? (item['msg'] ?? item['message'] ?? item.toString()) : item.toString())
+            .join('\n');
+      } else if (parsed is String && parsed.trim().isNotEmpty) {
+        return parsed.trim();
+      }
+      return 'An unknown error occurred.';
     } catch (_) {
+      if (body.isNotEmpty && body.length < 200 && !body.contains('<html') && !body.contains('<!DOCTYPE')) {
+        return body.trim();
+      }
       return 'Request failed. Please try again.';
     }
   }

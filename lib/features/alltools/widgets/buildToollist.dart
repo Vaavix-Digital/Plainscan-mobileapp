@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/tool_model.dart';
 
@@ -34,30 +35,50 @@ Widget buildToolList() {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 30),
-          itemCount: tools.length,
-          itemBuilder: (context, index) {
-            final tool = tools[index];
-            final currentCategory = tool.category ?? 'Other';
-            final previousCategory = index > 0 ? tools[index - 1].category : null;
-            final showCategoryHeader = index == 0 || previousCategory != currentCategory;
+        // Group tools by category
+        final Map<String, List<ToolModel>> groupedTools = {};
+        for (final tool in tools) {
+          final cat = tool.category ?? 'Other';
+          groupedTools.putIfAbsent(cat, () => []).add(tool);
+        }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (showCategoryHeader) _buildCategoryHeader(currentCategory),
-                _buildToolItem(tool),
-              ],
-            );
-          },
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            for (final entry in groupedTools.entries) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                  child: _buildCategoryHeader(entry.key, entry.value.length),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.78,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildToolGridCard(entry.value[index]),
+                    childCount: entry.value.length,
+                  ),
+                ),
+              ),
+            ],
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 32),
+            ),
+          ],
         );
       },
     ),
   );
 }
 
-Widget _buildCategoryHeader(String category) {
+Widget _buildCategoryHeader(String category, [int? count]) {
   String icon = '≡';
   String title = category.toUpperCase();
 
@@ -78,121 +99,175 @@ Widget _buildCategoryHeader(String category) {
     title = 'UTILITY TOOLS';
   }
 
-  return Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 8),
-    child: Row(
-      children: [
-        Text(
-          icon,
-          style: const TextStyle(fontSize: 14),
+  return Row(
+    children: [
+      Text(
+        icon,
+        style: const TextStyle(fontSize: 14),
+      ),
+      const SizedBox(width: 8),
+      Text(
+        title,
+        style: const TextStyle(
+          fontSize: 11,
+          letterSpacing: 1.1,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF4338CA),
         ),
+      ),
+      if (count != null) ...[
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 11,
-            letterSpacing: 1.1,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF4338CA),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF4338CA),
+            ),
           ),
         ),
       ],
-    ),
+    ],
   );
 }
 
-Widget _buildToolItem(ToolModel tool) {
+Widget _buildToolGridCard(ToolModel tool) {
   final isFree = tool.isFree ?? true;
   final formatBadge = (tool.inputFormat != null && tool.outputFormat != null)
       ? '${tool.inputFormat} → ${tool.outputFormat}'
       : tool.outputFormat ?? tool.inputFormat;
 
-  return InkWell(
-    onTap: () {
-      Get.find<AllToolsController>().recordToolUsage(tool.id);
-      Get.to(() => ToolExecutorPage(tool: tool));
-    },
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEEF2F6), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: tool.color.withAlpha(25),
-              borderRadius: BorderRadius.circular(10),
+  return Material(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(14),
+    elevation: 0,
+    child: InkWell(
+      onTap: () {
+        Get.find<AllToolsController>().recordToolUsage(tool.id);
+
+        if (!isFree) {
+          final profileCtrl = Get.isRegistered<ProfileController>()
+              ? Get.find<ProfileController>()
+              : Get.put(ProfileController());
+          if (!profileCtrl.isPro.value) {
+            ProfileController.showUpgradeSnackbar(tool.name);
+            return;
+          }
+        }
+
+        Get.to(() => ToolExecutorPage(tool: tool));
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFEEF2F6), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E293B).withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              tool.icon,
-              size: 20,
-              color: tool.color,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tool.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Center content: Icon, Title, Subtitle
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: tool.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      tool.icon,
+                      size: 20,
+                      color: tool.color,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                if (formatBadge != null)
+                  const SizedBox(height: 8),
                   Text(
-                    formatBadge,
-                    maxLines: 1,
+                    tool.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF6366F1),
-                    ),
-                  )
-                else
-                  Text(
-                    tool.category ?? '',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF64748B),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                      height: 1.2,
                     ),
                   ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: isFree ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              isFree ? 'FREE' : 'PRO',
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: isFree ? const Color(0xFF2563EB) : const Color(0xFFD97706),
+                  const SizedBox(height: 3),
+                  Text(
+                    formatBadge ?? tool.category ?? '',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w500,
+                      color: formatBadge != null
+                          ? const Color(0xFF6366F1)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            // Top Right: FREE / PRO badge
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: isFree ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: isFree ? const Color(0xFFDBEAFE) : const Color(0xFFFDE68A),
+                    width: 0.6,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isFree) ...[
+                      const Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 8,
+                        color: Color(0xFFD97706),
+                      ),
+                      const SizedBox(width: 1.5),
+                    ],
+                    Text(
+                      isFree ? 'FREE' : 'PRO',
+                      style: TextStyle(
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w800,
+                        color: isFree ? const Color(0xFF2563EB) : const Color(0xFFD97706),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
 }
-

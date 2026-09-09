@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/features/ai/pages/ai_page.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
@@ -44,6 +45,16 @@ class _DashboardCarouselSliderState extends State<DashboardCarouselSlider> {
           : Get.put(AllToolsController());
       final tool = allToolsCtrl.findToolByIdOrSlug(toolId);
       if (tool != null) {
+        final isFree = tool.isFree ?? true;
+        if (!isFree) {
+          final profileCtrl = Get.isRegistered<ProfileController>()
+              ? Get.find<ProfileController>()
+              : Get.put(ProfileController());
+          if (!profileCtrl.isPro.value) {
+            ProfileController.showUpgradeSnackbar(tool.name);
+            return;
+          }
+        }
         Get.to(() => ToolExecutorPage(tool: tool));
       } else {
         Get.to(() => fallback);

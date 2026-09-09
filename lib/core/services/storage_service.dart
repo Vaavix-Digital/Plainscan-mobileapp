@@ -5,7 +5,7 @@ class StorageService {
   static const String _keyRefreshToken = 'refresh_token';
   static const String _keyEmail = 'user_email';
   static const String _keyName = 'user_name';
-  static const String _keyIsGuest = 'is_guest';
+  static const String _keyPlan = 'user_plan';
 
   static Future<void> saveTokens({
     required String token,
@@ -14,7 +14,6 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, token);
     await prefs.setString(_keyRefreshToken, refreshToken);
-    await prefs.setBool(_keyIsGuest, false);
   }
 
   static Future<void> saveUser({
@@ -26,12 +25,19 @@ class StorageService {
     await prefs.setString(_keyName, name);
   }
 
-  static Future<void> setGuestMode(bool isGuest) async {
+  static Future<void> savePlan(String plan) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_keyIsGuest, isGuest);
-    if (isGuest) {
-      await clearTokens();
-    }
+    await prefs.setString(_keyPlan, plan);
+  }
+
+  static Future<String> getPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPlan) ?? 'free';
+  }
+
+  static Future<bool> isProUser() async {
+    final plan = await getPlan();
+    return plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro');
   }
 
   static Future<String?> getToken() async {
@@ -54,15 +60,9 @@ class StorageService {
     return prefs.getString(_keyName);
   }
 
-  static Future<bool> isGuest() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_keyIsGuest) ?? false;
-  }
-
   static Future<bool> hasSession() async {
     final token = await getToken();
-    final isGuestMode = await isGuest();
-    return token != null || isGuestMode;
+    return token != null && token.isNotEmpty;
   }
 
   static Future<void> clearTokens() async {
@@ -79,7 +79,20 @@ class StorageService {
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyName);
-    await prefs.setBool(_keyIsGuest, false);
+    await prefs.remove(_keyPlan);
+    await prefs.remove('is_guest');
+  }
+
+  static const String _keyLanguage = 'app_language';
+
+  static Future<String> getLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyLanguage) ?? 'en';
+  }
+
+  static Future<void> setLanguage(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLanguage, languageCode);
   }
 
   static Future<bool> isOnboarded() async {

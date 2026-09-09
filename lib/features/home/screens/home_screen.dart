@@ -1,6 +1,3 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
@@ -26,8 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
     const AiPage(),
      ProfilePage(),
   ];
-
-  bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   
 

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/services/auth_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class ProfileController extends GetxController {
-  final RxString userName = 'Guest User'.obs;
+  final RxString userName = 'User'.obs;
   final RxString userEmail = ''.obs;
+  final RxString userPlan = 'free'.obs;
+  final RxBool isPro = false.obs;
 
   final RxBool autoSave = true.obs;
   final RxBool cloudBackup = false.obs;
@@ -21,28 +24,75 @@ class ProfileController extends GetxController {
     try {
       final name = await StorageService.getName();
       final email = await StorageService.getEmail();
-      final isGuest = await StorageService.isGuest();
+      final localPlan = await StorageService.getPlan();
+      final pro = await StorageService.isProUser();
 
-      if (isGuest) {
-        userName.value = 'Guest User';
-        userEmail.value = 'No email associated';
-      } else {
-        userName.value =
-            name != null && name.trim().isNotEmpty
-                ? name.trim()
-                : 'User';
+      userName.value =
+          name != null && name.trim().isNotEmpty
+              ? name.trim()
+              : 'User';
 
-        userEmail.value =
-            email != null && email.trim().isNotEmpty
-                ? email.trim()
-                : 'No email associated';
-      }
+      userEmail.value =
+          email != null && email.trim().isNotEmpty
+              ? email.trim()
+              : 'No email associated';
+
+      userPlan.value = localPlan;
+      isPro.value = pro;
+
+      // Sync latest profile/plan from backend
+      AuthService.getProfile().then((profile) {
+        if (profile != null) {
+          final serverPlan = profile['plan_id']?.toString() ?? profile['plan']?.toString() ?? 'free';
+          userPlan.value = serverPlan;
+          isPro.value = serverPlan.toLowerCase() == 'pro' || serverPlan.toLowerCase().contains('pro');
+        }
+      });
     } catch (e) {
       debugPrint('Error loading user profile: $e');
 
       userName.value = 'User';
       userEmail.value = 'No email associated';
     }
+  }
+
+  Future<void> upgradeToPro() async {
+    isPro.value = true;
+    userPlan.value = 'pro';
+    await StorageService.savePlan('pro');
+  }
+
+  static void showUpgradeSnackbar(String toolName) {
+    Get.rawSnackbar(
+      messageText: Text(
+        '$toolName is a Pro tool. Please upgrade your plan to access it.',
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      ),
+      mainButton: TextButton(
+        onPressed: () {
+          if (Get.isSnackbarOpen) {
+            Get.closeCurrentSnackbar();
+          }
+          if (Get.isRegistered<ProfileController>()) {
+            Get.find<ProfileController>().showUpgradeBottomSheet();
+          } else {
+            Get.put(ProfileController()).showUpgradeBottomSheet();
+          }
+        },
+        child: const Text(
+          'UPGRADE',
+          style: TextStyle(
+            color: AppColors.amber,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      backgroundColor: const Color(0xFF1E224F),
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(12),
+      borderRadius: 10,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   void toggleAutoSave(bool value) {
@@ -153,15 +203,19 @@ class ProfileController extends GetxController {
             const SizedBox(height: 24),
 
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                await upgradeToPro();
                 Get.back();
 
-                Get.snackbar(
-                  'Success',
-                  'Thank you! Mock purchase succeeded.',
-                  snackPosition: SnackPosition.BOTTOM,
+                Get.rawSnackbar(
+                  messageText: const Text(
+                    'Congratulations! You have upgraded to PlainScan Pro.',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
                   backgroundColor: AppColors.primary,
-                  colorText: Colors.white,
+                  snackPosition: SnackPosition.BOTTOM,
+                  margin: const EdgeInsets.all(12),
+                  borderRadius: 10,
                 );
               },
               style: ElevatedButton.styleFrom(

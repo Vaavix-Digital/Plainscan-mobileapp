@@ -10,6 +10,7 @@ class AppColors {
   static const blue = Color(0xFF2563EB);
   static const purple = Color(0xFF7C3AED);
   static const coral = Color(0xFFF0466F);
+  static const emerald = Color(0xFF10B981);
 
   static const white = Colors.white;
   static const cardBackground = Colors.white;

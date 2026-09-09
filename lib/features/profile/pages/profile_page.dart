@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
+import 'package:plainscan/core/services/app_update_service.dart';
+import 'package:plainscan/core/services/permission_service.dart';
+import 'package:plainscan/features/home/widgets/notifications_sheet.dart';
 
 
 class ProfilePage extends StatelessWidget {
@@ -89,24 +93,32 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
 
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.amber.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.amber,
+                  Obx(
+                    () => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
                       ),
-                    ),
-                    child: const Text(
-                      'Free Account',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.amber,
+                      decoration: BoxDecoration(
+                        color: controller.isPro.value
+                            ? const Color(0xFFFEF3C7)
+                            : AppColors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: controller.isPro.value
+                              ? const Color(0xFFD97706)
+                              : AppColors.amber,
+                        ),
+                      ),
+                      child: Text(
+                        controller.isPro.value ? 'PRO Account' : 'Free Account',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: controller.isPro.value
+                              ? const Color(0xFFD97706)
+                              : AppColors.amber,
+                        ),
                       ),
                     ),
                   ),
@@ -323,6 +335,86 @@ class ProfilePage extends StatelessWidget {
                         onChanged:
                             controller.toggleCloudBackup,
                       ),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.notifications_active_outlined,
+                        color: AppColors.primary,
+                      ),
+                      title: const Text('Notifications & Alerts'),
+                      subtitle: const Text('View recent tool activity and update notices'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => showNotificationsBottomSheet(context),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.system_update_rounded,
+                        color: Color(0xFF10B981),
+                      ),
+                      title: const Text('Check for Tool Updates'),
+                      subtitle: const Text('Version 1.0.0 (Build 3)'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => AppUpdateService.showUpdateDialog(isManualCheck: true),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.translate_rounded,
+                        color: AppColors.blue,
+                      ),
+                      title: const Text('App Language'),
+                      subtitle: const Text('Change display and tool language'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => Get.toNamed(AppRoutes.language, arguments: {'isStandalone': true}),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.verified_user_outlined,
+                        color: AppColors.primary,
+                      ),
+                      title: const Text('Camera & Gallery Permissions'),
+                      subtitle: const Text('Manage Camera, Gallery, and Notification access'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => AppPermissionService.openSettings(),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.explore_outlined,
+                        color: AppColors.purple,
+                      ),
+                      title: const Text('Welcome Tour & Overview'),
+                      subtitle: const Text('Explore all 52+ tools and features'),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => Get.toNamed(AppRoutes.onboarding, arguments: {'isReplay': true}),
                     ),
                   ],
                 ),

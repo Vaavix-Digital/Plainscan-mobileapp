@@ -5,7 +5,6 @@ import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/auth_controller.dart';
 import 'package:plainscan/core/services/auth_service.dart';
-import 'package:plainscan/core/services/storage_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -83,6 +82,21 @@ class _AuthScreenState extends State<AuthScreen>
     if (result.success) {
       if (isSignUp || result.requiresVerification) {
         Get.toNamed(AppRoutes.verifyEmail, arguments: email);
+        if (result.message != null && result.message!.isNotEmpty) {
+          Get.rawSnackbar(
+            messageText: Text(
+              result.message!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppColors.primary,
+            snackPosition: SnackPosition.BOTTOM,
+            margin: const EdgeInsets.all(12),
+            borderRadius: 8,
+          );
+        }
       } else if (result.requires2Fa) {
         Get.toNamed(AppRoutes.verify2Fa, arguments: email);
       } else {
@@ -284,8 +298,18 @@ class _AuthScreenState extends State<AuthScreen>
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!value.contains('@') || !value.contains('.')) {
+                            final trimmed = value.trim();
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
+                            );
+                            if (!emailRegex.hasMatch(trimmed)) {
                               return 'Please enter a valid email address';
+                            }
+                            final parts = trimmed.split('@');
+                            if (parts.length == 2 && parts[1].toLowerCase() == 'gmail.com') {
+                              if (parts[0].length < 6) {
+                                return 'Gmail addresses must be at least 6 characters before @';
+                              }
                             }
                             return null;
                           },
@@ -434,26 +458,7 @@ class _AuthScreenState extends State<AuthScreen>
     ),
   ),
 ),
-              const SizedBox(height: 32),
-              Center(
-                child: TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          await StorageService.setGuestMode(true);
-                          Get.offNamed(AppRoutes.home);
-                        },
-                  child: const Text(
-                    'Skip for now (Guest Mode)',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           ),
         ),

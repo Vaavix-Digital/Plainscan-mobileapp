@@ -191,6 +191,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Conversion',
     inputFormat: '.pdf',
     outputFormat: '.epub',
+    isFree: false,
     description: 'Convert PDF documents into responsive EPUB e-reader files.',
   ),
   ToolModel(
@@ -363,6 +364,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '2 .pdf files',
     outputFormat: '.pdf (diff report)',
     isMultiFile: true,
+    isFree: false,
     description: 'Compare two PDF documents side-by-side with color-coded diff highlights.',
   ),
   ToolModel(
@@ -375,6 +377,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Manipulation',
     inputFormat: '.pdf (form)',
     outputFormat: '.pdf',
+    isFree: false,
     description: 'Automatically fill out interactive PDF forms using structured field data.',
   ),
   ToolModel(
@@ -387,6 +390,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Manipulation',
     inputFormat: '.pdf',
     outputFormat: '.pdf',
+    isFree: false,
     description: 'Auto-detect lines and boxes in standard PDFs to generate interactive fillable forms.',
   ),
   ToolModel(
@@ -447,6 +451,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'OCR / Scan Tools',
     inputFormat: '.pdf (scanned)',
     outputFormat: '.pdf',
+    isFree: false,
     description: 'Convert scanned image PDFs into fully searchable, selectable PDF documents.',
   ),
   ToolModel(
@@ -458,6 +463,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'OCR / Scan Tools',
     inputFormat: '.pdf / image',
     outputFormat: '.docx',
+    isFree: false,
     description: 'Recognize scanned document text and reconstruct into formatted Word DOCX.',
   ),
   ToolModel(
@@ -469,6 +475,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'OCR / Scan Tools',
     inputFormat: '.pdf / image',
     outputFormat: '.xlsx',
+    isFree: false,
     description: 'Extract scanned receipts, invoices, and tables into organized Excel spreadsheets.',
   ),
 
@@ -485,6 +492,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.txt',
     isTextAllowed: true,
+    isFree: false,
     description: 'Generate concise, medium, or detailed AI executive summaries of documents.',
   ),
   ToolModel(
@@ -497,6 +505,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Rewrite and improve text with Professional, Casual, Formal, or Academic styles.',
   ),
   ToolModel(
@@ -509,6 +518,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Translate documents and text into Spanish, French, German, Hindi, Arabic, etc.',
   ),
   ToolModel(
@@ -522,6 +532,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.json',
     isTextAllowed: true,
+    isFree: false,
     description: 'Extract specified custom fields (invoice #, total, vendor, date) into JSON data.',
   ),
   ToolModel(
@@ -535,6 +546,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.txt',
     isTextAllowed: true,
+    isFree: false,
     description: 'Extract action items, key takeaways, and core bullet points automatically.',
   ),
   ToolModel(
@@ -547,6 +559,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Elaborate and expand concise notes or draft outlines into full documents.',
   ),
   ToolModel(
@@ -559,6 +572,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Condense long paragraphs into brief, high-impact statements.',
   ),
   ToolModel(
@@ -571,6 +585,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.json',
     isTextAllowed: true,
+    isFree: false,
     description: 'Extract search tags, keywords, and SEO metadata from your content.',
   ),
   ToolModel(
@@ -584,6 +599,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Check grammar, spelling, punctuation and syntax corrections instantly.',
   ),
   ToolModel(
@@ -597,6 +613,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Make AI generated text sound more natural, expressive, and human-written.',
   ),
   ToolModel(
@@ -610,6 +627,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.json',
     isTextAllowed: true,
+    isFree: false,
     description: 'Analyze documents to detect whether content was generated by AI models.',
   ),
   ToolModel(
@@ -622,6 +640,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.pdf (report)',
     isTextAllowed: true,
+    isFree: false,
     description: 'Scan content against web and publication databases to produce a plagiarism report.',
   ),
   ToolModel(
@@ -634,6 +653,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: '.pdf',
     outputFormat: '.txt',
+    isFree: false,
     description: 'Handle massive multi-chapter books, research papers, and lengthy PDFs.',
   ),
   ToolModel(
@@ -685,6 +705,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: 'Multiple files',
     outputFormat: '.zip',
     isMultiFile: true,
+    isFree: false,
     description: 'Convert a batch of files simultaneously to Word, PDF, or TXT format.',
   ),
   ToolModel(

@@ -85,12 +85,19 @@ class DashboardController extends GetxController {
       inputFormat: '.pdf / text',
       outputFormat: '.txt',
       isTextAllowed: true,
-      isFree: true,
+      isFree: false,
     ),
   ];
 
   void triggerToolAction(ToolModel tool) {
     allToolsController.recordToolUsage(tool.id);
+
+    final isFree = tool.isFree ?? true;
+    if (!isFree && !profileController.isPro.value) {
+      ProfileController.showUpgradeSnackbar(tool.name);
+      return;
+    }
+
     if (tool.id == 'doc_scan' || tool.id == 'id_scan') {
       Get.find<ScanController>().openScanner();
     } else {

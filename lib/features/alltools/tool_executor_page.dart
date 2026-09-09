@@ -46,11 +46,11 @@ class ToolExecutorPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  buildAdBanner(),
+                  
                   // File / Input Selection
                   _buildInputSelectionCard(context, controller, isMulti),
                   const SizedBox(height: 10),
-                  buildAdBanner(),
+                  
                   // Dynamic Options Card
                   _buildOptionsCard(controller, slug),
                   const SizedBox(height: 24),
@@ -98,6 +98,7 @@ class ToolExecutorPage extends StatelessWidget {
                     ],
                   ],
                   const SizedBox(height: 24),
+                    buildAdBanner(),
                 ],
               ),
             ),
@@ -1778,6 +1779,86 @@ class ToolExecutorPage extends StatelessWidget {
                 ),
               ],
             ),
+            if (controller.existingOriginalFile != null) ...[
+              const SizedBox(height: 12),
+              if (controller.isOriginalFileReplaced) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, size: 16, color: Color(0xFF10B981)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Replaced original "${controller.existingOriginalFile!.name}" in Files Manager.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF065F46),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Original "${controller.existingOriginalFile!.name}" preserved.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF1E40AF),
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          final path = controller.convertedFile?.path;
+                          if (path != null) {
+                            controller.replaceOriginalWithUpdated(
+                              path,
+                              controller.convertedFile!.name,
+                              controller.convertedFile!.fileType,
+                            );
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Replace Original',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),

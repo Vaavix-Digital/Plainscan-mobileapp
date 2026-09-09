@@ -64,6 +64,29 @@ class ScanController extends GetxController {
     scannedFiles.insert(0, newFile);
   }
 
+  FileModel? updateExistingScan(
+    String fileId, {
+    required String newPath,
+    String? newName,
+    double? newSizeKb,
+    String? newFileType,
+  }) {
+    final index = scannedFiles.indexWhere((file) => file.id == fileId);
+    if (index != -1) {
+      final existing = scannedFiles[index];
+      final updated = existing.copyWith(
+        path: newPath,
+        name: newName ?? existing.name,
+        sizeKb: newSizeKb ?? existing.sizeKb,
+        fileType: newFileType ?? existing.fileType,
+        createdDate: DateTime.now(),
+      );
+      scannedFiles[index] = updated;
+      return updated;
+    }
+    return null;
+  }
+
   void toggleFavorite(String id) {
     final index = scannedFiles.indexWhere((file) => file.id == id);
     if (index != -1) {
