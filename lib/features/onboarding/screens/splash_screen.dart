@@ -42,23 +42,28 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final hasSession = await StorageService.hasSession();
     final isOnboarded = await StorageService.isOnboarded();
 
-    // When user installs and opens the app for the first time,
-    // ask for notification and essential permissions upfront
+    // Display splash animations smoothly
+    await Future.delayed(const Duration(milliseconds: 2200));
+
     if (!isOnboarded) {
-      AppPermissionService.requestAppOpenPermissions();
-    }
-    
-    Timer(const Duration(seconds: 3), () {
+      // 1. Ask Notification permission first
+      await AppPermissionService.requestNotificationPermission();
+
+      // 2. Ask Camera and Gallery permissions AFTER notification permission
+      await AppPermissionService.requestCameraAndGalleryPermissions();
+
       if (mounted) {
-        if (!isOnboarded) {
-          Get.offNamed(AppRoutes.onboarding);
-        } else if (hasSession) {
-          Get.offNamed(AppRoutes.home);
-        } else {
-          Get.offNamed(AppRoutes.auth);
-        }
+        Get.offNamed(AppRoutes.onboarding);
       }
-    });
+    } else if (hasSession) {
+      if (mounted) {
+        Get.offNamed(AppRoutes.home);
+      }
+    } else {
+      if (mounted) {
+        Get.offNamed(AppRoutes.auth);
+      }
+    }
   }
 
   @override

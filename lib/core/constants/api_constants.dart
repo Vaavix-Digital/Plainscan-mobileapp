@@ -30,6 +30,10 @@ class ApiConstants {
   static const String verifyCreditPayment = '/payments/credits/verify';
   static const String usdToInrRate = '/payments/usd-to-inr-rate';
 
+  // 🎁 Referrals
+  static const String myReferralCode = '/referral/my-code';
+  static const String applyReferral = '/referral/apply';
+
   // 🔑 Google Sign-In Configuration
   // Required on Android to obtain the idToken for backend verification.
   // Replace with the actual Web Client ID from Google Cloud Console.

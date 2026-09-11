@@ -148,7 +148,7 @@ class ProfilePage extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color:
-                            AppColors.purple.withOpacity(0.2),
+                            AppColors.purple.withValues(alpha: 0.2),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -195,6 +195,62 @@ class ProfilePage extends StatelessWidget {
                         Icons.chevron_right,
                         color: Colors.white,
                       ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Share & Earn 1 Month Free Promo Card
+              GestureDetector(
+                onTap: () => Get.toNamed(AppRoutes.referral),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFEF3C7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFD97706), size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Share App — Get 1 Month Free',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Earn 30 days of unlimited PRO access when a friend installs PlainScan.',
+                              style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                     ],
                   ),
                 ),
@@ -360,6 +416,59 @@ class ProfilePage extends StatelessWidget {
 
                     ListTile(
                       leading: const Icon(
+                        Icons.workspace_premium_outlined,
+                        color: AppColors.primary,
+                      ),
+                      title: const Text('Plans & Pricing'),
+                      subtitle: Obx(
+                        () => Text(
+                          controller.isPro.value
+                              ? 'Active Plan: ${controller.userPlan.value.toUpperCase()}'
+                              : 'Upgrade to Pro for unlimited AI & OCR',
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => Get.toNamed(AppRoutes.plans),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: Color(0xFFD97706),
+                      ),
+                      title: const Text('Share & Get 1 Month Free'),
+                      subtitle: const Text('Invite friends to get unlimited PRO access'),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFF59E0B)),
+                        ),
+                        child: const Text(
+                          'FREE PRO',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD97706),
+                          ),
+                        ),
+                      ),
+                      onTap: () => Get.toNamed(AppRoutes.referral),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
                         Icons.system_update_rounded,
                         color: Color(0xFF10B981),
                       ),
@@ -395,8 +504,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.verified_user_outlined,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Camera & Gallery Permissions'),
-                      subtitle: const Text('Manage Camera, Gallery, and Notification access'),
+                      title: const Text('Camera & App Permissions'),
+                      subtitle: const Text('Manage Camera and Notification access'),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => AppPermissionService.openSettings(),
                     ),

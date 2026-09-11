@@ -1,4 +1,5 @@
 {
   "java.import.gradle.enabled": false,
-  "java.autobuild.enabled": false
+  "java.autobuild.enabled": false,
+  "cmake.sourceDirectory": "C:/Users/abhin/PlainScan/plainscan/linux"
 }
