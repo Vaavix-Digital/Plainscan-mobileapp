@@ -4,6 +4,8 @@ import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/dashboard_controller.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 
+import 'package:plainscan/features/home/screens/home_screen.dart';
+
 Widget buildDashboardRecentTools() {
   final controller = Get.find<DashboardController>();
   return Column(
@@ -22,7 +24,11 @@ Widget buildDashboardRecentTools() {
           ),
           TextButton(
             onPressed: () {
-              Get.to(() => AllTools());
+              if (Get.isRegistered<HomeScreenController>()) {
+                Get.find<HomeScreenController>().changeTab(1);
+              } else {
+                Get.to(() => AllTools());
+              }
             },
             child: const Text(
               'View All Tools',

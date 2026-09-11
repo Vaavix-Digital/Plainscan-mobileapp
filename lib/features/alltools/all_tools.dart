@@ -7,10 +7,16 @@ import 'package:plainscan/features/alltools/widgets/buildSearchbar.dart';
 import 'package:plainscan/features/alltools/widgets/buildToollist.dart';
 
 class AllTools extends StatelessWidget {
-  AllTools({super.key});
+  final bool showBackButton;
 
-  final AllToolsController controller =
-      Get.put(AllToolsController());
+  AllTools({
+    super.key,
+    this.showBackButton = true,
+  });
+
+  final AllToolsController controller = Get.isRegistered<AllToolsController>()
+      ? Get.find<AllToolsController>()
+      : Get.put(AllToolsController());
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +25,7 @@ class AllTools extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            buildHeader(),
+            buildHeader(showBack: showBackButton),
             buildSearchBar(),
             buildFilters(),
             buildToolList(),

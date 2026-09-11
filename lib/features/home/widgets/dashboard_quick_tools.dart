@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/dashboard_controller.dart';
-import 'package:plainscan/features/alltools/all_tools.dart';
 
 Widget buildDashboardQuickTools() {
   final controller = Get.find<DashboardController>();
@@ -20,15 +19,7 @@ Widget buildDashboardQuickTools() {
               color: AppColors.text,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Get.to(() => AllTools());
-            },
-            child: const Text(
-              'See All',
-              style: TextStyle(color: AppColors.primary),
-            ),
-          ),
+          
         ],
       ),
       const SizedBox(height: 10),

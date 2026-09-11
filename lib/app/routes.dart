@@ -9,6 +9,8 @@ import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/features/profile/pages/plans_page.dart';
 import 'package:plainscan/features/profile/pages/referral_share_screen.dart';
 import 'package:plainscan/features/profile/pages/payment_page.dart';
+import 'package:plainscan/features/alltools/all_tools.dart';
+import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/profile/pages/subscription_success_page.dart';
 
 class AppRoutes {
@@ -19,6 +21,8 @@ class AppRoutes {
   static const String verify2Fa = '/verify-2fa';
   static const String verifyEmail = '/verify-email';
   static const String home = '/home';
+  static const String tools = '/tools';
+  static const String files = '/files';
   static const String referral = '/referral-share';
   static const String plans = '/plans';
   static const String payment = '/payment';
@@ -58,6 +62,14 @@ class AppRoutes {
     GetPage(
       name: home,
       page: () => const HomeScreen(),
+    ),
+    GetPage(
+      name: tools,
+      page: () => AllTools(),
+    ),
+    GetPage(
+      name: files,
+      page: () => const FilesPage(),
     ),
     GetPage(
       name: referral,

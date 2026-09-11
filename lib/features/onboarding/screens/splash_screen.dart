@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
@@ -164,7 +165,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   
                   // Slogan
                   const Text(
-                    '28 TOOLS  •  ONE WORKSPACE',
+                    '52 TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,

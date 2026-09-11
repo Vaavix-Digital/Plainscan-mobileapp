@@ -43,17 +43,10 @@ void main() {
       // Provide arguments via Get.to / Get.testMode
       await tester.pumpWidget(
         GetMaterialApp(
-          initialRoute: '/payment',
-          getPages: [
-            GetPage(
-              name: '/payment',
-              page: () => const PaymentPage(),
-              arguments: {
-                'plan': proPlan,
-                'billingPeriod': 'monthly',
-              },
-            ),
-          ],
+          home: PaymentPage(
+            plan: proPlan,
+            billingPeriod: 'monthly',
+          ),
         ),
       );
 
@@ -83,11 +76,42 @@ void main() {
 
       // Price breakdown
       expect(find.text('Total Payable Amount'), findsOneWidget);
+      expect(find.text('₹764'), findsAtLeastNWidgets(1));
       expect(find.text('Taxes & Fees'), findsOneWidget);
 
-      // "Pay Now" action button
-      expect(find.textContaining('Pay'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('Now'), findsAtLeastNWidgets(1));
+      // "Pay Now" action button with exact plan amount
+      expect(find.text('Pay ₹764 Now'), findsOneWidget);
+    });
+
+    testWidgets('PaymentPage renders yearly plan price ₹4584 correctly',
+        (WidgetTester tester) async {
+      final proPlan = PlanModel(
+        planId: 'pro',
+        name: 'Pro',
+        priceMonthly: 764.0,
+        priceYearly: 4584.0,
+        currency: 'INR',
+        currencySymbol: '₹',
+        features: [
+          'Unlimited documents per day',
+          '3,000 AI Credits / month',
+        ],
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: PaymentPage(
+            plan: proPlan,
+            billingPeriod: 'yearly',
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total Payable Amount'), findsOneWidget);
+      expect(find.text('₹4584'), findsAtLeastNWidgets(1));
+      expect(find.text('Pay ₹4584 Now'), findsOneWidget);
     });
   });
 

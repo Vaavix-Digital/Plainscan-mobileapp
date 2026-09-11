@@ -56,6 +56,12 @@ class PlanModel {
     return '$currencySymbol${_formatAmount(amount)}$suffix';
   }
 
+  String formattedAmount(bool isYearly) {
+    if (isFree) return 'Free';
+    final amount = isYearly ? priceYearly : priceMonthly;
+    return '$currencySymbol${_formatAmount(amount)}';
+  }
+
   String formattedMonthlyEquivalent() {
     if (isFree) return 'Free';
     final equiv = monthlyEquivalentYearly ?? (priceYearly > 0 ? (priceYearly / 12) : priceMonthly);

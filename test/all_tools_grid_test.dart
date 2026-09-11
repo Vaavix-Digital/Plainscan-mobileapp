@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,5 +69,42 @@ void main() {
     expect(find.text('AI TOOLS'), findsOneWidget);
     expect(find.text('PDF CONVERSION'), findsNothing);
     expect(find.text('PRO'), findsWidgets);
+  });
+
+  testWidgets('HomeScreen bottom navigation bar contains Tools instead of Files', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Provide ScanController required by HomeScreen scanner button
+    Get.put(ScanController());
+
+    await tester.pumpWidget(
+      const GetMaterialApp(
+        home: HomeScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify 'Tools' is present in bottom navigation bar
+    expect(find.text('Tools'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('AI'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
+
+    // Verify 'Files' is NOT present in bottom navigation bar
+    expect(find.text('Files'), findsNothing);
+
+    // Tap on 'Tools' tab in bottom navigation bar
+    await tester.tap(find.text('Tools'));
+    await tester.pumpAndSettle();
+
+    // Verify HomeScreenController switched to tab 1
+    final homeController = Get.find<HomeScreenController>();
+    expect(homeController.currentIndex.value, 1);
+
+    // Verify AllTools view is visible with category headers
+    expect(find.text('PDF CONVERSION'), findsOneWidget);
+    expect(find.text('PDF to Word'), findsOneWidget);
   });
 }

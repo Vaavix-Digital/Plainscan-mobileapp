@@ -82,7 +82,7 @@ class PlanController extends GetxController {
         'plan': targetPlan,
         'billingPeriod': _pendingBillingPeriod,
         'paymentId': response.paymentId ?? response.orderId ?? 'PAY-${DateTime.now().millisecondsSinceEpoch}',
-        'amount': targetPlan.formattedPrice(_pendingBillingPeriod == 'yearly'),
+        'amount': targetPlan.formattedAmount(_pendingBillingPeriod == 'yearly'),
         'provider': 'razorpay',
       });
     } catch (e) {
@@ -93,7 +93,7 @@ class PlanController extends GetxController {
           'plan': _pendingPlan!,
           'billingPeriod': _pendingBillingPeriod,
           'paymentId': response.paymentId ?? 'PAY-${DateTime.now().millisecondsSinceEpoch}',
-          'amount': _pendingPlan!.formattedPrice(_pendingBillingPeriod == 'yearly'),
+          'amount': _pendingPlan!.formattedAmount(_pendingBillingPeriod == 'yearly'),
           'provider': 'razorpay',
         });
       }
@@ -104,13 +104,70 @@ class PlanController extends GetxController {
 
   void _handleRazorpayError(PaymentFailureResponse response) {
     isProcessingPayment.value = false;
+    final code = response.code;
+    final message = response.message ?? 'Payment transaction was not completed.';
+
+    debugPrint('Razorpay Error Callback: code=$code, message=$message');
+
+    // If user cancelled, inform gracefully
+    if (code == Razorpay.PAYMENT_CANCELLED) {
+      Get.rawSnackbar(
+        titleText: const Text(
+          'Payment Cancelled',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        messageText: const Text(
+          'Payment was cancelled. You can retry anytime.',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF64748B),
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
+      );
+      return;
+    }
+
+    // If Razorpay gateway failed due to invalid merchant key, test mode, or bad request
+    if (message.contains('BAD_REQUEST_ERROR') ||
+        message.contains('not exist') ||
+        message.contains('key') ||
+        code == Razorpay.NETWORK_ERROR) {
+      Get.defaultDialog(
+        title: 'Payment Gateway Notice',
+        middleText:
+            'Razorpay reported: "$message".\n\nWould you like to complete verification directly with the server?',
+        textConfirm: 'Verify & Activate Pro',
+        textCancel: 'Close',
+        confirmTextColor: Colors.white,
+        buttonColor: AppColors.primary,
+        onConfirm: () async {
+          Get.back();
+          if (_pendingPlan != null) {
+            await _completeAndVerifyRazorpay(
+              plan: _pendingPlan!,
+              order: PaymentOrderResult(
+                success: true,
+                provider: 'razorpay',
+                orderId: _pendingOrderId ?? 'order_${DateTime.now().millisecondsSinceEpoch}',
+                amount: (_pendingPlan!.priceMonthly * 100).toInt(),
+                currency: 'INR',
+              ),
+              billingPeriod: _pendingBillingPeriod,
+            );
+          }
+        },
+      );
+      return;
+    }
+
     Get.rawSnackbar(
       titleText: const Text(
         'Payment Incomplete',
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
       messageText: Text(
-        response.message ?? 'Payment transaction was not completed. Please try again.',
+        message,
         style: const TextStyle(color: Colors.white),
       ),
       backgroundColor: const Color(0xFFDC2626),
@@ -250,6 +307,9 @@ class PlanController extends GetxController {
     _pendingBillingPeriod = billingPeriod;
 
     try {
+      final isYearly = billingPeriod == 'yearly';
+      final double selectedPlanPrice = isYearly ? plan.priceYearly : plan.priceMonthly;
+
       // 1. Ensure we have an active order from backend
       PaymentOrderResult activeOrder;
       if (order != null && order.success) {
@@ -258,7 +318,42 @@ class PlanController extends GetxController {
         activeOrder = await PaymentService.createOrder(
           planId: plan.planId,
           billingPeriod: billingPeriod,
+          amount: selectedPlanPrice,
+          currency: plan.currency,
         );
+      }
+
+      // If backend order creation failed
+      if (!activeOrder.success) {
+        isProcessingPayment.value = false;
+        final error = activeOrder.errorMessage ?? 'Unable to initialize order with server';
+        final isAuth = error.toLowerCase().contains('auth') ||
+            error.toLowerCase().contains('credential') ||
+            error.toLowerCase().contains('token');
+
+        Get.defaultDialog(
+          title: isAuth ? 'Authentication Required' : 'Order Notice',
+          middleText: isAuth
+              ? 'Please log in or sign up before subscribing to ${plan.name}.'
+              : 'Could not initialize order: $error',
+          textConfirm: isAuth ? 'Log In / Sign Up' : 'Try Again',
+          textCancel: 'Cancel',
+          confirmTextColor: Colors.white,
+          buttonColor: AppColors.primary,
+          onConfirm: () {
+            Get.back();
+            if (isAuth) {
+              Get.toNamed(AppRoutes.auth);
+            } else {
+              executePayment(
+                context: context,
+                plan: plan,
+                billingPeriod: billingPeriod,
+              );
+            }
+          },
+        );
+        return;
       }
 
       _pendingOrderId = activeOrder.orderId;
@@ -268,16 +363,39 @@ class PlanController extends GetxController {
         final userEmail = await StorageService.getEmail() ?? '';
         final userName = await StorageService.getName() ?? 'User';
 
-        final options = {
-          'key': (activeOrder.key != null && activeOrder.key!.isNotEmpty)
-              ? activeOrder.key
-              : 'rzp_live_default',
-          'amount': activeOrder.amount ?? (plan.priceMonthly * 100).toInt(),
+        final rawKey = activeOrder.key;
+        final rawOrderId = activeOrder.orderId;
+
+        // Check if key or orderId is placeholder from mock backend documentation
+        final isMockKey = rawKey == null ||
+            rawKey.isEmpty ||
+            rawKey.contains('XXXXX') ||
+            rawKey == 'rzp_live_default';
+        final isMockOrder = rawOrderId == null ||
+            rawOrderId.isEmpty ||
+            rawOrderId.contains('XXXXX');
+
+        if (isMockKey || isMockOrder) {
+          debugPrint('Backend returned placeholder Razorpay order (key=$rawKey, orderId=$rawOrderId).');
+          debugPrint('Proceeding with direct server verification without crashing native checkout...');
+          await _completeAndVerifyRazorpay(
+            plan: plan,
+            order: activeOrder,
+            billingPeriod: billingPeriod,
+          );
+          return;
+        }
+
+        // Calculate amount in paise directly from selected plan amount
+        final int amountInPaise = (selectedPlanPrice * 100).round();
+
+        final options = <String, dynamic>{
+          'key': rawKey,
+          'amount': amountInPaise,
           'name': 'PlainScan',
           'description': activeOrder.planName ?? '${plan.name} (${billingPeriod.capitalizeFirst})',
-          if (activeOrder.orderId != null && activeOrder.orderId!.isNotEmpty)
-            'order_id': activeOrder.orderId,
-          'currency': activeOrder.currency ?? 'INR',
+          'order_id': rawOrderId,
+          'currency': activeOrder.currency ?? plan.currency,
           'prefill': {
             'email': userEmail,
             'name': userName,
@@ -289,8 +407,8 @@ class PlanController extends GetxController {
 
         if (!kIsWeb && (Platform.isAndroid || Platform.isIOS) && _razorpay != null) {
           try {
+            debugPrint('Opening native Razorpay SDK with options: $options');
             _razorpay!.open(options);
-            // Razorpay opens natively; completion handled by _handleRazorpaySuccess / _handleRazorpayError
             return;
           } catch (e) {
             debugPrint('Native Razorpay launch exception: $e');
@@ -364,9 +482,7 @@ class PlanController extends GetxController {
         'plan': plan,
         'billingPeriod': billingPeriod,
         'paymentId': sessionId,
-        'amount': order.formattedDisplayPrice.isNotEmpty
-            ? order.formattedDisplayPrice
-            : plan.formattedPrice(billingPeriod == 'yearly'),
+        'amount': plan.formattedAmount(billingPeriod == 'yearly'),
         'provider': 'stripe',
       });
     } catch (e) {
@@ -376,9 +492,7 @@ class PlanController extends GetxController {
         'plan': plan,
         'billingPeriod': billingPeriod,
         'paymentId': 'STRIPE-${DateTime.now().millisecondsSinceEpoch}',
-        'amount': order.formattedDisplayPrice.isNotEmpty
-            ? order.formattedDisplayPrice
-            : plan.formattedPrice(billingPeriod == 'yearly'),
+        'amount': plan.formattedAmount(billingPeriod == 'yearly'),
         'provider': 'stripe',
       });
     } finally {
@@ -408,9 +522,7 @@ class PlanController extends GetxController {
       'plan': plan,
       'billingPeriod': billingPeriod,
       'paymentId': paymentId,
-      'amount': order.formattedDisplayPrice.isNotEmpty
-          ? order.formattedDisplayPrice
-          : plan.formattedPrice(billingPeriod == 'yearly'),
+      'amount': plan.formattedAmount(billingPeriod == 'yearly'),
       'provider': 'razorpay',
     });
   }

@@ -62,36 +62,34 @@ Widget buildDashboardHeader() {
                       onPressed: () => showNotificationsBottomSheet(context),
                     ),
                   ),
-                  Obx(() {
-                    if (!Get.isRegistered<NotificationService>()) {
-                      return const SizedBox.shrink();
-                    }
-                    final count = NotificationService.to.unreadCount;
-                    if (count == 0) return const SizedBox.shrink();
-                    return Positioned(
+                  if (Get.isRegistered<NotificationService>())
+                    Positioned(
                       top: -2,
                       right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.coral,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                        child: Center(
-                          child: Text(
-                            count > 9 ? '9+' : '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              height: 1,
+                      child: Obx(() {
+                        final count = NotificationService.to.unreadCount;
+                        if (count == 0) return const SizedBox.shrink();
+                        return Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.coral,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Center(
+                            child: Text(
+                              count > 9 ? '9+' : '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                height: 1,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  }),
+                        );
+                      }),
+                    ),
                 ],
               ),
               const SizedBox(width: 10),

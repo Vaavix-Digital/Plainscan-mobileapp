@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/plan_controller.dart';
 import 'package:plainscan/core/services/payment_service.dart';
 import 'package:plainscan/models/plan_model.dart';
 
 class PaymentPage extends StatefulWidget {
-  const PaymentPage({super.key});
+  final PlanModel? plan;
+  final String? billingPeriod;
+
+  const PaymentPage({
+    super.key,
+    this.plan,
+    this.billingPeriod,
+  });
 
   @override
   State<PaymentPage> createState() => _PaymentPageState();
@@ -27,7 +35,8 @@ class _PaymentPageState extends State<PaymentPage> {
   void initState() {
     super.initState();
     final args = Get.arguments as Map<String, dynamic>? ?? {};
-    _plan = args['plan'] as PlanModel? ??
+    _plan = widget.plan ??
+        args['plan'] as PlanModel? ??
         PlanModel(
           planId: 'pro',
           name: 'Pro',
@@ -46,7 +55,7 @@ class _PaymentPageState extends State<PaymentPage> {
             'Email notifications',
           ],
         );
-    _billingPeriod = args['billingPeriod'] as String? ?? 'monthly';
+    _billingPeriod = widget.billingPeriod ?? args['billingPeriod'] as String? ?? 'monthly';
 
     _prepareOrder();
   }
@@ -57,9 +66,14 @@ class _PaymentPageState extends State<PaymentPage> {
       _orderError = '';
     });
 
+    final isYearly = _billingPeriod == 'yearly';
+    final planAmount = isYearly ? _plan.priceYearly : _plan.priceMonthly;
+
     final orderResult = await PaymentService.createOrder(
       planId: _plan.planId,
       billingPeriod: _billingPeriod,
+      amount: planAmount,
+      currency: _plan.currency,
     );
 
     if (mounted) {
@@ -74,10 +88,7 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   String _getDisplayAmount() {
-    if (_order != null && _order!.formattedDisplayPrice.isNotEmpty) {
-      return _order!.formattedDisplayPrice;
-    }
-    return _plan.formattedPrice(_billingPeriod == 'yearly');
+    return _plan.formattedAmount(_billingPeriod == 'yearly');
   }
 
   @override
@@ -398,6 +409,31 @@ class _PaymentPageState extends State<PaymentPage> {
                         style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
                       ),
                     ),
+                    if (_orderError.toLowerCase().contains('auth') ||
+                        _orderError.toLowerCase().contains('login'))
+                      TextButton(
+                        onPressed: () => Get.toNamed(AppRoutes.auth),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Text(
+                          'Log In',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFDC2626),
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded, color: Color(0xFFDC2626), size: 18),
+                        onPressed: _prepareOrder,
+                        tooltip: 'Retry Order',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
                   ],
                 ),
               ),
@@ -411,12 +447,19 @@ class _PaymentPageState extends State<PaymentPage> {
               return ElevatedButton(
                 onPressed: isProcessing
                     ? null
-                    : () => _planController.executePayment(
-                          context: context,
-                          plan: _plan,
-                          order: _order,
-                          billingPeriod: _billingPeriod,
-                        ),
+                    : () async {
+                        if (_order == null || !_order!.success) {
+                          await _prepareOrder();
+                        }
+                        if (context.mounted) {
+                          await _planController.executePayment(
+                            context: context,
+                            plan: _plan,
+                            order: _order,
+                            billingPeriod: _billingPeriod,
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isRazorpay ? const Color(0xFF0C2340) : const Color(0xFF635BFF),
                   foregroundColor: Colors.white,

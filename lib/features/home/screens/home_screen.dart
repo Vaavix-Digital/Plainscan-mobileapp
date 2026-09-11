@@ -3,70 +3,75 @@ import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/features/ai/pages/ai_page.dart';
-import 'package:plainscan/features/files/pages/files_page.dart';
+import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/home/pages/dashboard_page.dart';
 import 'package:plainscan/features/profile/pages/profile_page.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreenController extends GetxController {
+  final RxInt currentIndex = 0.obs;
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  void changeTab(int index) {
+    currentIndex.value = index;
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
-  final List<Widget> _pages = [
-    const DashboardPage(),
-    const FilesPage(),
-    const AiPage(),
-     ProfilePage(),
-  ];
-
-  
-
-  Widget _navItem(IconData icon, String label, int index) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : AppColors.secondaryText,
-              size: 24,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
+  Widget _navItem(HomeScreenController controller, IconData icon, String label, int index) {
+    return Obx(() {
+      final isSelected = controller.currentIndex.value == index;
+      return GestureDetector(
+        onTap: () {
+          controller.changeTab(index);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                size: 24,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isSelected ? AppColors.primary : AppColors.secondaryText,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.isRegistered<HomeScreenController>()
+        ? Get.find<HomeScreenController>()
+        : Get.put(HomeScreenController());
+
+    final List<Widget> pages = [
+      const DashboardPage(),
+      AllTools(showBackButton: false),
+      const AiPage(),
+      ProfilePage(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Obx(
+        () => IndexedStack(
+          index: controller.currentIndex.value,
+          children: pages,
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
         color: AppColors.white,
@@ -77,14 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Expanded(child: _navItem(Icons.home_outlined, 'Home', 0)),
-            Expanded(child: _navItem(Icons.folder_outlined, 'Files', 1)),
+            Expanded(child: _navItem(controller, Icons.home_outlined, 'Home', 0)),
+            Expanded(child: _navItem(controller, Icons.grid_view_outlined, 'Tools', 1)),
             
             // Central scan button
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 8),
               child: FloatingActionButton(
-                onPressed: (){
+                onPressed: () {
                   Get.find<ScanController>().openScanner();
                 },
                 backgroundColor: AppColors.primary,
@@ -95,8 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             
-            Expanded(child: _navItem(Icons.auto_awesome_outlined, 'AI', 2)),
-            Expanded(child: _navItem(Icons.person_outline, 'Profile', 3)),
+            Expanded(child: _navItem(controller, Icons.auto_awesome_outlined, 'AI', 2)),
+            Expanded(child: _navItem(controller, Icons.person_outline, 'Profile', 3)),
           ],
         ),
       ),

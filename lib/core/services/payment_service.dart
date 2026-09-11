@@ -45,20 +45,88 @@ class PaymentOrderResult {
     return '${currency ?? ''} ${amount ?? amountUsd ?? ''}'.trim();
   }
 
-  factory PaymentOrderResult.fromJson(Map<String, dynamic> json) {
-    final rawProvider = json['provider']?.toString().toLowerCase() ?? 'razorpay';
+  factory PaymentOrderResult.fromJson(Map<String, dynamic> rawJson) {
+    final json = (rawJson['data'] is Map<String, dynamic>)
+        ? rawJson['data'] as Map<String, dynamic>
+        : (rawJson['order'] is Map<String, dynamic>)
+            ? rawJson['order'] as Map<String, dynamic>
+            : rawJson;
+
+    final rawProvider = (json['provider'] ?? rawJson['provider'] ?? 'razorpay')
+        .toString()
+        .toLowerCase();
+
+    // Parse amount safely regardless of type
+    num? parsedAmount;
+    final rawAmount = json['amount'] ?? rawJson['amount'];
+    if (rawAmount != null) {
+      if (rawAmount is num) {
+        parsedAmount = rawAmount;
+      } else {
+        parsedAmount = num.tryParse(rawAmount.toString());
+      }
+    }
+
+    // Parse amountUsd safely
+    double? parsedAmountUsd;
+    final rawUsd = json['amount_usd'] ??
+        json['amountUsd'] ??
+        rawJson['amount_usd'] ??
+        rawJson['amountUsd'];
+    if (rawUsd != null) {
+      if (rawUsd is num) {
+        parsedAmountUsd = rawUsd.toDouble();
+      } else {
+        parsedAmountUsd = double.tryParse(rawUsd.toString());
+      }
+    }
+
+    final orderId = (json['order_id'] ??
+            json['orderId'] ??
+            json['id'] ??
+            json['razorpay_order_id'] ??
+            rawJson['order_id'] ??
+            rawJson['orderId'] ??
+            rawJson['id'])
+        ?.toString();
+
+    final key = (json['key'] ??
+            json['key_id'] ??
+            json['keyId'] ??
+            json['razorpay_key'] ??
+            rawJson['key'] ??
+            rawJson['key_id'] ??
+            rawJson['keyId'])
+        ?.toString();
+
+    final sessionId = (json['session_id'] ??
+            json['sessionId'] ??
+            rawJson['session_id'] ??
+            rawJson['sessionId'] ??
+            json['id'])
+        ?.toString();
+
+    final publicKey = (json['public_key'] ??
+            json['publicKey'] ??
+            json['publishable_key'] ??
+            rawJson['public_key'] ??
+            rawJson['publicKey'])
+        ?.toString();
+
+    final currency = (json['currency'] ?? rawJson['currency'] ?? 'INR')?.toString();
+    final planName = (json['plan_name'] ?? json['planName'] ?? rawJson['plan_name'])?.toString();
 
     return PaymentOrderResult(
       success: true,
       provider: rawProvider,
-      orderId: json['order_id']?.toString(),
-      amount: json['amount'] as num?,
-      currency: json['currency']?.toString(),
-      key: json['key']?.toString(),
-      planName: json['plan_name']?.toString(),
-      sessionId: json['session_id']?.toString(),
-      publicKey: json['public_key']?.toString(),
-      amountUsd: (json['amount_usd'] as num?)?.toDouble(),
+      orderId: orderId,
+      amount: parsedAmount,
+      currency: currency,
+      key: key,
+      planName: planName,
+      sessionId: sessionId,
+      publicKey: publicKey,
+      amountUsd: parsedAmountUsd,
     );
   }
 
@@ -83,13 +151,21 @@ class PaymentVerifyResult {
     this.errorMessage,
   });
 
-  factory PaymentVerifyResult.fromJson(Map<String, dynamic> json) {
-    final status = json['status']?.toString();
-    final isOk = status == 'success' || json['success'] == true;
+  factory PaymentVerifyResult.fromJson(Map<String, dynamic> rawJson) {
+    final json = (rawJson['data'] is Map<String, dynamic>)
+        ? rawJson['data'] as Map<String, dynamic>
+        : rawJson;
+
+    final status = (json['status'] ?? rawJson['status'])?.toString();
+    final isOk = status == 'success' ||
+        json['success'] == true ||
+        rawJson['success'] == true;
+
     return PaymentVerifyResult(
       success: isOk,
       status: status,
-      message: json['message']?.toString() ?? 'Payment verified successfully',
+      message: (json['message'] ?? rawJson['message'])?.toString() ??
+          'Payment verified successfully',
     );
   }
 
@@ -109,22 +185,56 @@ class PaymentService {
   static Future<PaymentOrderResult> createOrder({
     required String planId,
     required String billingPeriod, // 'monthly' or 'yearly'
+    num? amount,
+    String? currency,
   }) async {
     try {
-      final token = await StorageService.getToken();
+      String? token = await StorageService.getToken();
       final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.createOrder}');
 
-      final response = await _client.post(
+      final payloadMap = <String, dynamic>{
+        'plan_id': planId,
+        'billing_period': billingPeriod,
+        if (amount != null) ...{
+          'amount': amount,
+          'amount_paise': (amount * 100).round(),
+        },
+        if (currency != null && currency.isNotEmpty) 'currency': currency,
+      };
+      final payload = jsonEncode(payloadMap);
+
+      debugPrint('POST $uri with payload: $payload (token: ${token != null && token.isNotEmpty ? 'present' : 'none'})');
+
+      var response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'plan_id': planId,
-          'billing_period': billingPeriod,
-        }),
+        body: payload,
       );
+
+      debugPrint('createOrder response: ${response.statusCode} - ${response.body}');
+
+      // If 401/403, attempt token refresh and retry once
+      if ((response.statusCode == 401 || response.statusCode == 403) &&
+          token != null &&
+          token.isNotEmpty) {
+        debugPrint('createOrder got 401/403, attempting token refresh...');
+        final refresh = await AuthService.refreshToken();
+        if (refresh.success && refresh.token != null) {
+          token = refresh.token!;
+          response = await _client.post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: payload,
+          );
+          debugPrint('createOrder retry response: ${response.statusCode} - ${response.body}');
+        }
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -150,23 +260,47 @@ class PaymentService {
     required String billingPeriod,
   }) async {
     try {
-      final token = await StorageService.getToken();
+      String? token = await StorageService.getToken();
       final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.verifyPayment}');
 
-      final response = await _client.post(
+      final payload = jsonEncode({
+        'razorpay_payment_id': paymentId,
+        'razorpay_order_id': orderId,
+        'razorpay_signature': signature,
+        'plan_id': planId,
+        'billing_period': billingPeriod,
+      });
+
+      debugPrint('POST $uri with payload: $payload');
+
+      var response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'razorpay_payment_id': paymentId,
-          'razorpay_order_id': orderId,
-          'razorpay_signature': signature,
-          'plan_id': planId,
-          'billing_period': billingPeriod,
-        }),
+        body: payload,
       );
+
+      debugPrint('verifyRazorpay response: ${response.statusCode} - ${response.body}');
+
+      if ((response.statusCode == 401 || response.statusCode == 403) &&
+          token != null &&
+          token.isNotEmpty) {
+        final refresh = await AuthService.refreshToken();
+        if (refresh.success && refresh.token != null) {
+          token = refresh.token!;
+          response = await _client.post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: payload,
+          );
+          debugPrint('verifyRazorpay retry response: ${response.statusCode} - ${response.body}');
+        }
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -190,21 +324,44 @@ class PaymentService {
     required String billingPeriod,
   }) async {
     try {
-      final token = await StorageService.getToken();
+      String? token = await StorageService.getToken();
       final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.verifyStripePayment}');
 
-      final response = await _client.post(
+      final payload = jsonEncode({
+        'session_id': sessionId,
+        'plan_id': planId,
+        'billing_period': billingPeriod,
+      });
+
+      debugPrint('POST $uri with payload: $payload');
+
+      var response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'session_id': sessionId,
-          'plan_id': planId,
-          'billing_period': billingPeriod,
-        }),
+        body: payload,
       );
+
+      debugPrint('verifyStripe response: ${response.statusCode} - ${response.body}');
+
+      if ((response.statusCode == 401 || response.statusCode == 403) &&
+          token != null &&
+          token.isNotEmpty) {
+        final refresh = await AuthService.refreshToken();
+        if (refresh.success && refresh.token != null) {
+          token = refresh.token!;
+          response = await _client.post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: payload,
+          );
+        }
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
