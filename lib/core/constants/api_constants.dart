@@ -33,6 +33,7 @@ class ApiConstants {
   // 🎁 Referrals
   static const String myReferralCode = '/referral/my-code';
   static const String applyReferral = '/referral/apply';
+  static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.plainscan.app&hl=en';
 
   // 🔑 Google Sign-In Configuration
   // Required on Android to obtain the idToken for backend verification.

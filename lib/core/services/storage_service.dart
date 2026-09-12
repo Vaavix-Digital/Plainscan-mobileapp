@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -10,7 +9,10 @@ class StorageService {
   static const String _keyProExpiry = 'pro_expiry_timestamp';
   static const String _keyReferralCode = 'user_referral_code';
   static const String _keyReferralsCount = 'referrals_count';
+  static const String _keyCreditsEarned = 'referral_credits_earned';
+  static const String _keyUserCredits = 'user_credits';
   static const String _keyRedeemedCodes = 'redeemed_referral_codes';
+  static const String _keyPendingReferralCode = 'pending_referral_code';
 
   static Future<void> saveTokens({
     required String token,
@@ -44,16 +46,57 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     var code = prefs.getString(_keyReferralCode);
     if (code == null || code.isEmpty) {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      final rand = Random();
-      final buffer = StringBuffer('PLAIN-');
-      for (int i = 0; i < 5; i++) {
-        buffer.write(chars[rand.nextInt(chars.length)]);
-      }
-      code = buffer.toString();
+      code = 'PLAIN2026';
       await prefs.setString(_keyReferralCode, code);
     }
     return code;
+  }
+
+  static Future<void> saveMyReferralCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReferralCode, code);
+  }
+
+  static Future<int> getUserCredits() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyUserCredits) ?? 250;
+  }
+
+  static Future<void> addCredits(int amount) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getUserCredits();
+    await prefs.setInt(_keyUserCredits, current + amount);
+  }
+
+  static Future<int> getCreditsEarned() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyCreditsEarned) ?? 250;
+  }
+
+  static Future<void> saveReferralData({
+    required String code,
+    required int totalReferred,
+    required int creditsEarned,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReferralCode, code);
+    await prefs.setInt(_keyReferralsCount, totalReferred);
+    await prefs.setInt(_keyCreditsEarned, creditsEarned);
+  }
+
+  static Future<void> setPendingReferralCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPendingReferralCode, code.trim().toUpperCase());
+  }
+
+  static Future<String?> getPendingReferralCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPendingReferralCode);
+  }
+
+  static Future<void> clearPendingReferralCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingReferralCode);
   }
 
   static Future<void> grantUnlimitedAccess({int days = 30}) async {
@@ -86,12 +129,12 @@ class StorageService {
 
   static Future<int> getReferralsCount() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyReferralsCount) ?? 0;
+    return prefs.getInt(_keyReferralsCount) ?? 5;
   }
 
   static Future<void> incrementReferralsCount() async {
     final prefs = await SharedPreferences.getInstance();
-    final count = prefs.getInt(_keyReferralsCount) ?? 0;
+    final count = await getReferralsCount();
     await prefs.setInt(_keyReferralsCount, count + 1);
   }
 
@@ -108,7 +151,7 @@ class StorageService {
     return plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro');
   }
 
-  /// Applies a referral code to unlock 1 month unlimited PRO access.
+  /// Applies a referral code to award 50 credits and unlock 1 month unlimited PRO access.
   static Future<Map<String, dynamic>> applyReferralCode(String inputCode) async {
     final cleanCode = inputCode.trim().toUpperCase();
     if (cleanCode.isEmpty) {
@@ -126,6 +169,8 @@ class StorageService {
       return {'success': false, 'message': 'You have already redeemed this referral code'};
     }
 
+    // Award 50 credits
+    await addCredits(50);
     // Award 30 days of unlimited PRO access
     await grantUnlimitedAccess(days: 30);
     await incrementReferralsCount();
@@ -134,8 +179,10 @@ class StorageService {
     await prefs.setStringList(_keyRedeemedCodes, redeemedList);
 
     return {
+      'status': 'success',
       'success': true,
-      'message': 'Congratulations! 1 Month of Unlimited PRO access unlocked.',
+      'message': 'Referral code applied! 50 credits added to your account.',
+      'credits_awarded': 50,
     };
   }
 

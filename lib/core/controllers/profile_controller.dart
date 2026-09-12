@@ -7,13 +7,14 @@ import 'package:plainscan/core/services/auth_service.dart';
 import 'package:plainscan/core/services/plan_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/models/plan_model.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:plainscan/core/services/referral_service.dart';
 
 class ProfileController extends GetxController {
   final RxString userName = 'User'.obs;
   final RxString userEmail = ''.obs;
   final RxString userPlan = 'free'.obs;
   final RxBool isPro = false.obs;
+  final RxInt userCredits = 250.obs;
 
   final RxBool autoSave = true.obs;
   final RxBool cloudBackup = false.obs;
@@ -24,12 +25,17 @@ class ProfileController extends GetxController {
     loadUserProfile();
   }
 
+  Future<void> refreshCredits() async {
+    userCredits.value = await StorageService.getUserCredits();
+  }
+
   Future<void> loadUserProfile() async {
     try {
       final name = await StorageService.getName();
       final email = await StorageService.getEmail();
       final localPlan = await StorageService.getPlan();
       final pro = await StorageService.isProUser();
+      final credits = await StorageService.getUserCredits();
 
       userName.value =
           name != null && name.trim().isNotEmpty
@@ -43,6 +49,7 @@ class ProfileController extends GetxController {
 
       userPlan.value = localPlan;
       isPro.value = pro;
+      userCredits.value = credits;
 
       // Sync latest profile/plan from backend
       AuthService.getProfile().then((profile) {
@@ -75,17 +82,7 @@ class ProfileController extends GetxController {
   }
 
   Future<void> shareApp() async {
-    final code = await StorageService.getMyReferralCode();
-    final shareText =
-        'Hey! I use PlainScan to scan HD documents, convert PDFs, and use unlimited AI tools.\n\n'
-        'Install PlainScan with my invite code: $code to get 1 Month of Unlimited PRO access for free!\n\n'
-        'Download PlainScan: https://plainscan.app/invite?ref=$code';
-
-    try {
-      await Share.share(shareText);
-    } catch (e) {
-      debugPrint('Error sharing app: $e');
-    }
+    await ReferralService.shareReferral();
   }
 
   static void showUpgradeSnackbar(String toolName) {

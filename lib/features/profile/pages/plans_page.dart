@@ -517,7 +517,7 @@ class PlansPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Get 1 Month Pro Free',
+                      'Get 50 Credits + 1 Month Pro Free',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -526,7 +526,7 @@ class PlansPage extends StatelessWidget {
                     ),
                     SizedBox(height: 2),
                     Text(
-                      'Invite friends to PlainScan to get 30 days of unlimited Pro access.',
+                      'Invite friends to PlainScan to get 50 bonus credits and 30 days of unlimited Pro access.',
                       style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
                     ),
                   ],

@@ -165,10 +165,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   
                   // Slogan
                   const Text(
-                    '52 TOOLS  •  ONE WORKSPACE',
+                    '56 TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w700,  
                       color: Color(0xFF64748B), // Custom slate accent
                       letterSpacing: 2.0,
                     ),

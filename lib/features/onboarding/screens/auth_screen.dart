@@ -5,6 +5,8 @@ import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/auth_controller.dart';
 import 'package:plainscan/core/services/auth_service.dart';
+import 'package:plainscan/core/services/referral_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -21,6 +23,7 @@ class _AuthScreenState extends State<AuthScreen>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _referralController = TextEditingController();
   final AuthController authController = Get.put(AuthController());
 
   bool _isPasswordVisible = false;
@@ -38,6 +41,7 @@ class _AuthScreenState extends State<AuthScreen>
       _nameController.clear();
       _emailController.clear();
       _passwordController.clear();
+      _referralController.clear();
       _formKey.currentState?.reset();
     }
   }
@@ -48,6 +52,7 @@ class _AuthScreenState extends State<AuthScreen>
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -80,6 +85,13 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     if (result.success) {
+      if (isSignUp) {
+        final refCode = _referralController.text.trim();
+        if (refCode.isNotEmpty) {
+          await StorageService.setPendingReferralCode(refCode);
+        }
+      }
+
       if (isSignUp || result.requiresVerification) {
         Get.toNamed(AppRoutes.verifyEmail, arguments: email);
         if (result.message != null && result.message!.isNotEmpty) {
@@ -100,6 +112,11 @@ class _AuthScreenState extends State<AuthScreen>
       } else if (result.requires2Fa) {
         Get.toNamed(AppRoutes.verify2Fa, arguments: email);
       } else {
+        final pendingCode = await StorageService.getPendingReferralCode();
+        if (pendingCode != null && pendingCode.isNotEmpty) {
+          await ReferralService.applyReferralCode(pendingCode);
+          await StorageService.clearPendingReferralCode();
+        }
         Get.offNamed(AppRoutes.home);
       }
     } else {
@@ -137,7 +154,7 @@ class _AuthScreenState extends State<AuthScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
@@ -373,6 +390,35 @@ class _AuthScreenState extends State<AuthScreen>
                             return null;
                           },
                         ),
+                        if (isSignUp) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _referralController,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              labelText: 'Referral Code (Optional)',
+                              hintText: 'e.g. PLAIN2026',
+                              prefixIcon: const Icon(Icons.card_giftcard_rounded, color: AppColors.primary),
+                              helperText: 'Have a friend\'s invite code? Enter it to get 50 bonus credits!',
+                              helperStyle: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
+                              filled: true,
+                              fillColor: Colors.white,
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.border,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _isLoading ? null : _submit,

@@ -7,13 +7,13 @@ class AllToolsController extends GetxController {
   final searchController = TextEditingController();
 
   final searchText = ''.obs;
-  final selectedFilter = '▦ All 52'.obs;
+  final selectedFilter = '▦ All 56'.obs;
   final recentTools = <ToolModel>[].obs;
 
   final List<ToolModel> tools = allPlainscanTools;
 
   final List<String> filters = [
-    '▦ All 52',
+    '▦ All 56',
     '📄 PDF Conversion',
     '🛠️ PDF Manipulation',
     '🔍 OCR & Scan',

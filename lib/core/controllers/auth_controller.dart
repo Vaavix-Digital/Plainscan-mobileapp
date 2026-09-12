@@ -5,6 +5,8 @@ import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/auth_service.dart';
+import 'package:plainscan/core/services/referral_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 
 class AuthController extends GetxController {
@@ -50,6 +52,11 @@ class AuthController extends GetxController {
       );
 
       if (result.success) {
+        final pendingCode = await StorageService.getPendingReferralCode();
+        if (pendingCode != null && pendingCode.isNotEmpty) {
+          await ReferralService.applyReferralCode(pendingCode);
+          await StorageService.clearPendingReferralCode();
+        }
         Get.offNamed(AppRoutes.home);
       } else {
         _showError(

@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/auth_service.dart';
+import 'package:plainscan/core/services/referral_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -36,6 +38,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     });
 
     if (result.success) {
+      final pendingCode = await StorageService.getPendingReferralCode();
+      if (pendingCode != null && pendingCode.isNotEmpty) {
+        await ReferralService.applyReferralCode(pendingCode);
+        await StorageService.clearPendingReferralCode();
+      }
       Get.offAllNamed(AppRoutes.home);
     } else {
       Get.rawSnackbar(
@@ -143,7 +150,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
                     hintText: '000000',
-                    hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.3), letterSpacing: 12),
+                    hintStyle: TextStyle(color: AppColors.secondaryText.withValues(alpha: 0.3), letterSpacing: 12),
                     counterText: '',
                     filled: true,
                     fillColor: Colors.white,

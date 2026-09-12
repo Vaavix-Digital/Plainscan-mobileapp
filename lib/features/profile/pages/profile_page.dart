@@ -235,7 +235,7 @@ class ProfilePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Share App — Get 1 Month Free',
+                              'Refer & Earn — 50 Credits + 1 Mo Free',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -244,7 +244,7 @@ class ProfilePage extends StatelessWidget {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Earn 30 days of unlimited PRO access when a friend installs PlainScan.',
+                              'Earn 50 credits & 1 month of unlimited PRO when a friend installs PlainScan.',
                               style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
                             ),
                           ],

@@ -10,10 +10,9 @@ void main() {
   });
 
   group('Referral & Unlimited Access Tests', () {
-    test('getMyReferralCode generates and persists unique code', () async {
+    test('getMyReferralCode returns mock code PLAIN2026 and persists', () async {
       final code1 = await StorageService.getMyReferralCode();
-      expect(code1, startsWith('PLAIN-'));
-      expect(code1.length, greaterThanOrEqualTo(10));
+      expect(code1, equals('PLAIN2026'));
 
       final code2 = await StorageService.getMyReferralCode();
       expect(code2, equals(code1));
@@ -30,7 +29,7 @@ void main() {
       expect(expiry!.isAfter(DateTime.now().add(const Duration(days: 28))), isTrue);
     });
 
-    test('applyReferralCode rejects own code and already redeemed code', () async {
+    test('applyReferralCode rejects own code, awards 50 credits, and rejects duplicates', () async {
       final myCode = await StorageService.getMyReferralCode();
 
       // Applying own code should fail
@@ -38,12 +37,17 @@ void main() {
       expect(resOwn['success'], isFalse);
       expect(resOwn['message'], contains('cannot use your own'));
 
-      // Applying valid friend code should succeed
+      // Initial credits
+      final initialCredits = await StorageService.getUserCredits();
+
+      // Applying valid friend code should succeed and award 50 credits
       const friendCode = 'PLAIN-FRIEND1';
       final resFriend = await StorageService.applyReferralCode(friendCode);
       expect(resFriend['success'], isTrue);
+      expect(resFriend['credits_awarded'], equals(50));
+      expect(await StorageService.getUserCredits(), equals(initialCredits + 50));
       expect(await StorageService.isProUser(), isTrue);
-      expect(await StorageService.getReferralsCount(), equals(1));
+      expect(await StorageService.getReferralsCount(), equals(6));
 
       // Redeeming same code twice should fail
       final resDuplicate = await StorageService.applyReferralCode(friendCode);
@@ -51,7 +55,7 @@ void main() {
       expect(resDuplicate['message'], contains('already redeemed'));
     });
 
-    testWidgets('ReferralShareScreen renders referral UI, share button, and redeem field',
+    testWidgets('ReferralShareScreen renders referral UI, Play Store share button, and apply field',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         const GetMaterialApp(
@@ -60,10 +64,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Share & Get Free Month'), findsOneWidget);
-      expect(find.text('Get 1 Month Unlimited Free'), findsOneWidget);
-      expect(find.text('Share PlainScan with Friends'), findsOneWidget);
-      expect(find.text('Redeem'), findsOneWidget);
+      expect(find.text('Share & Refer PlainScan'), findsOneWidget);
+      expect(find.text('Refer Friends & Earn Credits'), findsOneWidget);
+      expect(find.text('Share PlainScan via Google Play'), findsOneWidget);
+      expect(find.text('Apply Code'), findsOneWidget);
     });
   });
 }
