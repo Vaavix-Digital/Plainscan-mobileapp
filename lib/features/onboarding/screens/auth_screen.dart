@@ -117,7 +117,28 @@ class _AuthScreenState extends State<AuthScreen>
           await ReferralService.applyReferralCode(pendingCode);
           await StorageService.clearPendingReferralCode();
         }
-        Get.offNamed(AppRoutes.home);
+        Get.offAllNamed(AppRoutes.home);
+        Get.rawSnackbar(
+          messageText: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Signed in successfully!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.emerald,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(12),
+          borderRadius: 8,
+          duration: const Duration(seconds: 3),
+        );
       }
     } else {
       Get.rawSnackbar(

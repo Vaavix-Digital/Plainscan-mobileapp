@@ -36,9 +36,12 @@ class ApiConstants {
   static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.plainscan.app&hl=en';
 
   // 🔑 Google Sign-In Configuration
-  // Required on Android to obtain the idToken for backend verification.
-  // Replace with the actual Web Client ID from Google Cloud Console.
-  static const String googleServerClientId = 'YOUR_GOOGLE_SIGN_IN_WEB_CLIENT_ID.apps.googleusercontent.com';
+ 
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '690500109578-ojt7n2f6pbf6im3d7prb2adom37gfus3.apps.googleusercontent.com',
+  );
+
 
     static const String uploadFile =
       'files/upload';

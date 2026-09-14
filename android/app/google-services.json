@@ -1,0 +1,38 @@
+{
+  "project_info": {
+    "project_number": "690500109578",
+    "project_id": "plainscan-54b66",
+    "storage_bucket": "plainscan-54b66.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:690500109578:android:e9e4449f9254d4c663e6f3",
+        "android_client_info": {
+          "package_name": "com.plainscan.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "690500109578-ojt7n2f6pbf6im3d7prb2adom37gfus3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plainscan.app",
+            "certificate_hash": "cff34bc74aeef9ba303d5e10cf00e9598bcb9a9d"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAj572xVMBVD4gTOTPO40vt-oOGDSfVQ4g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

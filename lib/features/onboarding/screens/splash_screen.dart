@@ -82,8 +82,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1E224F), // Deep Slate Navy
-              Color(0xFF0C0D21), // Deep Space Near-Black
+              Color(0xFF1E224F), 
+              Color(0xFF0C0D21), 
             ],
           ),
         ),
@@ -104,8 +104,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF6366F1), // Bright Indigo
-                          Color(0xFF4F46E5), // Indigo Accent
+                          Color(0xFF6366F1), 
+                          Color(0xFF4F46E5), 
                         ],
                       ),
                       borderRadius: BorderRadius.circular(28),
@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF818CF8), // Matching Light Violet
+                          color: Color(0xFF818CF8), 
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -163,13 +163,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   const SizedBox(height: 16),
                   
-                  // Slogan
+                
                   const Text(
                     '56 TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,  
-                      color: Color(0xFF64748B), // Custom slate accent
+                      color: Color(0xFF64748B), 
                       letterSpacing: 2.0,
                     ),
                   ),

@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  firebase_core
   flutter_doc_scanner
   permission_handler_windows
   share_plus

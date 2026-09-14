@@ -12,6 +12,8 @@ class AuthResult {
   final String? refreshToken;
   final String? userId;
   final String? message;
+  final String? picture;
+  final String? role;
 
   AuthResult({
     required this.success,
@@ -22,6 +24,8 @@ class AuthResult {
     this.refreshToken,
     this.userId,
     this.message,
+    this.picture,
+    this.role,
   });
 }
 
@@ -199,9 +203,11 @@ class AuthService {
 
   static Future<AuthResult> googleLogin({
     required String token,
+    http.Client? client,
   }) async {
     try {
-      final response = await _client.post(
+      final httpClient = client ?? _client;
+      final response = await httpClient.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.googleLogin}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -211,18 +217,39 @@ class AuthService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
-        final data = responseData['data'] ?? {};
-        final tokenVal = data['accessToken'] ?? '';
-        final refreshTokenVal = data['refreshToken'] ?? '';
-        final email = data['user']?['email'] ?? '';
-        final name = data['user']?['name'] ?? 'User';
-        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
+        final data = responseData['data'] is Map<String, dynamic>
+            ? responseData['data'] as Map<String, dynamic>
+            : <String, dynamic>{};
+        final tokenVal = data['accessToken']?.toString() ?? '';
+        final refreshTokenVal = data['refreshToken']?.toString() ?? '';
+        final user = data['user'] is Map<String, dynamic>
+            ? data['user'] as Map<String, dynamic>
+            : <String, dynamic>{};
+        final userId = user['user_id']?.toString() ?? '';
+        final email = user['email']?.toString() ?? '';
+        final name = user['name']?.toString() ?? 'User';
+        final picture = user['picture']?.toString();
+        final role = user['role']?.toString() ?? 'user';
+        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
 
         await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
-        await StorageService.saveUser(email: email, name: name);
-        await StorageService.savePlan(plan.toString());
+        await StorageService.saveUser(
+          email: email,
+          name: name,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
+        await StorageService.savePlan(plan);
 
-        return AuthResult(success: true, token: tokenVal, refreshToken: refreshTokenVal);
+        return AuthResult(
+          success: true,
+          token: tokenVal,
+          refreshToken: refreshTokenVal,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
       } else {
         final errorMsg = _parseError(response.body);
         return AuthResult(success: false, errorMessage: errorMsg);

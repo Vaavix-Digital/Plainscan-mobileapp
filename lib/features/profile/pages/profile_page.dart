@@ -51,13 +51,23 @@ class ProfilePage extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: const CircleAvatar(
-                      radius: 36,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        color: AppColors.primary,
-                        size: 40,
+                    child: Obx(
+                      () => CircleAvatar(
+                        radius: 36,
+                        backgroundColor: Colors.white,
+                        backgroundImage: controller.userPicture.value.isNotEmpty
+                            ? NetworkImage(controller.userPicture.value)
+                            : null,
+                        onBackgroundImageError: controller.userPicture.value.isNotEmpty
+                            ? (_, stackTrace) {}
+                            : null,
+                        child: controller.userPicture.value.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                color: AppColors.primary,
+                                size: 40,
+                              )
+                            : null,
                       ),
                     ),
                   ),

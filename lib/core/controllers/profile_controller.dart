@@ -12,6 +12,9 @@ import 'package:plainscan/core/services/referral_service.dart';
 class ProfileController extends GetxController {
   final RxString userName = 'User'.obs;
   final RxString userEmail = ''.obs;
+  final RxString userPicture = ''.obs;
+  final RxString userId = ''.obs;
+  final RxString userRole = 'user'.obs;
   final RxString userPlan = 'free'.obs;
   final RxBool isPro = false.obs;
   final RxInt userCredits = 250.obs;
@@ -36,6 +39,9 @@ class ProfileController extends GetxController {
       final localPlan = await StorageService.getPlan();
       final pro = await StorageService.isProUser();
       final credits = await StorageService.getUserCredits();
+      final picture = await StorageService.getPicture();
+      final id = await StorageService.getUserId();
+      final role = await StorageService.getRole();
 
       userName.value =
           name != null && name.trim().isNotEmpty
@@ -47,6 +53,16 @@ class ProfileController extends GetxController {
               ? email.trim()
               : 'No email associated';
 
+      if (picture != null && picture.isNotEmpty) {
+        userPicture.value = picture;
+      }
+      if (id != null && id.isNotEmpty) {
+        userId.value = id;
+      }
+      if (role != null && role.isNotEmpty) {
+        userRole.value = role;
+      }
+
       userPlan.value = localPlan;
       isPro.value = pro;
       userCredits.value = credits;
@@ -57,6 +73,10 @@ class ProfileController extends GetxController {
           final serverPlan = profile['plan_id']?.toString() ?? profile['plan']?.toString() ?? 'free';
           userPlan.value = serverPlan;
           isPro.value = serverPlan.toLowerCase() == 'pro' || serverPlan.toLowerCase().contains('pro');
+          final pic = profile['picture']?.toString();
+          if (pic != null && pic.isNotEmpty) {
+            userPicture.value = pic;
+          }
         }
       });
 

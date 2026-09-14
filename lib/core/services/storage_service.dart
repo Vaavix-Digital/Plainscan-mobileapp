@@ -13,6 +13,9 @@ class StorageService {
   static const String _keyUserCredits = 'user_credits';
   static const String _keyRedeemedCodes = 'redeemed_referral_codes';
   static const String _keyPendingReferralCode = 'pending_referral_code';
+  static const String _keyUserId = 'user_id';
+  static const String _keyPicture = 'user_picture';
+  static const String _keyRole = 'user_role';
 
   static Future<void> saveTokens({
     required String token,
@@ -26,10 +29,22 @@ class StorageService {
   static Future<void> saveUser({
     required String email,
     required String name,
+    String? userId,
+    String? picture,
+    String? role,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyEmail, email);
     await prefs.setString(_keyName, name);
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.setString(_keyUserId, userId);
+    }
+    if (picture != null && picture.isNotEmpty) {
+      await prefs.setString(_keyPicture, picture);
+    }
+    if (role != null && role.isNotEmpty) {
+      await prefs.setString(_keyRole, role);
+    }
   }
 
   static Future<void> savePlan(String plan) async {
@@ -206,6 +221,21 @@ class StorageService {
     return prefs.getString(_keyName);
   }
 
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserId);
+  }
+
+  static Future<String?> getPicture() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPicture);
+  }
+
+  static Future<String?> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRole);
+  }
+
   static Future<bool> hasSession() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
@@ -226,6 +256,9 @@ class StorageService {
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyName);
     await prefs.remove(_keyPlan);
+    await prefs.remove(_keyUserId);
+    await prefs.remove(_keyPicture);
+    await prefs.remove(_keyRole);
     await prefs.remove('is_guest');
   }
 
