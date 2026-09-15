@@ -14,12 +14,24 @@
       },
       "oauth_client": [
         {
+          "client_id": "690500109578-2kcufdob6hqvs9mo1m41jl6c6rfds926.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plainscan.app",
+            "certificate_hash": "a66da724ebdbbc9e2bbc886238de6cef25fa6bd9"
+          }
+        },
+        {
           "client_id": "690500109578-ojt7n2f6pbf6im3d7prb2adom37gfus3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.plainscan.app",
             "certificate_hash": "cff34bc74aeef9ba303d5e10cf00e9598bcb9a9d"
           }
+        },
+        {
+          "client_id": "690500109578-aj7b3h7fctv2sed7c8jnl8i3ljg6n7go.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
@@ -29,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "690500109578-aj7b3h7fctv2sed7c8jnl8i3ljg6n7go.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "690500109578-5o8ev3emodqeabu5ekf144mrvhaelo13.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.plainscan.app"
+              }
+            }
+          ]
         }
       }
     }
