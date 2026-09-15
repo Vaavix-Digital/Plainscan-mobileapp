@@ -17,9 +17,9 @@ class PlansPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Subscription Plans',
-          style: TextStyle(
+        title: Text(
+          'Subscription Plans'.tr,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: AppColors.text,
           ),
@@ -59,7 +59,7 @@ class PlansPage extends StatelessWidget {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Try Again'),
+                    child: Text('Try Again'.tr),
                   ),
                 ],
               ),
@@ -77,20 +77,20 @@ class PlansPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header Title & Subtitle
-                const Text(
-                  'Unlock Full Power with Pro',
+                Text(
+                  'Unlock Full Power with Pro'.tr,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppColors.text,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Access high-definition scanning, batch AI enhancements, full OCR extractions, and cloud storage.',
+                Text(
+                  'Access high-definition scanning, batch AI enhancements, full OCR extractions, and cloud storage.'.tr,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.secondaryText,
                     height: 1.4,
@@ -155,7 +155,7 @@ class PlansPage extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'Monthly Billing',
+                      'Monthly Billing'.tr,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: !isYearly ? FontWeight.bold : FontWeight.w500,
@@ -189,7 +189,7 @@ class PlansPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Annual',
+                        'Annual'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: isYearly ? FontWeight.bold : FontWeight.w500,
@@ -203,9 +203,9 @@ class PlansPage extends StatelessWidget {
                           color: const Color(0xFF10B981),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
-                          'SAVE 40%',
-                          style: TextStyle(
+                        child: Text(
+                          'SAVE 40%'.tr,
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -275,7 +275,7 @@ class PlansPage extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isCurrent ? 'YOUR ACTIVE PLAN' : 'MOST POPULAR',
+                      isCurrent ? 'YOUR ACTIVE PLAN'.tr : 'MOST POPULAR'.tr,
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -312,7 +312,7 @@ class PlansPage extends StatelessWidget {
                             border: Border.all(color: const Color(0xFFF59E0B)),
                           ),
                           child: Text(
-                            'Save ${plan.savingsPercentage}%',
+                            'Save @percent%'.trParams({'percent': '${plan.savingsPercentage}'}),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -343,7 +343,7 @@ class PlansPage extends StatelessWidget {
                     children: [
                       Text(
                         plan.isFree
-                            ? 'Free'
+                            ? 'Free'.tr
                             : '${plan.currencySymbol}${plan.priceMonthly == 0 ? 0 : (isYearly ? (plan.priceYearly % 1 == 0 ? plan.priceYearly.toInt() : plan.priceYearly) : (plan.priceMonthly % 1 == 0 ? plan.priceMonthly.toInt() : plan.priceMonthly))}',
                         style: const TextStyle(
                           fontSize: 32,
@@ -354,7 +354,7 @@ class PlansPage extends StatelessWidget {
                       if (!plan.isFree) ...[
                         const SizedBox(width: 4),
                         Text(
-                          isYearly ? '/year' : '/month',
+                          isYearly ? '/year'.tr : '/month'.tr,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -368,7 +368,10 @@ class PlansPage extends StatelessWidget {
                   if (!plan.isFree && isYearly) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Billed annually at ${plan.formattedPrice(true)} (${plan.formattedMonthlyEquivalent()})',
+                      'Billed annually at @annualPrice (@monthlyEquivalent)'.trParams({
+                        'annualPrice': plan.formattedPrice(true),
+                        'monthlyEquivalent': plan.formattedMonthlyEquivalent(),
+                      }),
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF10B981),
@@ -391,7 +394,6 @@ class PlansPage extends StatelessWidget {
                           const Icon(
                             Icons.check_circle_rounded,
                             color: AppColors.primary,
-                            size: 18,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -419,7 +421,6 @@ class PlansPage extends StatelessWidget {
                           const Icon(
                             Icons.remove_circle_outline_rounded,
                             color: Color(0xFF94A3B8),
-                            size: 18,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -459,8 +460,8 @@ class PlansPage extends StatelessWidget {
                       ),
                       child: Text(
                         isCurrent
-                            ? 'Current Plan'
-                            : (plan.ctaLabel ?? (plan.isFree ? 'Get Started' : 'Upgrade to ${plan.name}')),
+                            ? 'Current Plan'.tr
+                            : (plan.ctaLabel != null ? plan.ctaLabel!.tr : (plan.isFree ? 'Get Started'.tr : 'Upgrade to @plan'.trParams({'plan': plan.name}))),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -512,22 +513,22 @@ class PlansPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Get 50 Credits + 1 Month Pro Free',
-                      style: TextStyle(
+                      'Get 50 Credits + 1 Month Pro Free'.tr,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: AppColors.text,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Invite friends to PlainScan to get 50 bonus credits and 30 days of unlimited Pro access.',
-                      style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+                      'Invite friends to PlainScan to get 50 bonus credits and 30 days of unlimited Pro access.'.tr,
+                      style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
                     ),
                   ],
                 ),
@@ -540,9 +541,9 @@ class PlansPage extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () => Get.toNamed(AppRoutes.referral),
               icon: const Icon(Icons.share_rounded, color: Color(0xFFD97706), size: 18),
-              label: const Text(
-                'Invite Friends Now',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+              label: Text(
+                'Invite Friends Now'.tr,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),

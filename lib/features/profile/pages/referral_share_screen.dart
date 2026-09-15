@@ -88,7 +88,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
   void _copyCode() {
     Clipboard.setData(ClipboardData(text: _myCode));
     Get.snackbar(
-      'Code Copied! 📋',
+      'Code Copied! 📋'.tr,
       'Referral code $_myCode copied to clipboard.',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.white,
@@ -102,7 +102,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
     final link = _shareLink.isNotEmpty ? _shareLink : 'https://plainscan.com/invite/$_myCode';
     Clipboard.setData(ClipboardData(text: link));
     Get.snackbar(
-      'Link Copied! 🔗',
+      'Link Copied! 🔗'.tr,
       'Invite link copied to clipboard.',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.white,
@@ -175,9 +175,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.text),
           onPressed: () => Get.back(),
         ),
-        title: const Text(
-          'Share & Refer PlainScan',
-          style: TextStyle(
+        title: Text(
+          'Share & Refer PlainScan'.tr,
+          style: const TextStyle(
             color: AppColors.text,
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -224,20 +224,20 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                           child: const Icon(Icons.card_giftcard_rounded, size: 48, color: Colors.white),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Refer Friends & Earn Credits',
+                        Text(
+                          'Refer Friends & Earn Credits'.tr,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Give 50 credits, get 50 credits! When your friend joins PlainScan using your invite, you both receive 50 AI credits and 1 month of Unlimited PRO access.',
+                        Text(
+                          'Give 50 credits, get 50 credits! When your friend joins PlainScan using your invite, you both receive 50 AI credits and 1 month of Unlimited PRO access.'.tr,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
                             height: 1.4,
@@ -255,7 +255,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         child: _buildStatCard(
                           icon: Icons.people_alt_rounded,
                           color: AppColors.primary,
-                          label: 'Friends Referred',
+                          label: 'Friends Referred'.tr,
                           value: '$_totalReferred',
                         ),
                       ),
@@ -264,7 +264,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         child: _buildStatCard(
                           icon: Icons.stars_rounded,
                           color: AppColors.amber,
-                          label: 'Credits Earned',
+                          label: 'Credits Earned'.tr,
                           value: '$_creditsEarned',
                         ),
                       ),
@@ -273,7 +273,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         child: _buildStatCard(
                           icon: Icons.account_balance_wallet_outlined,
                           color: AppColors.emerald,
-                          label: 'Available Credits',
+                          label: 'Available Credits'.tr,
                           value: '$_userCredits',
                         ),
                       ),
@@ -299,9 +299,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Your Unique Referral Code',
-                          style: TextStyle(
+                        Text(
+                          'Your Referral Code'.tr,
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.secondaryText,
@@ -330,9 +330,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                               TextButton.icon(
                                 onPressed: _copyCode,
                                 icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.primary),
-                                label: const Text(
-                                  'Copy',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                label: Text(
+                                  'Copy Code'.tr,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
                                 ),
                               ),
                             ],
@@ -341,9 +341,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         const SizedBox(height: 14),
 
                         // Share Link Box
-                        const Text(
-                          'Your Share Link',
-                          style: TextStyle(
+                        Text(
+                          'Your Share Link'.tr,
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.secondaryText,
@@ -378,9 +378,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text(
-                                  'Copy Link',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                                child: Text(
+                                  'Copy Code'.tr,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                                 ),
                               ),
                             ],
@@ -392,9 +392,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         ElevatedButton.icon(
                           onPressed: _shareApp,
                           icon: const Icon(Icons.share_rounded, size: 18),
-                          label: const Text(
-                            'Share PlainScan via Google Play',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          label: Text(
+                            'Share Your Code'.tr,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -411,7 +411,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                           onPressed: _openPlayStore,
                           icon: const Icon(Icons.shop_two_rounded, size: 18, color: AppColors.primary),
                           label: const Text(
-                            'View on Google Play Store',
+                            'Google Play',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
                           ),
                           style: OutlinedButton.styleFrom(
@@ -491,18 +491,18 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Have a Friend\'s Referral Code?',
-                          style: TextStyle(
+                        Text(
+                          'Have a Friend\'s Referral Code?'.tr,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Enter their code below to receive 50 bonus credits and unlock 1 month of unlimited PRO access.',
-                          style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+                        Text(
+                          'Enter their code below to receive 50 bonus credits and unlock 1 month of unlimited PRO access.'.tr,
+                          style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
                         ),
                         const SizedBox(height: 14),
                         Row(
@@ -544,7 +544,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                                       width: 16,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     )
-                                  : const Text('Apply Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  : Text('Redeem'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
@@ -564,9 +564,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'How Referrals Work',
-                          style: TextStyle(
+                        Text(
+                          'How Referrals Work'.tr,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,

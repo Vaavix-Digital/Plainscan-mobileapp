@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/app/app.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/notification_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,5 +15,7 @@ void main() async {
   }
   Get.put(ScanController(), permanent: true);
   Get.put(NotificationService(), permanent: true);
-  runApp(const PlainScanApp());
+  final savedLanguage = await StorageService.getLanguage();
+  runApp(PlainScanApp(initialLocale: Locale(savedLanguage)));
 }
+

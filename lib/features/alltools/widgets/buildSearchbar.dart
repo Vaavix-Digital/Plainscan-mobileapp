@@ -17,7 +17,7 @@ Widget buildSearchBar() {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -37,7 +37,7 @@ Widget buildSearchBar() {
               size: 20,
               color: Color(0xFF71809D),
             ),
-            hintText: 'Search tools',
+            hintText: 'Search 56+ tools...'.tr,
             hintStyle: const TextStyle(
               fontSize: 14,
               color: Color(0xFF71809D),

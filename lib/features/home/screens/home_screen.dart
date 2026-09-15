@@ -82,8 +82,8 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Expanded(child: _navItem(controller, Icons.home_outlined, 'Home', 0)),
-            Expanded(child: _navItem(controller, Icons.grid_view_outlined, 'Tools', 1)),
+            Expanded(child: _navItem(controller, Icons.home_outlined, 'Home'.tr, 0)),
+            Expanded(child: _navItem(controller, Icons.grid_view_outlined, 'Tools'.tr, 1)),
             
             // Central scan button
             Container(
@@ -100,8 +100,8 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             
-            Expanded(child: _navItem(controller, Icons.auto_awesome_outlined, 'AI', 2)),
-            Expanded(child: _navItem(controller, Icons.person_outline, 'Profile', 3)),
+            Expanded(child: _navItem(controller, Icons.auto_awesome_outlined, 'AI'.tr, 2)),
+            Expanded(child: _navItem(controller, Icons.person_outline, 'Profile'.tr, 3)),
           ],
         ),
       ),

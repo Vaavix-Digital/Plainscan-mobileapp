@@ -147,6 +147,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Conversion',
     inputFormat: 'image (.jpg)',
     outputFormat: '.pdf',
+    isMultiFile: true,
     description: 'Convert single or multiple JPG images into a clean PDF document.',
   ),
   ToolModel(
@@ -158,6 +159,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Conversion',
     inputFormat: 'image (.png)',
     outputFormat: '.pdf',
+    isMultiFile: true,
     description: 'Convert PNG images with layout sizing into a formatted PDF file.',
   ),
   ToolModel(
@@ -169,6 +171,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'PDF Conversion',
     inputFormat: 'image (.webp)',
     outputFormat: '.pdf',
+    isMultiFile: true,
     description: 'Convert WebP image files into a single PDF document.',
   ),
   ToolModel(

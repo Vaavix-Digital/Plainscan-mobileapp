@@ -119,13 +119,13 @@ class _AuthScreenState extends State<AuthScreen>
         }
         Get.offAllNamed(AppRoutes.home);
         Get.rawSnackbar(
-          messageText: const Row(
+          messageText: Row(
             children: [
-              Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
               Text(
-                'Signed in successfully!',
-                style: TextStyle(
+                'Signed in successfully!'.tr,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -143,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen>
     } else {
       Get.rawSnackbar(
         messageText: Text(
-          result.errorMessage ?? 'Authentication failed',
+          result.errorMessage?.tr ?? 'Authentication failed'.tr,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -197,20 +197,20 @@ class _AuthScreenState extends State<AuthScreen>
                 ],
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Welcome to PlainScan',
+              Text(
+                'Welcome to PlainScan'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Scan, clean, and organize your files instantly',
+              Text(
+                'Scan, clean, and organize your files instantly'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.secondaryText),
+                style: const TextStyle(fontSize: 14, color: AppColors.secondaryText),
               ),
               const SizedBox(height: 32),
 
@@ -235,9 +235,9 @@ class _AuthScreenState extends State<AuthScreen>
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
                   dividerColor: Colors.transparent,
-                  tabs: const [
-                    Tab(text: 'Sign In'),
-                    Tab(text: 'Sign Up'),
+                  tabs: [
+                    Tab(text: 'Sign In'.tr),
+                    Tab(text: 'Sign Up'.tr),
                   ],
                 ),
               ),
@@ -257,7 +257,7 @@ class _AuthScreenState extends State<AuthScreen>
                           TextFormField(
                             controller: _nameController,
                             decoration: InputDecoration(
-                              labelText: 'Full Name',
+                              labelText: 'Full Name'.tr,
                               prefixIcon: const Icon(Icons.person_outline),
                               filled: true,
                               fillColor: Colors.white,
@@ -290,7 +290,7 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your name';
+                                return 'Please enter your name'.tr;
                               }
                               return null;
                             },
@@ -301,7 +301,7 @@ class _AuthScreenState extends State<AuthScreen>
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
-                            labelText: 'Email Address',
+                            labelText: 'Email Address'.tr,
                             prefixIcon: const Icon(Icons.email_outlined),
                             filled: true,
                             fillColor: Colors.white,
@@ -334,19 +334,19 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your email';
+                              return 'Please enter your email'.tr;
                             }
                             final trimmed = value.trim();
                             final emailRegex = RegExp(
                               r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
                             );
                             if (!emailRegex.hasMatch(trimmed)) {
-                              return 'Please enter a valid email address';
+                              return 'Please enter a valid email address'.tr;
                             }
                             final parts = trimmed.split('@');
                             if (parts.length == 2 && parts[1].toLowerCase() == 'gmail.com') {
                               if (parts[0].length < 6) {
-                                return 'Gmail addresses must be at least 6 characters before @';
+                                return 'Gmail addresses must be at least 6 characters before @'.tr;
                               }
                             }
                             return null;
@@ -357,7 +357,7 @@ class _AuthScreenState extends State<AuthScreen>
                           controller: _passwordController,
                           obscureText: !_isPasswordVisible,
                           decoration: InputDecoration(
-                            labelText: 'Password',
+                            labelText: 'Password'.tr,
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -403,10 +403,10 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
+                              return 'Please enter your password'.tr;
                             }
                             if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
+                              return 'Password must be at least 6 characters'.tr;
                             }
                             return null;
                           },
@@ -417,10 +417,10 @@ class _AuthScreenState extends State<AuthScreen>
                             controller: _referralController,
                             textCapitalization: TextCapitalization.characters,
                             decoration: InputDecoration(
-                              labelText: 'Referral Code (Optional)',
+                              labelText: 'Referral Code (Optional)'.tr,
                               hintText: 'e.g. PLAIN2026',
                               prefixIcon: const Icon(Icons.card_giftcard_rounded, color: AppColors.primary),
-                              helperText: 'Have a friend\'s invite code? Enter it to get 50 bonus credits!',
+                              helperText: 'Have a friend\'s invite code? Enter it to get 50 bonus credits!'.tr,
                               helperStyle: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
                               filled: true,
                               fillColor: Colors.white,
@@ -463,8 +463,8 @@ class _AuthScreenState extends State<AuthScreen>
                                     ),
                                   ),
                                 )
-                              : Text(
-                                  isSignUp ? 'Create Account' : 'Sign In',
+                               : Text(
+                                  isSignUp ? 'Create Account'.tr : 'Sign In'.tr,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -479,16 +479,16 @@ class _AuthScreenState extends State<AuthScreen>
 
               const SizedBox(height: 24),
               Row(
-                children: const [
-                  Expanded(child: Divider(color: AppColors.border)),
+                children: [
+                  const Expanded(child: Divider(color: AppColors.border)),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
-                      'OR',
-                      style: TextStyle(color: AppColors.secondaryText),
+                      'OR'.tr,
+                      style: const TextStyle(color: AppColors.secondaryText),
                     ),
                   ),
-                  Expanded(child: Divider(color: AppColors.border)),
+                  const Expanded(child: Divider(color: AppColors.border)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -499,7 +499,7 @@ class _AuthScreenState extends State<AuthScreen>
     onPressed: authController.isLoading.value
         ? null
         : authController.handleGoogleLogin,
-        icon: FaIcon(
+        icon: const FaIcon(
           FontAwesomeIcons.google,
           size: 20,
           color: AppColors.amber,
@@ -507,8 +507,8 @@ class _AuthScreenState extends State<AuthScreen>
    
     label: Text(
       authController.isLoading.value
-          ? 'Signing in...'
-          : 'Continue with Google',
+          ? 'Signing in...'.tr
+          : 'Continue with Google'.tr,
       style: const TextStyle(
         color: AppColors.text,
       ),

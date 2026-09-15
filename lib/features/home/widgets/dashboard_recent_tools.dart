@@ -14,9 +14,9 @@ Widget buildDashboardRecentTools() {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Recent Tools',
-            style: TextStyle(
+          Text(
+            'Recent Tools'.tr,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.text,
@@ -30,9 +30,9 @@ Widget buildDashboardRecentTools() {
                 Get.to(() => AllTools());
               }
             },
-            child: const Text(
-              'View All Tools',
-              style: TextStyle(
+            child: Text(
+              'View All'.tr,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
@@ -59,28 +59,19 @@ Widget buildDashboardRecentTools() {
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
+                children: [
+                  const Icon(
                     Icons.history_outlined,
                     size: 38,
                     color: Color(0xFF94A3B8),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Text(
-                    'No recent tools found',
-                    style: TextStyle(
+                    'No recent tools used yet'.tr,
+                    style: const TextStyle(
                       color: Color(0xFF20243D),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Use any tool to see it appear here.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF747A91),
-                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -143,7 +134,7 @@ Widget buildDashboardRecentTools() {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                tool.name,
+                                tool.name.tr,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -154,7 +145,7 @@ Widget buildDashboardRecentTools() {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                tool.category ?? '',
+                                (tool.category ?? '').tr,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Color(0xFF4C5CE8),
@@ -173,7 +164,7 @@ Widget buildDashboardRecentTools() {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            isFree ? 'FREE' : 'PRO',
+                            (isFree ? 'FREE' : 'PRO').tr,
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,

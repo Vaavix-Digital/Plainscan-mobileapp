@@ -20,9 +20,9 @@ class ProfilePage extends StatelessWidget {
       backgroundColor: AppColors.background,
 
       appBar: AppBar(
-        title: const Text(
-          'Profile Settings',
-          style: TextStyle(
+        title: Text(
+          'Profile Settings'.tr,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -121,7 +121,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        controller.isPro.value ? 'PRO Account' : 'Free Account',
+                        controller.isPro.value ? 'PRO Account'.tr : 'Free Account'.tr,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -164,15 +164,15 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.star,
                         color: Colors.white,
                         size: 32,
                       ),
 
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
 
                       Expanded(
                         child: Column(
@@ -180,19 +180,19 @@ class ProfilePage extends StatelessWidget {
                               CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Upgrade to Premium',
-                              style: TextStyle(
+                              'Upgrade to Premium'.tr,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
 
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
 
                             Text(
-                              'Access AI translation, batch editing, and auto-crop accuracy.',
-                              style: TextStyle(
+                              'Access AI translation, batch editing, and auto-crop accuracy.'.tr,
+                              style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
                               ),
@@ -201,7 +201,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
 
-                      Icon(
+                      const Icon(
                         Icons.chevron_right,
                         color: Colors.white,
                       ),
@@ -240,22 +240,22 @@ class ProfilePage extends StatelessWidget {
                         child: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFD97706), size: 24),
                       ),
                       const SizedBox(width: 14),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Refer & Earn — 50 Credits + 1 Mo Free',
-                              style: TextStyle(
+                              'Refer & Earn — 50 Credits + 1 Mo Free'.tr,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                                 color: AppColors.text,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              'Earn 50 credits & 1 month of unlimited PRO when a friend installs PlainScan.',
-                              style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
+                              'Earn 50 credits & 1 month of unlimited PRO when a friend installs PlainScan.'.tr,
+                              style: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
                             ),
                           ],
                         ),
@@ -272,9 +272,9 @@ class ProfilePage extends StatelessWidget {
               // Progress
               // ─────────────────────────────
 
-              const Text(
-                'My Progress',
-                style: TextStyle(
+              Text(
+                'My Progress'.tr,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
@@ -287,7 +287,7 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      'Total Scans',
+                      'Total Scans'.tr,
                       '12',
                       Icons.document_scanner,
                     ),
@@ -297,7 +297,7 @@ class ProfilePage extends StatelessWidget {
 
                   Expanded(
                     child: _buildStatCard(
-                      'OCR Usage',
+                      'OCR Usage'.tr,
                       '4/10',
                       Icons.text_fields,
                     ),
@@ -307,7 +307,7 @@ class ProfilePage extends StatelessWidget {
 
                   Expanded(
                     child: _buildStatCard(
-                      'Shared',
+                      'Shared'.tr,
                       '8',
                       Icons.share,
                     ),
@@ -321,9 +321,9 @@ class ProfilePage extends StatelessWidget {
               // Settings
               // ─────────────────────────────
 
-              const Text(
-                'Settings & Preferences',
-                style: TextStyle(
+              Text(
+                'Settings & Preferences'.tr,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
@@ -349,7 +349,7 @@ class ProfilePage extends StatelessWidget {
                         Icons.image_outlined,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Scan Quality'),
+                      title: Text('Scan Quality'.tr),
                       trailing: const Text(
                         'HD (1080p)',
                         style: TextStyle(
@@ -369,8 +369,8 @@ class ProfilePage extends StatelessWidget {
                     Obx(
                       () => SwitchListTile(
                         value: controller.autoSave.value,
-                        title: const Text(
-                          'Auto-Save to Photo Gallery',
+                        title: Text(
+                          'Auto-Save to Photo Gallery'.tr,
                         ),
                         secondary: const Icon(
                           Icons.photo_library_outlined,
@@ -391,8 +391,8 @@ class ProfilePage extends StatelessWidget {
                       () => SwitchListTile(
                         value:
                             controller.cloudBackup.value,
-                        title: const Text(
-                          'Auto Cloud Sync',
+                        title: Text(
+                          'Auto Cloud Sync'.tr,
                         ),
                         secondary: const Icon(
                           Icons.cloud_sync_outlined,
@@ -413,8 +413,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.notifications_active_outlined,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Notifications & Alerts'),
-                      subtitle: const Text('View recent tool activity and update notices'),
+                      title: Text('Notifications & Alerts'.tr),
+                      subtitle: Text('View recent tool activity and update notices'.tr),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => showNotificationsBottomSheet(context),
                     ),
@@ -429,12 +429,12 @@ class ProfilePage extends StatelessWidget {
                         Icons.workspace_premium_outlined,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Plans & Pricing'),
+                      title: Text('Plans & Pricing'.tr),
                       subtitle: Obx(
                         () => Text(
                           controller.isPro.value
-                              ? 'Active Plan: ${controller.userPlan.value.toUpperCase()}'
-                              : 'Upgrade to Pro for unlimited AI & OCR',
+                              ? 'Active Plan: @plan'.trParams({'plan': controller.userPlan.value.toUpperCase()})
+                              : 'Upgrade to Pro for unlimited AI & OCR'.tr,
                         ),
                       ),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
@@ -451,8 +451,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.card_giftcard_rounded,
                         color: Color(0xFFD97706),
                       ),
-                      title: const Text('Share & Get 1 Month Free'),
-                      subtitle: const Text('Invite friends to get unlimited PRO access'),
+                      title: Text('Share & Get 1 Month Free'.tr),
+                      subtitle: Text('Invite friends to get unlimited PRO access'.tr),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -460,9 +460,9 @@ class ProfilePage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: const Color(0xFFF59E0B)),
                         ),
-                        child: const Text(
-                          'FREE PRO',
-                          style: TextStyle(
+                        child: Text(
+                          'FREE PRO'.tr,
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFD97706),
@@ -482,7 +482,7 @@ class ProfilePage extends StatelessWidget {
                         Icons.system_update_rounded,
                         color: Color(0xFF10B981),
                       ),
-                      title: const Text('Check for Tool Updates'),
+                      title: Text('Check for Tool Updates'.tr),
                       subtitle: const Text('Version 1.0.0 (Build 3)'),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => AppUpdateService.showUpdateDialog(isManualCheck: true),
@@ -498,8 +498,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.translate_rounded,
                         color: AppColors.blue,
                       ),
-                      title: const Text('App Language'),
-                      subtitle: const Text('Change display and tool language'),
+                      title: Text('App Language'.tr),
+                      subtitle: Text('Change display and tool language'.tr),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => Get.toNamed(AppRoutes.language, arguments: {'isStandalone': true}),
                     ),
@@ -514,8 +514,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.verified_user_outlined,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Camera & App Permissions'),
-                      subtitle: const Text('Manage Camera and Notification access'),
+                      title: Text('Camera & App Permissions'.tr),
+                      subtitle: Text('Manage Camera and Notification access'.tr),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => AppPermissionService.openSettings(),
                     ),
@@ -530,8 +530,8 @@ class ProfilePage extends StatelessWidget {
                         Icons.explore_outlined,
                         color: AppColors.purple,
                       ),
-                      title: const Text('Welcome Tour & Overview'),
-                      subtitle: const Text('Explore all 52+ tools and features'),
+                      title: Text('Welcome Tour & Overview'.tr),
+                      subtitle: Text('Explore all 52+ tools and features'.tr),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => Get.toNamed(AppRoutes.onboarding, arguments: {'isReplay': true}),
                     ),
@@ -552,9 +552,9 @@ class ProfilePage extends StatelessWidget {
                     Icons.logout,
                     color: AppColors.coral,
                   ),
-                  label: const Text(
-                    'Log Out',
-                    style: TextStyle(
+                  label: Text(
+                    'Log Out'.tr,
+                    style: const TextStyle(
                       color: AppColors.coral,
                       fontWeight: FontWeight.bold,
                     ),

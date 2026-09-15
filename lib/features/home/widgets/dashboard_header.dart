@@ -18,7 +18,7 @@ Widget buildDashboardHeader() {
               children: [
                 Obx(
                   () => Text(
-                    'Hi, ${controller.profileController.userName.value}!',
+                    'Hi, @name!'.trParams({'name': controller.profileController.userName.value}),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -27,9 +27,9 @@ Widget buildDashboardHeader() {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Ready to organize your documents?',
-                  style: TextStyle(
+                Text(
+                  'Ready to organize your documents?'.tr,
+                  style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.secondaryText,
                   ),

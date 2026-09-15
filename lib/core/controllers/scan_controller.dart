@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/features/scanner/pages/scan_preview_page.dart';
 import 'package:plainscan/features/scanner/pages/scanner_mock_page.dart';
 import 'package:plainscan/models/file_model.dart';
 
@@ -123,59 +124,61 @@ class ScanController extends GetxController {
     }
 
     try {
-      dynamic scannedDocuments =
-          await FlutterDocScanner().getScanDocuments(
-        page: 4,
-      );
+      List<String> imagePaths = [];
 
-      if (scannedDocuments == null) {
-        return;
-      }
-
-      String? path;
-
-      if (scannedDocuments is String) {
-        path = scannedDocuments;
-      } else if (scannedDocuments is Map &&
-          scannedDocuments.containsKey('pdf')) {
-        path = scannedDocuments['pdf'];
-      } else if (scannedDocuments is Map &&
-          scannedDocuments.containsKey('images')) {
-        final imagesList = scannedDocuments['images'];
-
-        if (imagesList is List && imagesList.isNotEmpty) {
-          path = imagesList.first;
+      // Attempt to retrieve scanned documents as separate image photos
+      final result = await FlutterDocScanner().getScannedDocumentAsImages(page: 20);
+      if (result != null && result.images.isNotEmpty) {
+        imagePaths = result.images;
+      } else {
+        // Fallback to getScanDocuments
+        dynamic scannedDocuments =
+            await FlutterDocScanner().getScanDocuments(page: 20);
+        if (scannedDocuments == null) {
+          return;
         }
-      } else if (scannedDocuments is List &&
-          scannedDocuments.isNotEmpty) {
-        path = scannedDocuments.first;
+
+        if (scannedDocuments is String) {
+          imagePaths = [scannedDocuments];
+        } else if (scannedDocuments is Map &&
+            scannedDocuments.containsKey('images')) {
+          final imagesList = scannedDocuments['images'];
+          if (imagesList is List && imagesList.isNotEmpty) {
+            imagePaths = imagesList.map((e) => e.toString()).toList();
+          }
+        } else if (scannedDocuments is List &&
+            scannedDocuments.isNotEmpty) {
+          imagePaths = scannedDocuments.map((e) => e.toString()).toList();
+        } else if (scannedDocuments is Map &&
+            scannedDocuments.containsKey('pdf')) {
+          // If only a single PDF was created natively
+          final pdfPath = scannedDocuments['pdf']?.toString();
+          if (pdfPath != null && pdfPath.isNotEmpty) {
+            addScan(pdfPath, fileType: 'PDF');
+            Get.rawSnackbar(
+              messageText: const Text(
+                'Document scanned successfully as PDF!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: AppColors.primary,
+              snackPosition: SnackPosition.BOTTOM,
+              margin: const EdgeInsets.all(12),
+              borderRadius: 8,
+            );
+            return;
+          }
+        }
       }
 
-      if (path == null) {
+      if (imagePaths.isEmpty) {
         return;
       }
 
-      final fileType =
-          path.toLowerCase().endsWith('.pdf') ? 'PDF' : 'JPG';
-
-      addScan(
-        path,
-        fileType: fileType,
-      );
-
-      Get.rawSnackbar(
-        messageText: const Text(
-          'Document scanned successfully!',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: const EdgeInsets.all(12),
-        borderRadius: 8,
-      );
+      // Display captured photos in the Scan Preview Screen
+      Get.to(() => ScanPreviewPage(imagePaths: imagePaths));
     } catch (e) {
       Get.rawSnackbar(
         messageText: Text(

@@ -35,12 +35,12 @@ void showNotificationsBottomSheet(BuildContext context) {
                 Expanded(
                   child: Row(
                     children: [
-                      const Flexible(
+                      Flexible(
                         child: Text(
-                          'Notifications & Alerts',
+                          'Notifications & Alerts'.tr,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,
@@ -77,9 +77,9 @@ void showNotificationsBottomSheet(BuildContext context) {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text(
-                    'Mark all read',
-                    style: TextStyle(
+                  child: Text(
+                    'Mark all as read'.tr,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -144,9 +144,9 @@ void showNotificationsBottomSheet(BuildContext context) {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'No notifications yet',
-                          style: TextStyle(
+                        Text(
+                          'No notifications yet'.tr,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,

@@ -21,7 +21,7 @@ Widget buildDashboardSearchBar() {
       controller: controller.searchController,
       onChanged: controller.onSearchChanged,
       decoration: InputDecoration(
-        hintText: 'Search scans, folders, tools...',
+        hintText: 'Search 56+ PDF tools, AI actions...'.tr,
         hintStyle: const TextStyle(color: AppColors.secondaryText),
         prefixIcon: const Icon(
           Icons.search,

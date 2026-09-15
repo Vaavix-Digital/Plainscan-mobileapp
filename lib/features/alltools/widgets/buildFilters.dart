@@ -35,7 +35,7 @@ Widget buildFilters() {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  filter,
+                  filter.tr,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

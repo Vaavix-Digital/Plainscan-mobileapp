@@ -47,7 +47,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     } else {
       Get.rawSnackbar(
         messageText: Text(
-          result.errorMessage ?? 'Email verification failed',
+          result.errorMessage?.tr ?? 'Email verification failed'.tr,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: AppColors.coral,
@@ -72,7 +72,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (result.success) {
       Get.rawSnackbar(
         messageText: Text(
-          result.message ?? 'A new verification code has been sent to your email.',
+          result.message?.tr ?? 'A new verification code has been sent to your email.'.tr,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: AppColors.primary,
@@ -83,7 +83,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     } else {
       Get.rawSnackbar(
         messageText: Text(
-          result.errorMessage ?? 'Failed to resend verification code.',
+          result.errorMessage?.tr ?? 'Failed to resend verification code.'.tr,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: AppColors.coral,
@@ -105,7 +105,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Verify Email', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Verify Email'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -123,10 +123,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   color: AppColors.primary,
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'Verify Your Account',
+                Text(
+                  'Verify Your Account'.tr,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.text,
@@ -134,7 +134,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter the 6-digit OTP code sent to\n${widget.email}',
+                  'Enter the 6-digit OTP code sent to\n@email'.trParams({'email': widget.email}),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14,
@@ -173,10 +173,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().length != 6) {
-                      return 'Please enter a valid 6-digit code';
+                      return 'Please enter a valid 6-digit code'.tr;
                     }
                     if (int.tryParse(value) == null) {
-                      return 'Code must be numeric only';
+                      return 'Code must be numeric only'.tr;
                     }
                     return null;
                   },
@@ -202,9 +202,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
-                          'Verify Code',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      : Text(
+                          'Verify Code'.tr,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
                 const SizedBox(height: 24),
@@ -220,9 +220,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                             ),
                           )
-                        : const Text(
-                            'Resend Code',
-                            style: TextStyle(
+                        : Text(
+                            'Resend Code'.tr,
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,

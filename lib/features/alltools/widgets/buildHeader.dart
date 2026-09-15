@@ -17,9 +17,9 @@ Widget buildHeader({bool showBack = true}) {
             ),
             const SizedBox(width: 14),
           ],
-          const Text(
-            'All Tools',
-            style: TextStyle(
+          Text(
+            'All Tools'.tr,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Color(0xFF11152F),

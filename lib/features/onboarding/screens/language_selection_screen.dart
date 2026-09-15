@@ -60,17 +60,23 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       _selectedCode = code;
     });
     await StorageService.setLanguage(code);
+    Get.updateLocale(Locale(code));
   }
 
   void _onContinue() async {
     await StorageService.setLanguage(_selectedCode);
+    Get.updateLocale(Locale(_selectedCode));
     if (!mounted) return;
 
     if (_isStandalone) {
       Get.back();
+      final langName = _languages.firstWhere(
+        (l) => l['code'] == _selectedCode,
+        orElse: () => {'name': _selectedCode},
+      )['name']!;
       Get.snackbar(
-        'Language Updated',
-        'App language set to ${_languages.firstWhere((l) => l['code'] == _selectedCode)['name']}',
+        'Language Updated'.tr,
+        'App language set to @lang'.trParams({'lang': langName}),
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.white,
         colorText: AppColors.text,
@@ -116,7 +122,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          _isStandalone ? 'App Language' : 'Select Language',
+          (_isStandalone ? 'App Language' : 'Select Language').tr,
           style: const TextStyle(
             color: AppColors.text,
             fontSize: 18,
@@ -127,9 +133,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
           if (!_isStandalone)
             TextButton(
               onPressed: _onContinue,
-              child: const Text(
-                'Skip',
-                style: TextStyle(
+              child: Text(
+                'Skip'.tr,
+                style: const TextStyle(
                   color: AppColors.secondaryText,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
@@ -164,22 +170,22 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                       child: const Icon(Icons.translate_rounded, color: AppColors.blue, size: 24),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Choose Your Language',
-                            style: TextStyle(
+                            'Choose Your Language'.tr,
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.text,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Select your preferred language for tools & documents',
-                            style: TextStyle(
+                            'Select your preferred language for tools & documents'.tr,
+                            style: const TextStyle(
                               fontSize: 13,
                               color: AppColors.secondaryText,
                             ),
@@ -199,7 +205,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search language...',
+                    hintText: 'Search language...'.tr,
                     hintStyle: const TextStyle(fontSize: 14, color: AppColors.secondaryText),
                     prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.secondaryText),
                     suffixIcon: _searchQuery.isNotEmpty
@@ -339,7 +345,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _isStandalone ? 'Save Language' : 'Get Started',
+                  (_isStandalone ? 'Save Language' : 'Get Started').tr,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),

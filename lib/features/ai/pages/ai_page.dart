@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 
 class MessageModel {
@@ -21,9 +22,9 @@ class AiPage extends StatefulWidget {
 }
 
 class _AiPageState extends State<AiPage> {
-  final List<MessageModel> _messages = [
+  late final List<MessageModel> _messages = [
     MessageModel(
-      text: 'Hi! I am your PlainScan AI Assistant. Pick any of your scanned documents and ask me to:\n\n• Summarize key details\n• Translate paragraphs\n• Extract invoice tables or numbers',
+      text: 'Hi! I am your PlainScan AI Assistant. Pick any of your scanned documents and ask me to:\n\n• Summarize key details\n• Translate paragraphs\n• Extract invoice tables or numbers'.tr,
       isUser: false,
       time: DateTime.now().subtract(const Duration(minutes: 5)),
     ),
@@ -110,7 +111,7 @@ class _AiPageState extends State<AiPage> {
               child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 8),
-            const Text('Scan AI Assistant', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Scan AI Assistant'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         backgroundColor: Colors.transparent,
@@ -179,7 +180,7 @@ class _AiPageState extends State<AiPage> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: ActionChip(
-                        label: Text(sug),
+                        label: Text(sug.tr),
                         labelStyle: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
                         backgroundColor: Colors.white,
                         side: const BorderSide(color: AppColors.primary, width: 0.8),
@@ -205,7 +206,7 @@ class _AiPageState extends State<AiPage> {
                     icon: const Icon(Icons.attach_file, color: AppColors.secondaryText),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Selecting document attachment...')),
+                        SnackBar(content: Text('Selecting document attachment...'.tr)),
                       );
                     },
                   ),
@@ -219,9 +220,9 @@ class _AiPageState extends State<AiPage> {
                       child: TextField(
                         controller: _messageController,
                         onSubmitted: _sendMessage,
-                        decoration: const InputDecoration(
-                          hintText: 'Ask AI assistant...',
-                          hintStyle: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Ask AI assistant...'.tr,
+                          hintStyle: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
                           border: InputBorder.none,
                         ),
                       ),

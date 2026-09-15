@@ -11,12 +11,26 @@ import 'package:plainscan/models/tool_model.dart';
 
 class ToolExecutorPage extends StatelessWidget {
   final ToolModel tool;
+  final List<FileModel>? initialFiles;
+  final bool autoExecute;
 
-  const ToolExecutorPage({super.key, required this.tool});
+  const ToolExecutorPage({
+    super.key,
+    required this.tool,
+    this.initialFiles,
+    this.autoExecute = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    Get.put(ToolExecutorController(tool: tool));
+    if (Get.isRegistered<ToolExecutorController>()) {
+      Get.delete<ToolExecutorController>();
+    }
+    Get.put(ToolExecutorController(
+      tool: tool,
+      initialFiles: initialFiles,
+      autoExecute: autoExecute,
+    ));
 
     return GetBuilder<ToolExecutorController>(
       builder: (controller) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
-import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/features/scanner/pages/scan_preview_page.dart';
 
 class ScannerMockPage extends StatefulWidget {
   const ScannerMockPage({super.key});
@@ -45,7 +45,7 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Captured page $_batchCount in batch.'),
+          content: Text('Captured page @count in batch.'.trParams({'count': '$_batchCount'})),
           duration: const Duration(milliseconds: 500),
           backgroundColor: AppColors.primary,
         ),
@@ -63,25 +63,14 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
         return StatefulBuilder(
           builder: (context, setDialogState) {
             // Simulate progression
-            Future.delayed(const Duration(milliseconds: 800), () {
+            Future.delayed(const Duration(milliseconds: 600), () {
               if (context.mounted) {
-                Get.find<ScanController>().addScan(
-                  "mock_scanned_file.pdf",
-                  customName: "Scan_${DateTime.now().millisecondsSinceEpoch}.pdf",
-                  fileType: "PDF",
-                );
                 Get.back(); // Close dialog
-                Get.back(); // Go back from Scanner
-                Get.rawSnackbar(
-                  messageText: const Text(
-                    'Document scanned successfully! Cleaned up by AI.',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  ),
-                  backgroundColor: AppColors.primary,
-                  snackPosition: SnackPosition.BOTTOM,
-                  margin: const EdgeInsets.all(12),
-                  borderRadius: 8,
-                );
+                Get.off(() => const ScanPreviewPage(
+                  imagePaths: [
+                    'mock_scanned_photo_1.jpg',
+                  ],
+                ));
               }
             });
 
@@ -97,13 +86,13 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                       valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      'Processing Document...',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    Text(
+                      'Processing Document...'.tr,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isAutoCropOn ? 'Detecting edges & cropping...' : 'Optimizing color details...',
+                      _isAutoCropOn ? 'Detecting edges & cropping...'.tr : 'Optimizing color details...'.tr,
                       style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
                     ),
                   ],
@@ -126,27 +115,14 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        Future.delayed(const Duration(milliseconds: 1500), () {
+        Future.delayed(const Duration(milliseconds: 800), () {
           if (context.mounted) {
-            for (int i = 1; i <= _batchCount; i++) {
-              Get.find<ScanController>().addScan(
-                "mock_batch_page_$i.jpg",
-                customName: "BatchScan_${DateTime.now().millisecondsSinceEpoch}_Page$i.jpg",
-                fileType: "JPG",
-              );
-            }
-            Get.back(); // Close dialog
-            Get.back(); // Go back from Scanner
-            Get.rawSnackbar(
-              messageText: Text(
-                'Batch scan complete: $_batchCount pages processed & saved!',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-              backgroundColor: AppColors.primary,
-              snackPosition: SnackPosition.BOTTOM,
-              margin: const EdgeInsets.all(12),
-              borderRadius: 8,
+            final List<String> batchPaths = List.generate(
+              _batchCount,
+              (i) => 'mock_batch_page_${i + 1}.jpg',
             );
+            Get.back(); // Close dialog
+            Get.off(() => ScanPreviewPage(imagePaths: batchPaths));
           }
         });
 
@@ -162,13 +138,13 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Processing Batch...',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Text(
+                  'Processing Batch...'.tr,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Applying AI Enhancement to $_batchCount pages...',
+                  'Applying AI Enhancement to @count pages...'.trParams({'count': '$_batchCount'}),
                   style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
                 ),
               ],
@@ -220,7 +196,7 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(_isAutoCropOn ? 'Auto-Crop Enabled' : 'Auto-Crop Disabled (Manual)'),
+                              content: Text(_isAutoCropOn ? 'Auto-Crop Enabled'.tr : 'Auto-Crop Disabled (Manual)'.tr),
                               duration: const Duration(milliseconds: 500),
                             ),
                           );
@@ -363,12 +339,12 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.crop_free, color: Colors.white, size: 16),
-                                    SizedBox(width: 8),
+                                  children: [
+                                    const Icon(Icons.crop_free, color: Colors.white, size: 16),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'Hold steady. Detecting edges...',
-                                      style: TextStyle(color: Colors.white, fontSize: 12),
+                                      'Hold steady. Detecting edges...'.tr,
+                                      style: const TextStyle(color: Colors.white, fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -401,9 +377,9 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                         color: !_isBatchMode ? Colors.white24 : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'SINGLE',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      child: Text(
+                        'SINGLE'.tr,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
                   ),
@@ -420,9 +396,9 @@ class _ScannerMockPageState extends State<ScannerMockPage> with SingleTickerProv
                         color: _isBatchMode ? Colors.white24 : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'BATCH SCAN',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      child: Text(
+                        'BATCH SCAN'.tr,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
                   ),

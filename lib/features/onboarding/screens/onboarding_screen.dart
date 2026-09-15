@@ -133,9 +133,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           if (!_isReplay)
             TextButton(
               onPressed: _finishOnboarding,
-              child: const Text(
-                'Skip',
-                style: TextStyle(
+              child: Text(
+                'Skip'.tr,
+                style: const TextStyle(
                   color: AppColors.secondaryText,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
@@ -220,7 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            slide['subtitle'] as String,
+                            (slide['subtitle'] as String).tr,
                             style: TextStyle(
                               color: accent,
                               fontWeight: FontWeight.bold,
@@ -232,7 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                         // Title
                         Text(
-                          slide['title'] as String,
+                          (slide['title'] as String).tr,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 24,
@@ -244,7 +244,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                         // Description
                         Text(
-                          slide['description'] as String,
+                          (slide['description'] as String).tr,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,
@@ -280,7 +280,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        feat,
+                                        feat.tr,
                                         style: const TextStyle(
                                           color: AppColors.text,
                                           fontSize: 13,
@@ -309,55 +309,55 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Indicators
-                  Row(
-                    children: List.generate(_slides.length, (idx) {
-                      final isCurrent = _currentPage == idx;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        height: 8,
-                        width: isCurrent ? 24 : 8,
-                        decoration: BoxDecoration(
-                          color: isCurrent ? AppColors.primary : AppColors.border,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Indicators
+                Row(
+                  children: List.generate(_slides.length, (idx) {
+                    final isCurrent = _currentPage == idx;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      height: 8,
+                      width: isCurrent ? 24 : 8,
+                      decoration: BoxDecoration(
+                        color: isCurrent ? AppColors.primary : AppColors.border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                ),
 
-                  // Next / Get Started Button
-                  ElevatedButton(
-                    onPressed: _onNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _currentPage == _slides.length - 1
-                              ? (_isReplay ? 'Done' : 'Get Started')
-                              : 'Next',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          _currentPage == _slides.length - 1 ? Icons.check : Icons.arrow_forward_rounded,
-                          size: 18,
-                        ),
-                      ],
-                    ),
+                // Next / Get Started Button
+                ElevatedButton(
+                  onPressed: _onNext,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _currentPage == _slides.length - 1
+                            ? (_isReplay ? 'Done' : 'Get Started').tr
+                            : 'Next'.tr,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _currentPage == _slides.length - 1 ? Icons.check : Icons.arrow_forward_rounded,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
           ],
         ),
       ),

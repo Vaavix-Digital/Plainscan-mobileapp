@@ -36,12 +36,12 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
       builder: (context) {
         String folderName = '';
         return AlertDialog(
-          title: const Text('New Folder'),
+          title: Text('New Folder'.tr),
           content: TextField(
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Folder name',
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+            decoration: InputDecoration(
+              hintText: 'Folder name'.tr,
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
             ),
             onChanged: (value) {
               folderName = value;
@@ -50,7 +50,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
+              child: Text('Cancel'.tr, style: const TextStyle(color: AppColors.secondaryText)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -62,7 +62,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Create', style: TextStyle(color: Colors.white)),
+              child: Text('Create'.tr, style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -76,12 +76,12 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
       builder: (context) {
         String newName = currentName;
         return AlertDialog(
-          title: const Text('Rename File'),
+          title: Text('Rename File'.tr),
           content: TextField(
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'New file name',
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+            decoration: InputDecoration(
+              hintText: 'New file name'.tr,
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
             ),
             controller: TextEditingController(text: currentName),
             onChanged: (value) {
@@ -91,7 +91,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
+              child: Text('Cancel'.tr, style: const TextStyle(color: AppColors.secondaryText)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -101,7 +101,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Rename', style: TextStyle(color: Colors.white)),
+              child: Text('Rename'.tr, style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -128,7 +128,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Files Manager', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Files Manager'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -140,9 +140,9 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
             icon: const Icon(Icons.sort_outlined, color: AppColors.primary),
             onPressed: () {
               Get.rawSnackbar(
-                messageText: const Text(
-                  'Sorting list...',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                messageText: Text(
+                  'Sorting list...'.tr,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 ),
                 backgroundColor: AppColors.primary,
                 snackPosition: SnackPosition.BOTTOM,
@@ -168,11 +168,11 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                 ),
                 child: TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    hintText: 'Search files...',
-                    prefixIcon: Icon(Icons.search, color: AppColors.secondaryText),
+                  decoration: InputDecoration(
+                    hintText: 'Search files...'.tr,
+                    prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),
@@ -199,11 +199,11 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   dividerColor: Colors.transparent,
                   indicatorSize: TabBarIndicatorSize.tab,
-                  tabs: const [
-                    Tab(text: 'All'),
-                    Tab(text: 'PDF'),
-                    Tab(text: 'Images'),
-                    Tab(text: 'Starred'),
+                  tabs: [
+                    Tab(text: 'All'.tr),
+                    Tab(text: 'PDF'.tr),
+                    Tab(text: 'Images'.tr),
+                    Tab(text: 'Starred'.tr),
                   ],
                 ),
               ),
@@ -225,9 +225,9 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                       children: [
                         // Folders section (Only visible on the 'All' tab)
                         if (tabIndex == 0 && _folders.isNotEmpty) ...[
-                          const Text(
-                            'Folders',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text),
+                          Text(
+                            'Folders'.tr,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text),
                           ),
                           const SizedBox(height: 12),
                           GridView.builder(
@@ -264,9 +264,9 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          const Text(
-                                            '0 files',
-                                            style: TextStyle(color: AppColors.secondaryText, fontSize: 11),
+                                          Text(
+                                            '@count files'.trParams({'count': '0'}),
+                                            style: const TextStyle(color: AppColors.secondaryText, fontSize: 11),
                                           ),
                                         ],
                                       ),
@@ -283,12 +283,12 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Documents',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text),
+                            Text(
+                              'Documents'.tr,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text),
                             ),
                             Text(
-                              '${filteredFiles.length} items',
+                              '@count items'.trParams({'count': '${filteredFiles.length}'}),
                               style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
                             ),
                           ],
@@ -301,12 +301,12 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                             alignment: Alignment.center,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.insert_drive_file_outlined, size: 48, color: AppColors.secondaryText),
-                                SizedBox(height: 12),
+                              children: [
+                                const Icon(Icons.insert_drive_file_outlined, size: 48, color: AppColors.secondaryText),
+                                const SizedBox(height: 12),
                                 Text(
-                                  'No documents found',
-                                  style: TextStyle(color: AppColors.secondaryText),
+                                  'No documents found'.tr,
+                                  style: const TextStyle(color: AppColors.secondaryText),
                                 ),
                               ],
                             ),
@@ -355,9 +355,9 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                                       } else if (action == 'delete') {
                                         controller.deleteFile(file.id);
                                         Get.rawSnackbar(
-                                          messageText: const Text(
-                                            'File deleted',
-                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                          messageText: Text(
+                                            'File deleted'.tr,
+                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                                           ),
                                           backgroundColor: AppColors.coral,
                                           snackPosition: SnackPosition.BOTTOM,
@@ -389,38 +389,38 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
                                               color: AppColors.amber,
                                             ),
                                             const SizedBox(width: 8),
-                                            Text(file.isFavorite ? 'Unstar' : 'Star'),
+                                            Text(file.isFavorite ? 'Unstar'.tr : 'Star'.tr),
                                           ],
                                         ),
                                       ),
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 'share',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.share_outlined, color: AppColors.blue),
-                                            SizedBox(width: 8),
-                                            Text('Share'),
+                                            const Icon(Icons.share_outlined, color: AppColors.blue),
+                                            const SizedBox(width: 8),
+                                            Text('Share'.tr),
                                           ],
                                         ),
                                       ),
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 'rename',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.edit_outlined, color: AppColors.primary),
-                                            SizedBox(width: 8),
-                                            Text('Rename'),
+                                            const Icon(Icons.edit_outlined, color: AppColors.primary),
+                                            const SizedBox(width: 8),
+                                            Text('Rename'.tr),
                                           ],
                                         ),
                                       ),
                                       const PopupMenuDivider(),
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 'delete',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.delete_outline, color: AppColors.coral),
-                                            SizedBox(width: 8),
-                                            Text('Delete'),
+                                            const Icon(Icons.delete_outline, color: AppColors.coral),
+                                            const SizedBox(width: 8),
+                                            Text('Delete'.tr),
                                           ],
                                         ),
                                       ),

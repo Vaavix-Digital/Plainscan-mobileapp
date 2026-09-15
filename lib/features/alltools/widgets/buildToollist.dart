@@ -13,17 +13,17 @@ Widget buildToolList() {
         final tools = controller.filteredTools;
 
         if (tools.isEmpty) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(32.0),
+              padding: const EdgeInsets.all(32.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.search_off, size: 48, color: Color(0xFF94A3B8)),
-                  SizedBox(height: 12),
+                  const Icon(Icons.search_off, size: 48, color: Color(0xFF94A3B8)),
+                  const SizedBox(height: 12),
                   Text(
-                    'No tools found matching your search',
-                    style: TextStyle(
+                    'No tools found matching your search'.tr,
+                    style: const TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -80,23 +80,23 @@ Widget buildToolList() {
 
 Widget _buildCategoryHeader(String category, [int? count]) {
   String icon = '≡';
-  String title = category.toUpperCase();
+  String title = category.toUpperCase().tr;
 
   if (category.contains('Conversion')) {
     icon = '📄';
-    title = 'PDF CONVERSION';
+    title = 'PDF CONVERSION'.tr;
   } else if (category.contains('Manipulation') || category.contains('editing')) {
     icon = '🛠️';
-    title = 'PDF MANIPULATION';
+    title = 'PDF MANIPULATION'.tr;
   } else if (category.contains('OCR') || category.contains('Scan')) {
     icon = '🔍';
-    title = 'OCR & SCAN TOOLS';
+    title = 'OCR & SCAN TOOLS'.tr;
   } else if (category.contains('AI')) {
     icon = '🤖';
-    title = 'AI TOOLS';
+    title = 'AI TOOLS'.tr;
   } else if (category.contains('Utility')) {
     icon = '📦';
-    title = 'UTILITY TOOLS';
+    title = 'UTILITY TOOLS'.tr;
   }
 
   return Row(
@@ -200,7 +200,7 @@ Widget _buildToolGridCard(ToolModel tool) {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    tool.name,
+                    tool.name.tr,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -213,7 +213,7 @@ Widget _buildToolGridCard(ToolModel tool) {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    formatBadge ?? tool.category ?? '',
+                    formatBadge ?? (tool.category != null ? tool.category!.tr : ''),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -254,7 +254,7 @@ Widget _buildToolGridCard(ToolModel tool) {
                       const SizedBox(width: 1.5),
                     ],
                     Text(
-                      isFree ? 'FREE' : 'PRO',
+                      isFree ? 'FREE'.tr : 'PRO'.tr,
                       style: TextStyle(
                         fontSize: 7.5,
                         fontWeight: FontWeight.w800,

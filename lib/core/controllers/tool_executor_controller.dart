@@ -21,9 +21,15 @@ import 'package:plainscan/models/tool_model.dart';
 
 class ToolExecutorController extends GetxController {
   final ToolModel tool;
+  final List<FileModel>? initialFiles;
+  final bool autoExecute;
   final ScanController scanController = Get.find<ScanController>();
 
-  ToolExecutorController({required this.tool});
+  ToolExecutorController({
+    required this.tool,
+    this.initialFiles,
+    this.autoExecute = false,
+  });
 
   // Interstitial Ad
   InterstitialAd? _interstitialAd;
@@ -188,6 +194,28 @@ class ToolExecutorController extends GetxController {
     _loadInterstitialAd();
     loadSavedToken();
     initializeDefaults();
+    _applyInitialFiles();
+  }
+
+  void _applyInitialFiles() {
+    if (initialFiles != null && initialFiles!.isNotEmpty) {
+      if (isMultiFileTool()) {
+        selectedFiles.clear();
+        selectedFiles.addAll(initialFiles!);
+        if (selectedFiles.isNotEmpty) {
+          selectedFile = selectedFiles.first;
+        }
+      } else {
+        selectedFile = initialFiles!.first;
+      }
+      update();
+
+      if (autoExecute) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          executeJobFlow();
+        });
+      }
+    }
   }
 
   Future<void> loadSavedToken() async {
@@ -217,12 +245,17 @@ class ToolExecutorController extends GetxController {
 
   bool isMultiFileTool() {
     final slug = getSlug();
-    return slug == 'pdf-merge' ||
+    return tool.isMultiFile ||
+        slug == 'pdf-merge' ||
         slug == 'pdf-compare' ||
         slug == 'file-to-zip' ||
         slug == 'batch-pdf-converter' ||
         slug == 'batch-converter' ||
-        slug == 'batch-rename';
+        slug == 'batch-rename' ||
+        slug == 'jpg-to-pdf' ||
+        slug == 'png-to-pdf' ||
+        slug == 'webp-to-pdf' ||
+        slug == 'image-to-pdf';
   }
 
   bool isTextOptionSupported() {
@@ -733,6 +766,9 @@ class ToolExecutorController extends GetxController {
         // Text-only tool doesn't send file IDs
       } else if (isMulti) {
         requestBody['file_ids'] = uploadedFileIds;
+        if (uploadedFileIds.isNotEmpty) {
+          requestBody['file_id'] = uploadedFileIds.first;
+        }
       } else {
         requestBody['file_id'] = singleUploadedFileId;
       }
