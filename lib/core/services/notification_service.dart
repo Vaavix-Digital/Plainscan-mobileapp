@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
@@ -130,7 +131,11 @@ class NotificationService extends GetxController {
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosSettings =
-          DarwinInitializationSettings();
+          DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
       const InitializationSettings initSettings = InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
@@ -158,7 +163,8 @@ class NotificationService extends GetxController {
             showBadge: false,
           ),
         );
-        await androidPlugin.requestNotificationsPermission();
+        // Note: Runtime notification permission is requested via AppPermissionService
+        // only after the splash screen has completed.
       }
     } catch (e) {
       debugPrint('Error initializing local notifications: $e');

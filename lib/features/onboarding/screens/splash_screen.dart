@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
-import 'package:plainscan/core/services/permission_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -46,24 +45,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Display splash animations smoothly
     await Future.delayed(const Duration(milliseconds: 2200));
 
+    if (!mounted) return;
+
     if (!isOnboarded) {
-      // 1. Ask Notification permission first
-      await AppPermissionService.requestNotificationPermission();
-
-      // 2. Ask Camera and Gallery permissions AFTER notification permission
-      await AppPermissionService.requestCameraAndGalleryPermissions();
-
-      if (mounted) {
-        Get.offNamed(AppRoutes.onboarding);
-      }
+      Get.offNamed(AppRoutes.onboarding);
     } else if (hasSession) {
-      if (mounted) {
-        Get.offNamed(AppRoutes.home);
-      }
+      Get.offNamed(AppRoutes.home);
     } else {
-      if (mounted) {
-        Get.offNamed(AppRoutes.auth);
-      }
+      Get.offNamed(AppRoutes.auth);
     }
   }
 

@@ -284,6 +284,18 @@ class StorageService {
     await prefs.setBool(_keyIsOnboarded, value);
   }
 
+  static const String _keyPermissionsRequested = 'has_requested_initial_permissions';
+
+  static Future<bool> hasRequestedInitialPermissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyPermissionsRequested) ?? false;
+  }
+
+  static Future<void> setRequestedInitialPermissions(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyPermissionsRequested, value);
+  }
+
   static const String _keyRecentTools = 'recent_tools';
 
   static Future<List<String>> getRecentToolIds() async {

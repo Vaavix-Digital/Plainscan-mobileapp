@@ -14,12 +14,19 @@ class AuthController extends GetxController {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  Future<void>? _initFuture;
+  static bool _isGoogleSignInInitialized = false;
+  static Future<void>? _initFuture;
 
   @override
   void onInit() {
     super.onInit();
-    _initFuture = _initializeGoogleSignIn();
+    _ensureInitialized();
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (_isGoogleSignInInitialized) return;
+    _initFuture ??= _initializeGoogleSignIn();
+    await _initFuture;
   }
 
   Future<void> _initializeGoogleSignIn() async {
@@ -28,8 +35,10 @@ class AuthController extends GetxController {
       await _googleSignIn.initialize(
         serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
       );
+      _isGoogleSignInInitialized = true;
     } catch (e) {
       debugPrint('Error initializing Google Sign-In: $e');
+      _initFuture = null; // allow retry
     }
   }
 
@@ -47,14 +56,7 @@ class AuthController extends GetxController {
     isLoading.value = true;
 
     try {
-      if (_initFuture != null) {
-        await _initFuture;
-      }
-
-      // Reset any previous session so the Google account selector appears cleanly
-      try {
-        await _googleSignIn.signOut();
-      } catch (_) {}
+      await _ensureInitialized();
 
       final GoogleSignInAccount googleUser =
           await _googleSignIn.authenticate();
@@ -109,28 +111,48 @@ class AuthController extends GetxController {
         );
       }
     } on GoogleSignInException catch (e) {
-      debugPrint('GoogleSignInException: ${e.code}, description: ${e.description}');
+      debugPrint('GoogleSignInException: ${e.code}, description: ${e.description}, details: ${e.details}');
 
-      // User closed or canceled sign-in sheet; do not show error
-      if (e.code == GoogleSignInExceptionCode.canceled ||
-          (e.description != null &&
-              (e.description!.toLowerCase().contains('canceled') ||
-                  e.description!.toLowerCase().contains('cancelled') ||
-                  e.description!.contains('12501')))) {
+      final String rawDesc = e.description ?? '';
+      final String lowerDesc = rawDesc.toLowerCase();
+
+      // 1. Check for configuration errors FIRST.
+      // On Android Credential Manager, config errors (SHA-1 mismatch, unconfigured OAuth consent)
+      // are returned as GetCredentialCancellationException, which maps to code 'canceled'.
+      if (rawDesc.contains('28444') ||
+          lowerDesc.contains('developer console') ||
+          lowerDesc.contains('developer_error') ||
+          rawDesc.contains('10:') ||
+          lowerDesc.contains('12500')) {
+        _showError(
+          'Google Cloud setup incomplete (Error 28444/10):\n'
+          '1. Add SHA-1 to Firebase Console.\n'
+          '2. Ensure OAuth Consent Screen is published/configured in Google Cloud Console.\n'
+          '3. Ensure Web Client ID in api_constants.dart is correct.',
+        );
         return;
       }
 
-      String message = e.description ?? e.code.name;
-      if (message.contains('28444') || message.contains('Developer console')) {
-        message =
-            'Google Cloud Console setup incomplete (Error 28444): \n1. Add SHA-1 to Firebase Console.\n2. Ensure googleServerClientId in api_constants.dart is a Web Client ID (not an Android Client ID).\n3. Check OAuth Consent Screen.';
-      } else if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
-          message.contains('serverClientId')) {
-        message =
-            'Google Sign-In configuration error: serverClientId is required. Verify your Google Web Client ID in api_constants.dart.';
+      if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
+          lowerDesc.contains('serverclientid') ||
+          lowerDesc.contains('missing server client id')) {
+        _showError(
+          'Google Sign-In configuration error: serverClientId is required. Verify your Google Web Client ID in api_constants.dart.',
+        );
+        return;
       }
+
+      // 2. User closed or canceled sign-in sheet without an underlying error
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          lowerDesc.contains('canceled') ||
+          lowerDesc.contains('cancelled') ||
+          lowerDesc.contains('12501')) {
+        debugPrint('Google sign-in canceled by user.');
+        return;
+      }
+
       _showError(
-        'Google Sign-In failed: $message',
+        'Google Sign-In failed: ${e.description ?? e.code.name}',
       );
     } catch (e) {
       debugPrint('Google Sign-In error: $e');

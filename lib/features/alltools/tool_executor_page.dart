@@ -112,7 +112,7 @@ class ToolExecutorPage extends StatelessWidget {
                     ],
                   ],
                   const SizedBox(height: 24),
-                    buildAdBanner(),
+                    buildAdBanner(),   
                 ],
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/services/permission_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final bool isReplay;
@@ -67,6 +68,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _isReplay = args['isReplay'] as bool? ?? widget.isReplay;
     } else {
       _isReplay = widget.isReplay;
+    }
+
+    if (!_isReplay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Request runtime permissions ONLY after splash screen is completed
+        // and the onboarding screen is fully rendered on screen.
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            AppPermissionService.requestAppOpenPermissions();
+          }
+        });
+      });
     }
   }
 

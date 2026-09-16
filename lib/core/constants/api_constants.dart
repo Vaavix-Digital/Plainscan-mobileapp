@@ -39,7 +39,7 @@ class ApiConstants {
  
   static const String googleServerClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
-    defaultValue: '690500109578-um3qhq8vevcslnqnkocm80ifmb282m0f.apps.googleusercontent.com',
+    defaultValue: '690500109578-aj7b3h7fctv2sed7c8jnl8i3ljg6n7go.apps.googleusercontent.com',
   );
 
 

@@ -1,6 +1,8 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 /// Service responsible for managing app permissions on initial install/launch
 /// and from system settings.
@@ -34,9 +36,16 @@ class AppPermissionService {
   /// Sequentially requests permissions on app open:
   /// 1. Notification permission first.
   /// 2. Camera and Gallery permissions after notification permission.
-  static Future<void> requestAppOpenPermissions() async {
+  /// Guarded so it only prompts once on initial launch/setup unless force is true.
+  static Future<void> requestAppOpenPermissions({bool force = false}) async {
     if (kIsWeb) return;
     try {
+      if (!force) {
+        final alreadyRequested = await StorageService.hasRequestedInitialPermissions();
+        if (alreadyRequested) return;
+        await StorageService.setRequestedInitialPermissions(true);
+      }
+
       // 1. Notification permission first
       await requestNotificationPermission();
 
