@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -18,4 +19,3 @@ void main() async {
   final savedLanguage = await StorageService.getLanguage();
   runApp(PlainScanApp(initialLocale: Locale(savedLanguage)));
 }
-

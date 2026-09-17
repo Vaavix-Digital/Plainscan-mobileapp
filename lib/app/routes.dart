@@ -5,6 +5,8 @@ import 'package:plainscan/features/onboarding/screens/language_selection_screen.
 import 'package:plainscan/features/onboarding/screens/auth_screen.dart';
 import 'package:plainscan/features/onboarding/screens/two_factor_screen.dart';
 import 'package:plainscan/features/onboarding/screens/verify_email_screen.dart';
+import 'package:plainscan/features/onboarding/screens/forgot_password_screen.dart';
+import 'package:plainscan/features/onboarding/screens/reset_password_screen.dart';
 import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/features/profile/pages/plans_page.dart';
 import 'package:plainscan/features/profile/pages/referral_share_screen.dart';
@@ -20,6 +22,8 @@ class AppRoutes {
   static const String auth = '/auth';
   static const String verify2Fa = '/verify-2fa';
   static const String verifyEmail = '/verify-email';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String home = '/home';
   static const String tools = '/tools';
   static const String files = '/files';
@@ -57,6 +61,29 @@ class AppRoutes {
       page: () {
         final email = Get.arguments as String? ?? '';
         return VerifyEmailScreen(email: email);
+      },
+    ),
+    GetPage(
+      name: forgotPassword,
+      page: () {
+        final email = Get.arguments as String? ?? '';
+        return ForgotPasswordScreen(initialEmail: email);
+      },
+    ),
+    GetPage(
+      name: resetPassword,
+      page: () {
+        final args = Get.arguments;
+        String token = '';
+        if (args is String) {
+          token = args;
+        } else if (args is Map) {
+          token = args['token']?.toString() ?? '';
+        }
+        if (token.isEmpty && Get.parameters['token'] != null) {
+          token = Get.parameters['token']!;
+        }
+        return ResetPasswordScreen(token: token);
       },
     ),
     GetPage(
