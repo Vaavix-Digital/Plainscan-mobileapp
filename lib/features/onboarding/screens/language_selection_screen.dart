@@ -60,7 +60,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       _selectedCode = code;
     });
     await StorageService.setLanguage(code);
-    Get.updateLocale(Locale(code));
+    Future(() {
+      Get.updateLocale(Locale(code));
+    });
   }
 
   void _onContinue() async {

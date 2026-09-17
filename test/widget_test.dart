@@ -9,5 +9,9 @@ void main() {
     // Verify that the splash screen shows the app title.
     expect(find.text('Plain'), findsOneWidget);
     expect(find.text('scan'), findsOneWidget);
+
+    // Pump timers from Upgrader and splash animation
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
   });
 }

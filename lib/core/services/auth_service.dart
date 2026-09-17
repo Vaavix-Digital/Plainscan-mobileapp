@@ -334,6 +334,63 @@ class AuthService {
     await StorageService.logout();
   }
 
+  static Future<AuthResult> forgotPassword({
+    required String email,
+    http.Client? client,
+  }) async {
+    try {
+      final httpClient = client ?? _client;
+      final response = await httpClient.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.forgotPassword}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final msg = data['message'] ?? 'Password reset link sent to your email.';
+        return AuthResult(success: true, message: msg);
+      } else {
+        final errorMsg = _parseError(response.body);
+        return AuthResult(success: false, errorMessage: errorMsg);
+      }
+    } catch (e) {
+      return AuthResult(success: false, errorMessage: 'Connection failed: ${e.toString()}');
+    }
+  }
+
+  static Future<AuthResult> resetPassword({
+    required String token,
+    required String newPassword,
+    http.Client? client,
+  }) async {
+    try {
+      final httpClient = client ?? _client;
+      final response = await httpClient.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.resetPassword}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token.trim(),
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final msg = data['message'] ?? 'Password reset successfully.';
+        return AuthResult(success: true, message: msg);
+      } else {
+        final errorMsg = _parseError(response.body);
+        return AuthResult(success: false, errorMessage: errorMsg);
+      }
+    } catch (e) {
+      return AuthResult(success: false, errorMessage: 'Connection failed: ${e.toString()}');
+    }
+  }
+
+
   static String parseError(String body) => _parseError(body);
 
   static String _parseError(String body) {

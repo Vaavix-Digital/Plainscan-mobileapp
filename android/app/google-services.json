@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "690500109578-02tp9mtvr38ll8uk72gt5cgtq15q2ume.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plainscan.app",
+            "certificate_hash": "cff34bc74aeef9ba303d5e10cf00e9598bcb9a9d"
+          }
+        },
+        {
           "client_id": "690500109578-2kcufdob6hqvs9mo1m41jl6c6rfds926.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -22,16 +30,20 @@
           }
         },
         {
-          "client_id": "690500109578-ojt7n2f6pbf6im3d7prb2adom37gfus3.apps.googleusercontent.com",
+          "client_id": "690500109578-8961hvs36kt1pqaho9a99kvgug10jeee.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.plainscan.app",
-            "certificate_hash": "cff34bc74aeef9ba303d5e10cf00e9598bcb9a9d"
+            "certificate_hash": "134be55037777037ab9b6b281ed7e49486dbe0e2"
           }
         },
         {
-          "client_id": "690500109578-aj7b3h7fctv2sed7c8jnl8i3ljg6n7go.apps.googleusercontent.com",
-          "client_type": 3
+          "client_id": "690500109578-aadehbrbel4kkiefe44ef9633j47f6ak.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plainscan.app",
+            "certificate_hash": "d878d7bcbea0581603126240cd89facad56fda68"
+          }
         }
       ],
       "api_key": [

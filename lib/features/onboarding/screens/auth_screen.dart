@@ -411,6 +411,33 @@ class _AuthScreenState extends State<AuthScreen>
                             return null;
                           },
                         ),
+                        if (!isSignUp) ...[
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                Get.toNamed(
+                                  AppRoutes.forgotPassword,
+                                  arguments: _emailController.text.trim(),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Forgot Password?'.tr,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                         if (isSignUp) ...[
                           const SizedBox(height: 16),
                           TextFormField(

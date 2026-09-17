@@ -66,8 +66,8 @@ void main() {
 
       expect(find.text('Share & Refer PlainScan'), findsOneWidget);
       expect(find.text('Refer Friends & Earn Credits'), findsOneWidget);
-      expect(find.text('Share PlainScan via Google Play'), findsOneWidget);
-      expect(find.text('Apply Code'), findsOneWidget);
+      expect(find.text('Share Your Code'), findsOneWidget);
+      expect(find.text('Redeem'), findsOneWidget);
     });
   });
 }

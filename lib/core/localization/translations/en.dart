@@ -138,6 +138,7 @@ const Map<String, String> enTranslations = {
   'Explore 56+ PDF, AI & OCR tools': 'Explore 56+ PDF, AI & OCR tools',
   'Search 56+ tools...': 'Search 56+ tools...',
   'No tools found matching your search': 'No tools found matching your search',
+  '▦ All': '▦ All',
   '▦ All 56': '▦ All 56',
   'All 56': 'All 56',
   '📄 PDF Conversion': '📄 PDF Conversion',
@@ -199,6 +200,26 @@ const Map<String, String> enTranslations = {
   'HTML to PDF': 'HTML to PDF',
   'Render HTML files, snippets, or styled web content into a PDF.':
       'Render HTML files, snippets, or styled web content into a PDF.',
+  'Convert webpage URLs or raw HTML strings into high-quality PDF documents.':
+      'Convert webpage URLs or raw HTML strings into high-quality PDF documents.',
+  'Images to PDF': 'Images to PDF',
+  'Combine multiple image files into a single formatted PDF document.':
+      'Combine multiple image files into a single formatted PDF document.',
+  'Convert Image': 'Convert Image',
+  'Convert images between JPG, PNG, HEIC, and TIFF with custom quality.':
+      'Convert images between JPG, PNG, HEIC, and TIFF with custom quality.',
+  'CSV to Excel': 'CSV to Excel',
+  'Convert comma- or custom-delimited CSV data files into Excel spreadsheets.':
+      'Convert comma- or custom-delimited CSV data files into Excel spreadsheets.',
+  'Excel to CSV': 'Excel to CSV',
+  'Convert Excel workbook sheets (.xlsx/.xls) into standard delimited CSV files.':
+      'Convert Excel workbook sheets (.xlsx/.xls) into standard delimited CSV files.',
+  'Bank Statement to Excel': 'Bank Statement to Excel',
+  'AI-powered extraction of transaction tables and balances from bank statement PDFs into Excel.':
+      'AI-powered extraction of transaction tables and balances from bank statement PDFs into Excel.',
+  'Receipt to Excel': 'Receipt to Excel',
+  'AI-powered parsing of receipt and invoice details into structured Excel spreadsheets.':
+      'AI-powered parsing of receipt and invoice details into structured Excel spreadsheets.',
   'PDF to RTF': 'PDF to RTF',
   'Convert PDF files to Rich Text Format (.rtf) retaining basic typography.':
       'Convert PDF files to Rich Text Format (.rtf) retaining basic typography.',
@@ -530,7 +551,70 @@ const Map<String, String> enTranslations = {
   'Applying AI Enhancement to @count pages...': 'Applying AI Enhancement to @count pages...',
   'Auto-Crop Enabled': 'Auto-Crop Enabled',
   'Auto-Crop Disabled (Manual)': 'Auto-Crop Disabled (Manual)',
-  'Hold steady. Detecting edges...': 'Hold steady. Detecting edges...',
   'SINGLE': 'SINGLE',
   'BATCH SCAN': 'BATCH SCAN',
+
+  // Remaining Tools 8-15
+  'ID Templates': 'ID Templates',
+  'Design & generate professional ID cards and badges with custom photo and logos.':
+      'Design & generate professional ID cards and badges with custom photo and logos.',
+  'N-up PDF': 'N-up PDF',
+  'Print and arrange multiple pages per sheet to save paper.':
+      'Print and arrange multiple pages per sheet to save paper.',
+  'PDF to Grayscale': 'PDF to Grayscale',
+  'Convert color PDF documents to clean black and white grayscale.':
+      'Convert color PDF documents to clean black and white grayscale.',
+  'Print Optimize PDF': 'Print Optimize PDF',
+  'Downsample high-resolution images and compress PDF for optimal print speed.':
+      'Downsample high-resolution images and compress PDF for optimal print speed.',
+  'Invoice Generator': 'Invoice Generator',
+  'Generate formatted business PDF invoices with items, taxes, and discounts.':
+      'Generate formatted business PDF invoices with items, taxes, and discounts.',
+
+  // Batch 3 Tools (16 to 26)
+  'AI Email Writer': 'AI Email Writer',
+  'Generate tailored professional, casual, or friendly emails with AI.':
+      'Generate tailored professional, casual, or friendly emails with AI.',
+  'AI Proofread': 'AI Proofread',
+  'Proofread and refine grammar, tone, clarity, and phrasing in your writing.':
+      'Proofread and refine grammar, tone, clarity, and phrasing in your writing.',
+  'AI Citation Generator': 'AI Citation Generator',
+  'Format accurate citations in APA, MLA, Chicago, or Harvard styles.':
+      'Format accurate citations in APA, MLA, Chicago, or Harvard styles.',
+  'AI Flashcards': 'AI Flashcards',
+  'Generate study flashcard Q&A decks from uploaded documents or text.':
+      'Generate study flashcard Q&A decks from uploaded documents or text.',
+  'AI Quiz Generator': 'AI Quiz Generator',
+  'Generate multiple-choice or short-answer quiz questions by difficulty level.':
+      'Generate multiple-choice or short-answer quiz questions by difficulty level.',
+  'Chat with PDF': 'Chat with PDF',
+  'Ask questions, query facts, and chat interactively with your PDF documents.':
+      'Ask questions, query facts, and chat interactively with your PDF documents.',
+  'ATS Resume Scanner': 'ATS Resume Scanner',
+  'Analyze resumes for ATS parsing compliance and match against job descriptions.':
+      'Analyze resumes for ATS parsing compliance and match against job descriptions.',
+  'Word Counter': 'Word Counter',
+  'Accurately count words, reading time, and paragraph density in your text.':
+      'Accurately count words, reading time, and paragraph density in your text.',
+  'Character Counter': 'Character Counter',
+  'Count characters with and without spaces for essays, tweets, and metadata.':
+      'Count characters with and without spaces for essays, tweets, and metadata.',
+  'Image to Base64': 'Image to Base64',
+  'Encode any image file into a clean data URI Base64 string for web usage.':
+      'Encode any image file into a clean data URI Base64 string for web usage.',
+  'Base64 to Image': 'Base64 to Image',
+  'Decode Base64 raw strings and data URIs back into high-quality images.':
+      'Decode Base64 raw strings and data URIs back into high-quality images.',
+  'Favicon Generator': 'Favicon Generator',
+  'Generate standard website favicon assets and icons from square photos.':
+      'Generate standard website favicon assets and icons from square photos.',
+  'Metadata Editor': 'Metadata Editor',
+  'View or strip EXIF and sensitive location metadata from image files.':
+      'View or strip EXIF and sensitive location metadata from image files.',
+  'Remove Metadata': 'Remove Metadata',
+  'Strip author, GPS coordinates, camera tags, and hidden metadata from PDFs and images.':
+      'Strip author, GPS coordinates, camera tags, and hidden metadata from PDFs and images.',
+  'Read Metadata': 'Read Metadata',
+  'Inspect embedded document attributes, creation dates, camera specifications, and tags.':
+      'Inspect embedded document attributes, creation dates, camera specifications, and tags.',
 };

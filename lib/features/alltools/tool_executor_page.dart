@@ -122,11 +122,1282 @@ class ToolExecutorPage extends StatelessWidget {
     );
   }
 
+  IconData _getFileIcon(String fileType) {
+    final upper = fileType.toUpperCase();
+    if (upper == 'PDF') return Icons.picture_as_pdf;
+    if (upper == 'XLS' || upper == 'XLSX' || upper.contains('EXCEL')) return Icons.table_chart_outlined;
+    if (upper == 'CSV') return Icons.table_view_outlined;
+    if (upper == 'DOC' || upper == 'DOCX' || upper.contains('WORD')) return Icons.description_outlined;
+    if (upper == 'PPT' || upper == 'PPTX') return Icons.slideshow_outlined;
+    if (upper == 'ZIP') return Icons.folder_zip_outlined;
+    if (upper == 'TXT' || upper == 'MD') return Icons.text_snippet_outlined;
+    return Icons.image_outlined;
+  }
+
+  Color _getFileColor(String fileType) {
+    final upper = fileType.toUpperCase();
+    if (upper == 'PDF') return AppColors.coral;
+    if (upper == 'XLS' || upper == 'XLSX' || upper.contains('EXCEL') || upper == 'CSV') return const Color(0xFF10B981);
+    if (upper == 'DOC' || upper == 'DOCX' || upper.contains('WORD')) return AppColors.blue;
+    if (upper == 'PPT' || upper == 'PPTX') return AppColors.coral;
+    if (upper == 'ZIP') return const Color(0xFFD97706);
+    return AppColors.purple;
+  }
+
+  Widget _buildHtmlToPdfInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final isUrlMode = controller.htmlToPdfMode == 'url';
+
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE44D26).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.html_outlined,
+                    color: Color(0xFFE44D26),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HTML to PDF Input',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'No file upload needed. Pass URL or raw HTML.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => controller.setHtmlToPdfMode('url'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isUrlMode ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: isUrlMode
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  )
+                                ]
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.link_rounded,
+                              size: 16,
+                              color: isUrlMode ? AppColors.primary : AppColors.secondaryText,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Webpage URL',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isUrlMode ? FontWeight.bold : FontWeight.w500,
+                                color: isUrlMode ? AppColors.primary : AppColors.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => controller.setHtmlToPdfMode('html'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: !isUrlMode ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: !isUrlMode
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  )
+                                ]
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.code_rounded,
+                              size: 16,
+                              color: !isUrlMode ? AppColors.primary : AppColors.secondaryText,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'HTML Code',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: !isUrlMode ? FontWeight.bold : FontWeight.w500,
+                                color: !isUrlMode ? AppColors.primary : AppColors.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (isUrlMode) ...[
+              TextField(
+                controller: controller.htmlToPdfUrlController,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  labelText: 'Target Webpage URL',
+                  hintText: 'https://example.com',
+                  prefixIcon: const Icon(Icons.language_outlined, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+              ),
+            ] else ...[
+              TextField(
+                controller: controller.htmlToPdfHtmlController,
+                maxLines: 6,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: 'Raw HTML Content',
+                  hintText: '<h1>Hello World</h1>\n<p>Your HTML content here...</p>',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIdTemplatesInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.badge_outlined,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ID Card Details & Photos',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Upload logo/photo and fill in organization & employee details.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Company & Employee Photos (Optional)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: controller.idLogoFile != null
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle, size: 16, color: Color(0xFF10B981)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  controller.idLogoFile!.name,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => controller.clearIdLogo(),
+                                child: const Icon(Icons.close, size: 16, color: AppColors.secondaryText),
+                              ),
+                            ],
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () => controller.pickIdLogo(),
+                          icon: const Icon(Icons.image_outlined, size: 16),
+                          label: const Text('Company Logo', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: controller.idPhotoFile != null
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle, size: 16, color: Color(0xFF10B981)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  controller.idPhotoFile!.name,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => controller.clearIdPhoto(),
+                                child: const Icon(Icons.close, size: 16, color: AppColors.secondaryText),
+                              ),
+                            ],
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () => controller.pickIdPhoto(),
+                          icon: const Icon(Icons.person_outline, size: 16),
+                          label: const Text('Employee Photo', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Organization Info',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.idCompanyNameController,
+              decoration: InputDecoration(
+                labelText: 'Company / Organization Name *',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller.idCompanyAddressController,
+              decoration: InputDecoration(
+                labelText: 'Company Address',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller.idCompanyPhoneController,
+              decoration: InputDecoration(
+                labelText: 'Company Phone',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Employee Details',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.idEmployeeNameController,
+              decoration: InputDecoration(
+                labelText: 'Employee Full Name *',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller.idEmployeeRoleController,
+              decoration: InputDecoration(
+                labelText: 'Role / Job Title',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller.idEmployeeIdController,
+              decoration: InputDecoration(
+                labelText: 'Employee ID',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvoiceGeneratorInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long_outlined,
+                    color: Color(0xFF4F46E5),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Invoice Details & Items',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Generate a PDF invoice directly from your billing details.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller.invoiceNumberController,
+              decoration: InputDecoration(
+                labelText: 'Invoice Number *',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'From (Issuer / Business)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.invoiceFromNameController,
+              decoration: InputDecoration(
+                labelText: 'Business / Issuer Name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller.invoiceFromEmailController,
+                    decoration: InputDecoration(
+                      labelText: 'Issuer Email',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: controller.invoiceFromPhoneController,
+                    decoration: InputDecoration(
+                      labelText: 'Issuer Phone',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.invoiceFromAddressController,
+              decoration: InputDecoration(
+                labelText: 'Issuer Address',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Bill To (Client / Customer)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.invoiceToNameController,
+              decoration: InputDecoration(
+                labelText: 'Client Name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.invoiceToEmailController,
+              decoration: InputDecoration(
+                labelText: 'Client Email',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.invoiceToAddressController,
+              decoration: InputDecoration(
+                labelText: 'Client Address',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Currency',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      DropdownButton<String>(
+                        value: controller.invoiceCurrency,
+                        isExpanded: true,
+                        items: const [
+                          DropdownMenuItem(value: 'USD', child: Text('USD (\$)')),
+                          DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
+                          DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
+                          DropdownMenuItem(value: 'INR', child: Text('INR (₹)')),
+                          DropdownMenuItem(value: 'CAD', child: Text('CAD (\$)')),
+                          DropdownMenuItem(value: 'AUD', child: Text('AUD (\$)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) controller.setInvoiceCurrency(val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Discount',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: '5.0',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          final parsed = double.tryParse(val);
+                          if (parsed != null) controller.setInvoiceDiscount(parsed);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Shipping',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: '15.0',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          final parsed = double.tryParse(val);
+                          if (parsed != null) controller.setInvoiceShipping(parsed);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Invoice Items',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    _showAddInvoiceItemDialog(context, controller);
+                  },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...controller.invoiceItems.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final item = entry.value;
+              final qty = item['quantity'] ?? 1;
+              final price = item['unit_price'] ?? 0.0;
+              final total = (qty as num) * (price as num);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['description']?.toString() ?? 'Item',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Qty: $qty × ${controller.invoiceCurrency} $price = ${controller.invoiceCurrency} ${total.toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.coral),
+                      onPressed: () => controller.removeInvoiceItem(idx),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddInvoiceItemDialog(BuildContext context, ToolExecutorController controller) {
+    final descCtrl = TextEditingController(text: 'Consulting Service');
+    final qtyCtrl = TextEditingController(text: '1');
+    final priceCtrl = TextEditingController(text: '150.00');
+    final taxCtrl = TextEditingController(text: '0');
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Add Invoice Item', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: descCtrl,
+              decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: qtyCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: priceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Unit Price', border: OutlineInputBorder()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: taxCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Tax Rate (%)', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final desc = descCtrl.text.trim();
+              final qty = int.tryParse(qtyCtrl.text.trim()) ?? 1;
+              final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+              final tax = double.tryParse(taxCtrl.text.trim()) ?? 0.0;
+              if (desc.isNotEmpty) {
+                controller.addInvoiceItem(desc, qty, price, tax);
+                Get.back();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceChip({
+    required String label,
+    IconData? icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: isSelected ? Colors.white : AppColors.secondaryText),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppColors.text,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailWriterInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.email_outlined,
+                    color: Color(0xFF2563EB),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI Email Writer',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Draft an email from subject, context, and desired tone.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller.emailSubjectController,
+              decoration: InputDecoration(
+                labelText: 'Email Subject *',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller.emailContextController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: 'Context / Message Goal *',
+                hintText: 'Brief description of what the email should say...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Writing Tone',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildChoiceChip(
+                  label: 'Professional',
+                  icon: Icons.business_center_outlined,
+                  isSelected: controller.emailTone == 'professional',
+                  onTap: () => controller.setEmailTone('professional'),
+                ),
+                const SizedBox(width: 8),
+                _buildChoiceChip(
+                  label: 'Casual',
+                  icon: Icons.chat_bubble_outline,
+                  isSelected: controller.emailTone == 'casual',
+                  onTap: () => controller.setEmailTone('casual'),
+                ),
+                const SizedBox(width: 8),
+                _buildChoiceChip(
+                  label: 'Friendly',
+                  icon: Icons.sentiment_satisfied_alt_outlined,
+                  isSelected: controller.emailTone == 'friendly',
+                  onTap: () => controller.setEmailTone('friendly'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCitationInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.format_quote_outlined,
+                    color: Color(0xFF7C3AED),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI Citation Generator',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Format bibliography citations from source information.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller.citationSourceController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: 'Source Information *',
+                hintText: 'Author, title, publication year, publisher, DOI or URL...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Citation Style',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildChoiceChip(
+                  label: 'APA',
+                  isSelected: controller.citationStyle == 'APA',
+                  onTap: () => controller.setCitationStyle('APA'),
+                ),
+                const SizedBox(width: 8),
+                _buildChoiceChip(
+                  label: 'MLA',
+                  isSelected: controller.citationStyle == 'MLA',
+                  onTap: () => controller.setCitationStyle('MLA'),
+                ),
+                const SizedBox(width: 8),
+                _buildChoiceChip(
+                  label: 'Chicago',
+                  isSelected: controller.citationStyle == 'Chicago',
+                  onTap: () => controller.setCitationStyle('Chicago'),
+                ),
+                const SizedBox(width: 8),
+                _buildChoiceChip(
+                  label: 'Harvard',
+                  isSelected: controller.citationStyle == 'Harvard',
+                  onTap: () => controller.setCitationStyle('Harvard'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextCounterInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final text = controller.counterTextController.text;
+    final words = text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+    final characters = text.length;
+    final charactersNoSpaces = text.replaceAll(RegExp(r'\s+'), '').length;
+
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF475569).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.pin_outlined,
+                    color: Color(0xFF475569),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        controller.getSlug() == 'character-counter' ? 'Character Counter' : 'Word Counter',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Count words, characters, and sentences in your text.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller.counterTextController,
+              maxLines: 5,
+              onChanged: (_) => controller.update(),
+              decoration: InputDecoration(
+                labelText: 'Input Text *',
+                hintText: 'Type or paste your text here...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        Text('$words', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
+                        const Text('Words', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        Text('$characters', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
+                        const Text('Characters', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        Text('$charactersNoSpaces', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
+                        const Text('No Spaces', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBase64ToImageInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.image_outlined,
+                    color: Color(0xFF2563EB),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Base64 to Image',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Convert a Base64 encoded string into a downloadable image.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller.base64InputController,
+              maxLines: 5,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              decoration: InputDecoration(
+                labelText: 'Base64 Encoded String *',
+                hintText: 'Paste data:image/png;base64,... or raw Base64...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputSelectionCard(
     BuildContext context,
     ToolExecutorController controller,
     bool isMulti,
   ) {
+    if (controller.isNoUploadTool()) {
+      final slug = controller.getSlug();
+      if (slug == 'id-templates' || slug == 'id-certificate-templates' || slug == 'id-generator') {
+        return _buildIdTemplatesInputCard(context, controller);
+      } else if (slug == 'invoice-generator') {
+        return _buildInvoiceGeneratorInputCard(context, controller);
+      } else if (slug == 'ai-email-writer') {
+        return _buildEmailWriterInputCard(context, controller);
+      } else if (slug == 'ai-citation') {
+        return _buildCitationInputCard(context, controller);
+      } else if (slug == 'word-counter' || slug == 'character-counter') {
+        return _buildTextCounterInputCard(context, controller);
+      } else if (slug == 'base64-to-image') {
+        return _buildBase64ToImageInputCard(context, controller);
+      } else {
+        return _buildHtmlToPdfInputCard(context, controller);
+      }
+    }
     final supportsText = controller.isTextOptionSupported();
 
     return Card(
@@ -223,20 +1494,12 @@ class ToolExecutorPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:
-                  (controller.selectedFile!.fileType == 'PDF'
-                          ? AppColors.coral
-                          : AppColors.blue)
-                      .withOpacity(0.1),
+              color: _getFileColor(controller.selectedFile!.fileType).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              controller.selectedFile!.fileType == 'PDF'
-                  ? Icons.picture_as_pdf
-                  : Icons.image,
-              color: controller.selectedFile!.fileType == 'PDF'
-                  ? AppColors.coral
-                  : AppColors.blue,
+              _getFileIcon(controller.selectedFile!.fileType),
+              color: _getFileColor(controller.selectedFile!.fileType),
             ),
           ),
           const SizedBox(width: 12),
@@ -298,12 +1561,8 @@ class ToolExecutorPage extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  file.fileType == 'PDF'
-                      ? Icons.picture_as_pdf
-                      : Icons.image,
-                  color: file.fileType == 'PDF'
-                      ? AppColors.coral
-                      : AppColors.blue,
+                  _getFileIcon(file.fileType),
+                  color: _getFileColor(file.fileType),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -1313,6 +2572,808 @@ class ToolExecutorPage extends StatelessWidget {
         );
         break;
 
+      case 'images-to-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Images Compilation',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Selected ${controller.selectedFiles.length} image(s) will be converted and combined into a single formatted PDF document in the sequence shown above.',
+              style: const TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'convert-image':
+      case 'tiff-conversion':
+      case 'heic-to-jpg':
+      case 'heic-to-png':
+        final isFixedJpg = slug == 'heic-to-jpg';
+        final isFixedPng = slug == 'heic-to-png';
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isFixedJpg && !isFixedPng) ...[
+              const Text(
+                'Target Image Format',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              DropdownButton<String>(
+                value: controller.convertImageTargetFormat,
+                items: const [
+                  DropdownMenuItem(value: 'jpg', child: Text('JPG (.jpg)')),
+                  DropdownMenuItem(value: 'png', child: Text('PNG (.png)')),
+                ],
+                onChanged: (val) {
+                  if (val != null) controller.setConvertImageTargetFormat(val);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Output Quality',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '${controller.convertImageQuality}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ],
+            ),
+            Slider(
+              value: controller.convertImageQuality.toDouble(),
+              min: 10,
+              max: 100,
+              divisions: 18,
+              label: '${controller.convertImageQuality}%',
+              activeColor: AppColors.primary,
+              onChanged: (val) => controller.setConvertImageQuality(val.toInt()),
+            ),
+          ],
+        );
+        break;
+
+      case 'bank-statement-to-excel':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.auto_awesome, color: Color(0xFF059669), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'AI Financial Table Parser',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'AI automatically identifies transactions, transaction dates, descriptions, credits, debits, and balance records from your bank statement PDF and exports them into clean Microsoft Excel (.xlsx) columns.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'receipt-to-excel':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.auto_awesome, color: Color(0xFFD97706), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'AI Receipt & Invoice Parser',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Extracts vendor name, transaction date, invoice numbers, tax lines, itemized totals, and payment methods from receipt scans or PDFs into an organized Excel spreadsheet.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'csv-to-excel':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'CSV Delimiter',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: controller.csvDelimiter,
+              items: const [
+                DropdownMenuItem(value: ',', child: Text('Comma (,) — Standard')),
+                DropdownMenuItem(value: ';', child: Text('Semicolon (;) — European')),
+                DropdownMenuItem(value: '\t', child: Text('Tab (\\t) — TSV')),
+                DropdownMenuItem(value: '|', child: Text('Pipe (|)')),
+              ],
+              onChanged: (val) {
+                if (val != null) controller.setCsvDelimiter(val);
+              },
+            ),
+          ],
+        );
+        break;
+
+      case 'excel-to-csv':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Excel Sheet Selection',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed: controller.excelSheetIndex > 0
+                      ? () => controller.decrementExcelSheetIndex()
+                      : null,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Sheet ${controller.excelSheetIndex + 1} (Index ${controller.excelSheetIndex})',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: () => controller.incrementExcelSheetIndex(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Index 0 extracts the first sheet in your Excel workbook.',
+              style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
+            ),
+          ],
+        );
+        break;
+
+      case 'flatten-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.layers_clear_outlined, color: AppColors.primary, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Flatten Form Fields & Annotations',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Flattens all interactive form fields, checkboxes, and annotations into static PDF layers. The resulting document is read-only and cannot be altered or filled again.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'n-up-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pages Per Sheet (N-Up)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<int>(
+              value: controller.nUpPages,
+              items: const [
+                DropdownMenuItem(value: 2, child: Text('2 Pages per sheet')),
+                DropdownMenuItem(value: 4, child: Text('4 Pages per sheet')),
+                DropdownMenuItem(value: 6, child: Text('6 Pages per sheet')),
+                DropdownMenuItem(value: 9, child: Text('9 Pages per sheet')),
+              ],
+              onChanged: (val) {
+                if (val != null) controller.setNUpPages(val);
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Sheet Orientation',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: controller.nUpOrientation,
+              items: const [
+                DropdownMenuItem(value: 'portrait', child: Text('Portrait')),
+                DropdownMenuItem(value: 'landscape', child: Text('Landscape')),
+              ],
+              onChanged: (val) {
+                if (val != null) controller.setNUpOrientation(val);
+              },
+            ),
+          ],
+        );
+        break;
+
+      case 'pdf-to-grayscale':
+      case 'grayscale-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.filter_b_and_w_outlined, color: AppColors.primary, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Black & White / Grayscale Conversion',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Converts all colored text, vector artwork, and embedded images in the PDF into monochromatic grayscale to save color printer ink and reduce file size.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'print-optimize-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Optimization Preset',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: controller.printOptType,
+              items: const [
+                DropdownMenuItem(value: 'standard', child: Text('Standard Print (Recommended)')),
+                DropdownMenuItem(value: 'screen', child: Text('Screen (Low Resolution)')),
+                DropdownMenuItem(value: 'printer', child: Text('Office Printer (Medium Resolution)')),
+                DropdownMenuItem(value: 'prepress', child: Text('Prepress (High Resolution Commercial)')),
+              ],
+              onChanged: (val) {
+                if (val != null) controller.setPrintOptType(val);
+              },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Resolution (DPI)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '${controller.printOptDpi} DPI',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ],
+            ),
+            Slider(
+              value: controller.printOptDpi.toDouble(),
+              min: 72,
+              max: 600,
+              divisions: 22,
+              label: '${controller.printOptDpi} DPI',
+              activeColor: AppColors.primary,
+              onChanged: (val) => controller.setPrintOptDpi(val.toInt()),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Image Compression Quality',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '${controller.printOptQuality}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ],
+            ),
+            Slider(
+              value: controller.printOptQuality.toDouble(),
+              min: 10,
+              max: 100,
+              divisions: 18,
+              label: '${controller.printOptQuality}%',
+              activeColor: AppColors.primary,
+              onChanged: (val) => controller.setPrintOptQuality(val.toInt()),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Convert to Grayscale for Print',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              subtitle: const Text(
+                'Save color ink during printing.',
+                style: TextStyle(fontSize: 11),
+              ),
+              value: controller.printOptGrayscale,
+              activeThumbColor: AppColors.primary,
+              onChanged: (val) => controller.togglePrintOptGrayscale(val),
+            ),
+          ],
+        );
+        break;
+
+      case 'repair-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.build_circle_outlined, color: Color(0xFF0284C7), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'PDF Structure Recovery',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Analyzes damaged or unreadable PDF files, repairs damaged headers, rebuilds corrupted cross-reference (xref) tables, and recovers valid page contents.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'crop-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Crop Margins (in points)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Top', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('${controller.cropTop} pt', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      Slider(
+                        value: controller.cropTop.toDouble(),
+                        min: 0,
+                        max: 200,
+                        divisions: 40,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => controller.setCropTop(v.toInt()),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Bottom', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('${controller.cropBottom} pt', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      Slider(
+                        value: controller.cropBottom.toDouble(),
+                        min: 0,
+                        max: 200,
+                        divisions: 40,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => controller.setCropBottom(v.toInt()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Left', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('${controller.cropLeft} pt', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      Slider(
+                        value: controller.cropLeft.toDouble(),
+                        min: 0,
+                        max: 200,
+                        divisions: 40,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => controller.setCropLeft(v.toInt()),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Right', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('${controller.cropRight} pt', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      Slider(
+                        value: controller.cropRight.toDouble(),
+                        min: 0,
+                        max: 200,
+                        divisions: 40,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) => controller.setCropRight(v.toInt()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+        break;
+
+      case 'id-templates':
+      case 'id-certificate-templates':
+      case 'id-generator':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Identity Document Ready',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'All employee and company details entered above will be rendered into an official printable ID card format.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'invoice-generator':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Invoice Layout & Template',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Line items, taxes, discounts, and billing addresses entered above will be rendered into a clean, professional invoice PDF.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'ai-flashcards':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Number of Flashcards',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '${controller.flashcardsCount}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ],
+            ),
+            Slider(
+              value: controller.flashcardsCount.toDouble(),
+              min: 5,
+              max: 50,
+              divisions: 9,
+              label: '${controller.flashcardsCount}',
+              activeColor: AppColors.primary,
+              onChanged: (v) => controller.setFlashcardsCount(v.toInt()),
+            ),
+          ],
+        );
+        break;
+
+      case 'ai-quiz':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Number of Questions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  '${controller.quizCount}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ],
+            ),
+            Slider(
+              value: controller.quizCount.toDouble(),
+              min: 3,
+              max: 20,
+              divisions: 17,
+              label: '${controller.quizCount}',
+              activeColor: AppColors.primary,
+              onChanged: (v) => controller.setQuizCount(v.toInt()),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Difficulty Level',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: controller.quizDifficulty,
+              items: const [
+                DropdownMenuItem(value: 'easy', child: Text('Easy')),
+                DropdownMenuItem(value: 'medium', child: Text('Medium (Recommended)')),
+                DropdownMenuItem(value: 'hard', child: Text('Hard')),
+              ],
+              onChanged: (v) {
+                if (v != null) controller.setQuizDifficulty(v);
+              },
+            ),
+          ],
+        );
+        break;
+
+      case 'chat-with-pdf':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Question for PDF *',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.chatPdfQuestionController,
+              decoration: InputDecoration(
+                hintText: 'e.g. What is the main summary of this document?',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Quick Prompts:',
+              style: TextStyle(fontSize: 11, color: AppColors.secondaryText, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ActionChip(
+                  label: const Text('Summarize Document', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    controller.chatPdfQuestionController.text = 'Summarize this document in 3 paragraphs.';
+                    controller.update();
+                  },
+                ),
+                ActionChip(
+                  label: const Text('Key Action Items', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    controller.chatPdfQuestionController.text = 'Extract all key action items, deadlines, and dates.';
+                    controller.update();
+                  },
+                ),
+                ActionChip(
+                  label: const Text('Main Takeaways', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    controller.chatPdfQuestionController.text = 'List the top 5 most important takeaways.';
+                    controller.update();
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+        break;
+
+      case 'ats-scanner':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Job Description (Optional)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Paste a target job posting to compute keyword match score and skill gaps.',
+              style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.atsJobDescriptionController,
+              maxLines: 5,
+              decoration: InputDecoration(
+                hintText: 'Paste job requirements, required skills, and qualifications here...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        );
+        break;
+
+      case 'metadata-editor':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Metadata Operation',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String>(
+              value: controller.metadataAction,
+              items: const [
+                DropdownMenuItem(value: 'strip', child: Text('Strip / Remove Metadata')),
+                DropdownMenuItem(value: 'view', child: Text('View / Inspect Metadata')),
+              ],
+              onChanged: (v) {
+                if (v != null) controller.setMetadataAction(v);
+              },
+            ),
+          ],
+        );
+        break;
+
+      case 'remove-metadata':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.phonelink_erase_outlined, color: AppColors.coral, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Permanent Metadata Stripping',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Removes author names, location coordinates (GPS), camera make & model, editing software history, and hidden tags from your document or photo for maximum privacy.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'read-metadata':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.primary, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Metadata Inspection',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Reads and extracts all embedded metadata properties, EXIF tags, creation timestamps, DPI resolution, color profiles, and document structure into structured JSON.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'favicon-generator':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.web_outlined, color: Color(0xFFD97706), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Multi-Size Favicon Generation',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Converts your square PNG or JPG logo into optimized web favicon assets (16x16, 32x32, 48x48) in standard .ico format ready for websites and web apps.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
+      case 'image-to-base64':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.data_object_outlined, color: Color(0xFF059669), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Base64 Data URI Conversion',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Encodes your image file directly into a clean Base64 data string suitable for embedding into HTML, CSS, or JSON payloads.',
+              style: TextStyle(fontSize: 12, color: AppColors.secondaryText, height: 1.4),
+            ),
+          ],
+        );
+        break;
+
       default:
         // Render simple placeholder
         return const SizedBox.shrink();
@@ -1659,7 +3720,7 @@ class ToolExecutorPage extends StatelessWidget {
                           (controller.convertedFile!.fileType == 'PDF'
                                   ? AppColors.coral
                                   : AppColors.blue)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(

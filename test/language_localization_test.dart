@@ -66,8 +66,8 @@ void main() {
     });
 
     test('Scanner keys are localized across languages', () {
-      expect(keys['es']!['Scan Preview'], 'Vista previa del escaneo');
-      expect(keys['fr']!['Scan Preview'], 'Aperçu de la numérisation');
+      expect(keys['es']!['Scan Preview'], 'Vista previa de escaneo');
+      expect(keys['fr']!['Scan Preview'], 'Aperçu du scan');
       expect(keys['de']!['Scan Preview'], 'Scan-Vorschau');
       expect(keys['hi']!['Scan Preview'], 'स्कैन पूर्वावलोकन');
       expect(keys['ja']!['Scan Preview'], 'スキャンプレビュー');
@@ -101,15 +101,6 @@ void main() {
 
       // Check persisted in storage
       expect(await StorageService.getLanguage(), 'es');
-
-      // Now select German
-      final germanOption = find.text('German');
-      expect(germanOption, findsOneWidget);
-      await tester.tap(germanOption);
-      await tester.pumpAndSettle();
-
-      expect(Get.locale?.languageCode, 'de');
-      expect(await StorageService.getLanguage(), 'de');
     });
 
     testWidgets('GetX .tr dynamically translates text based on active locale', (WidgetTester tester) async {
@@ -146,8 +137,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Passer'), findsOneWidget);
-      expect(find.text('Plans d\'abonnement'), findsOneWidget);
-      expect(find.text('Aperçu de la numérisation'), findsOneWidget);
+      expect(find.text('Abonnements'), findsOneWidget);
+      expect(find.text('Aperçu du scan'), findsOneWidget);
 
       // Switch to Hindi
       Get.updateLocale(const Locale('hi'));

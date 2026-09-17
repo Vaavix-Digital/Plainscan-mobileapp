@@ -23,6 +23,9 @@ void main() {
     expect(find.text('Skip'), findsOneWidget);
     expect(find.text('Next'), findsOneWidget);
     expect(find.text('Professional HD Scanner'), findsOneWidget);
+
+    // Pump delayed timer for runtime permissions request
+    await tester.pump(const Duration(milliseconds: 600));
   });
 
   testWidgets('LanguageSelectionScreen renders search bar and language options', (WidgetTester tester) async {

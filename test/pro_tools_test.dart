@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/models/tool_model.dart';
@@ -33,11 +33,13 @@ void main() {
       'form-filling',
       'pdf-to-fillable-form',
       'pdf-compare',
+      'bank-statement-to-excel',
+      'receipt-to-excel',
     ];
 
-    test('exactly 21 specified tools are marked as Pro (isFree == false)', () {
+    test('exactly 23 specified tools are marked as Pro (isFree == false)', () {
       final proToolsInList = allPlainscanTools.where((t) => (t.isFree ?? true) == false).toList();
-      expect(proToolsInList.length, 21);
+      expect(proToolsInList.length, 23);
 
       for (final id in expectedProToolIds) {
         final tool = allPlainscanTools.firstWhere(

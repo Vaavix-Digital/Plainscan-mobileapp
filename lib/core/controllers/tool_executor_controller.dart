@@ -188,6 +188,109 @@ class ToolExecutorController extends GetxController {
   bool renameNumbering = true;
   int renameStartNumber = 1;
 
+  // HTML to PDF options
+  String htmlToPdfMode = 'url'; // 'url' or 'html'
+  final htmlToPdfUrlController = TextEditingController(text: 'https://example.com');
+  final htmlToPdfHtmlController = TextEditingController(
+    text: '<h1>Hello World</h1>\n<p>Generated with PlainScan HTML to PDF converter.</p>',
+  );
+
+  // Convert Image options
+  String convertImageTargetFormat = 'jpg'; // 'jpg' or 'png'
+  int convertImageQuality = 90;
+
+  // CSV to Excel options
+  String csvDelimiter = ',';
+
+  // Excel to CSV options
+  int excelSheetIndex = 0;
+
+  // ID Templates options
+  FileModel? idLogoFile;
+  FileModel? idPhotoFile;
+  final idCompanyNameController = TextEditingController(text: 'PlainScan Corp');
+  final idCompanyAddressController = TextEditingController(text: '123 Tech Park, NY');
+  final idCompanyPhoneController = TextEditingController(text: '+1 555-1234');
+  final idEmployeeNameController = TextEditingController(text: 'John Doe');
+  final idEmployeeRoleController = TextEditingController(text: 'Software Engineer');
+  final idEmployeeIdController = TextEditingController(text: 'EMP-001');
+
+  // N-up PDF options
+  int nUpPages = 2; // 2, 4, 6, 9
+  String nUpOrientation = 'portrait'; // portrait or landscape
+
+  // Print Optimize PDF options
+  String printOptType = 'standard';
+  int printOptDpi = 150;
+  int printOptQuality = 75;
+  bool printOptGrayscale = false;
+
+  // Crop PDF options
+  int cropTop = 50;
+  int cropBottom = 50;
+  int cropLeft = 30;
+  int cropRight = 30;
+
+  // Invoice Generator options
+  final invoiceNumberController = TextEditingController(text: 'INV-2026-001');
+  final invoiceFromNameController = TextEditingController(text: 'My Business LLC');
+  final invoiceFromEmailController = TextEditingController(text: 'billing@business.com');
+  final invoiceFromPhoneController = TextEditingController(text: '+1 555-9876');
+  final invoiceFromAddressController = TextEditingController(text: '456 Wall St, NY');
+  final invoiceToNameController = TextEditingController(text: 'Acme Corp');
+  final invoiceToEmailController = TextEditingController(text: 'accounts@acme.com');
+  final invoiceToAddressController = TextEditingController(text: '789 Main St, CA');
+  String invoiceCurrency = 'USD';
+  String invoiceTaxType = 'tax';
+  double invoiceDiscount = 5.0;
+  double invoiceShipping = 15.0;
+  String invoiceThemeColor = '#4F46E5';
+  List<Map<String, dynamic>> invoiceItems = [
+    {
+      'description': 'Web Development Services',
+      'quantity': 1,
+      'unit_price': 1000.00,
+      'tax_rate': 0,
+    },
+    {
+      'description': 'Server Hosting (1 Year)',
+      'quantity': 1,
+      'unit_price': 200.00,
+      'tax_rate': 5,
+    },
+  ];
+
+  // AI Email Writer options
+  final emailSubjectController = TextEditingController(text: 'Meeting Request');
+  final emailContextController = TextEditingController(text: 'Brief description of what the email should say');
+  String emailTone = 'professional'; // professional, casual, friendly
+
+  // AI Citation options
+  final citationSourceController = TextEditingController(text: 'Smith, J. (2025). The Future of Artificial Intelligence. Tech Press.');
+  String citationStyle = 'APA'; // APA, MLA, Chicago, Harvard
+
+  // AI Flashcards options
+  int flashcardsCount = 10;
+
+  // AI Quiz options
+  int quizCount = 5;
+  String quizDifficulty = 'medium'; // easy, medium, hard
+
+  // Chat with PDF options
+  final chatPdfQuestionController = TextEditingController(text: 'What is the main summary of this document?');
+
+  // ATS Resume Scanner options
+  final atsJobDescriptionController = TextEditingController(text: 'Senior Software Engineer with Flutter and Dart experience.');
+
+  // Word & Character Counters options
+  final counterTextController = TextEditingController(text: 'PlainScan is a fast and powerful document scanner and PDF utility suite.');
+
+  // Base64 to Image options
+  final base64InputController = TextEditingController(text: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+
+  // Metadata Editor options
+  String metadataAction = 'strip'; // strip, view
+
   @override
   void onInit() {
     super.onInit();
@@ -243,9 +346,25 @@ class ToolExecutorController extends GetxController {
     return tool.slug.replaceAll('_', '-');
   }
 
+  bool isNoUploadTool() {
+    final slug = getSlug();
+    return slug == 'html-to-pdf' ||
+        slug == 'id-templates' ||
+        slug == 'id-certificate-templates' ||
+        slug == 'id-generator' ||
+        slug == 'invoice-generator' ||
+        slug == 'ai-email-writer' ||
+        slug == 'ai-citation' ||
+        slug == 'word-counter' ||
+        slug == 'character-counter' ||
+        slug == 'base64-to-image';
+  }
+
   bool isMultiFileTool() {
     final slug = getSlug();
     return tool.isMultiFile ||
+        slug == 'images-to-pdf' ||
+        slug == 'image-to-pdf' ||
         slug == 'pdf-merge' ||
         slug == 'pdf-compare' ||
         slug == 'file-to-zip' ||
@@ -254,8 +373,7 @@ class ToolExecutorController extends GetxController {
         slug == 'batch-rename' ||
         slug == 'jpg-to-pdf' ||
         slug == 'png-to-pdf' ||
-        slug == 'webp-to-pdf' ||
-        slug == 'image-to-pdf';
+        slug == 'webp-to-pdf';
   }
 
   bool isTextOptionSupported() {
@@ -276,7 +394,10 @@ class ToolExecutorController extends GetxController {
         slug == 'ai-keywords' ||
         slug == 'humanize-ai-content' ||
         slug == 'humanize-ai' ||
-        slug == 'plagiarism-check';
+        slug == 'plagiarism-check' ||
+        slug == 'ai-proofread' ||
+        slug == 'ai-flashcards' ||
+        slug == 'ai-quiz';
   }
 
   // Creates a physical temporary file if the mock path doesn't exist on disk
@@ -557,6 +678,157 @@ class ToolExecutorController extends GetxController {
           'numbering': renameNumbering,
           'start_number': renameStartNumber,
         };
+      case 'html-to-pdf':
+        if (htmlToPdfMode == 'url') {
+          return {'url': htmlToPdfUrlController.text.trim()};
+        } else {
+          return {'html': htmlToPdfHtmlController.text.trim()};
+        }
+      case 'images-to-pdf':
+        return {};
+      case 'convert-image':
+      case 'tiff-conversion':
+      case 'tiff-to-jpg':
+      case 'tiff-to-png':
+        return {
+          'target_format': convertImageTargetFormat,
+          'quality': convertImageQuality,
+        };
+      case 'heic-to-jpg':
+        return {
+          'target_format': 'jpg',
+          'quality': convertImageQuality,
+        };
+      case 'heic-to-png':
+        return {
+          'target_format': 'png',
+          'quality': convertImageQuality,
+        };
+      case 'bank-statement-to-excel':
+        return {};
+      case 'receipt-to-excel':
+        return {};
+      case 'csv-to-excel':
+        return {'delimiter': csvDelimiter};
+      case 'excel-to-csv':
+        return {'sheet_index': excelSheetIndex};
+      case 'id-templates':
+      case 'id-certificate-templates':
+      case 'id-generator':
+        return {
+          'logo_url': idLogoFile != null ? idLogoFile!.id : 'file_logo123',
+          'photo_url': idPhotoFile != null ? idPhotoFile!.id : 'file_photo123',
+          'company_name': idCompanyNameController.text.trim(),
+          'company_address': idCompanyAddressController.text.trim(),
+          'company_phone': idCompanyPhoneController.text.trim(),
+          'employee_name': idEmployeeNameController.text.trim(),
+          'employee_role': idEmployeeRoleController.text.trim(),
+          'employee_id': idEmployeeIdController.text.trim(),
+        };
+      case 'flatten-pdf':
+        return {};
+      case 'n-up-pdf':
+        return {
+          'n': nUpPages,
+          'orientation': nUpOrientation,
+        };
+      case 'pdf-to-grayscale':
+      case 'grayscale-pdf':
+        return {};
+      case 'print-optimize-pdf':
+        return {
+          'optimization_type': printOptType,
+          'dpi': printOptDpi,
+          'quality': printOptQuality,
+          'grayscale': printOptGrayscale,
+        };
+      case 'repair-pdf':
+        return {};
+      case 'invoice-generator':
+        return {
+          'invoice_number': invoiceNumberController.text.trim(),
+          'from_name': invoiceFromNameController.text.trim(),
+          'from_email': invoiceFromEmailController.text.trim(),
+          'from_phone': invoiceFromPhoneController.text.trim(),
+          'from_address': invoiceFromAddressController.text.trim(),
+          'to_name': invoiceToNameController.text.trim(),
+          'to_email': invoiceToEmailController.text.trim(),
+          'to_address': invoiceToAddressController.text.trim(),
+          'currency': invoiceCurrency,
+          'tax_type': invoiceTaxType,
+          'discount': invoiceDiscount,
+          'shipping': invoiceShipping,
+          'theme_color': invoiceThemeColor,
+          'items': invoiceItems,
+        };
+      case 'crop-pdf':
+        return {
+          'top': cropTop,
+          'bottom': cropBottom,
+          'left': cropLeft,
+          'right': cropRight,
+        };
+      case 'ai-email-writer':
+        return {
+          'subject': emailSubjectController.text.trim(),
+          'context': emailContextController.text.trim(),
+          'tone': emailTone,
+        };
+      case 'ai-proofread':
+        final proofreadOpts = <String, dynamic>{};
+        if (useRawText) {
+          proofreadOpts['text'] = rawTextController.text.trim();
+        }
+        return proofreadOpts;
+      case 'ai-citation':
+        return {
+          'text': citationSourceController.text.trim(),
+          'style': citationStyle,
+        };
+      case 'ai-flashcards':
+        final flashcardsOpts = <String, dynamic>{
+          'count': flashcardsCount,
+        };
+        if (useRawText) {
+          flashcardsOpts['text'] = rawTextController.text.trim();
+        }
+        return flashcardsOpts;
+      case 'ai-quiz':
+        final quizOpts = <String, dynamic>{
+          'count': quizCount,
+          'difficulty': quizDifficulty,
+        };
+        if (useRawText) {
+          quizOpts['text'] = rawTextController.text.trim();
+        }
+        return quizOpts;
+      case 'chat-with-pdf':
+        return {
+          'question': chatPdfQuestionController.text.trim(),
+        };
+      case 'ats-scanner':
+        final desc = atsJobDescriptionController.text.trim();
+        return desc.isNotEmpty ? {'job_description': desc} : <String, dynamic>{};
+      case 'word-counter':
+      case 'character-counter':
+        return {
+          'text': counterTextController.text.trim(),
+        };
+      case 'image-to-base64':
+        return {};
+      case 'base64-to-image':
+        return {
+          'base64_string': base64InputController.text.trim(),
+        };
+      case 'favicon-generator':
+        return {};
+      case 'metadata-editor':
+        return {
+          'action': metadataAction,
+        };
+      case 'remove-metadata':
+      case 'read-metadata':
+        return {};
       default:
         return {};
     }
@@ -575,6 +847,7 @@ class ToolExecutorController extends GetxController {
       case 'humanize-ai-content':
       case 'ai-resume-formatter':
       case 'ai-cover-letter':
+      case 'ai-proofread':
         return 'docx';
       case 'word-to-pdf':
       case 'ppt-to-pdf':
@@ -583,6 +856,19 @@ class ToolExecutorController extends GetxController {
       case 'png-to-pdf':
       case 'webp-to-pdf':
       case 'image-to-pdf':
+      case 'images-to-pdf':
+      case 'html-to-pdf':
+      case 'flatten-pdf':
+      case 'n-up-pdf':
+      case 'pdf-to-grayscale':
+      case 'grayscale-pdf':
+      case 'print-optimize-pdf':
+      case 'repair-pdf':
+      case 'crop-pdf':
+      case 'id-templates':
+      case 'id-certificate-templates':
+      case 'id-generator':
+      case 'invoice-generator':
       case 'epub-to-pdf':
       case 'ocr-to-pdf':
       case 'pdf-compress':
@@ -598,11 +884,29 @@ class ToolExecutorController extends GetxController {
       case 'pdf-sign':
       case 'pdf-compare':
       case 'plagiarism-check':
+      case 'remove-metadata':
         return 'pdf';
       case 'pdf-to-excel':
       case 'ocr-to-excel':
       case 'pdf-extract-table':
+      case 'bank-statement-to-excel':
+      case 'receipt-to-excel':
+      case 'csv-to-excel':
         return 'xlsx';
+      case 'excel-to-csv':
+        return 'csv';
+      case 'convert-image':
+      case 'tiff-conversion':
+        return convertImageTargetFormat;
+      case 'heic-to-jpg':
+        return 'jpg';
+      case 'heic-to-png':
+      case 'base64-to-image':
+        return 'png';
+      case 'favicon-generator':
+        return 'ico';
+      case 'metadata-editor':
+        return metadataAction == 'strip' ? 'jpg' : 'json';
       case 'pdf-to-jpg':
       case 'pdf-to-png':
       case 'pdf-to-webp':
@@ -621,12 +925,22 @@ class ToolExecutorController extends GetxController {
       case 'ai-summarize':
       case 'ai-extract-key-points':
       case 'summarize-long-pdfs':
+      case 'ai-email-writer':
+      case 'ai-citation':
+      case 'chat-with-pdf':
+      case 'image-to-base64':
         return 'txt';
       case 'pdf-to-markdown':
         return 'md';
       case 'ai-extract-data':
       case 'ai-keywords':
       case 'ai-detector':
+      case 'ai-flashcards':
+      case 'ai-quiz':
+      case 'ats-scanner':
+      case 'word-counter':
+      case 'character-counter':
+      case 'read-metadata':
         return 'json';
       default:
         return 'pdf';
@@ -677,6 +991,7 @@ class ToolExecutorController extends GetxController {
     try {
       final slug = getSlug();
       final isMulti = isMultiFileTool();
+      final isNoUpload = isNoUploadTool();
       final isTextOnly = isTextOptionSupported() && useRawText;
 
       final services = JobflowApiServices(accessToken: tokenToUse);
@@ -685,11 +1000,17 @@ class ToolExecutorController extends GetxController {
 
       // STEP 1: Uploading input
       if (Get.isRegistered<NotificationService>()) {
-        final initialDetail = isTextOnly
-            ? 'Text content'
-            : (isMulti
-                ? '${selectedFiles.length} file(s)'
-                : (selectedFile?.name ?? ''));
+        final initialDetail = isNoUpload
+            ? (slug == 'html-to-pdf'
+                ? (htmlToPdfMode == 'url' ? htmlToPdfUrlController.text.trim() : 'HTML Content')
+                : (slug == 'invoice-generator'
+                    ? 'Invoice #${invoiceNumberController.text.trim()}'
+                    : 'ID Card: ${idEmployeeNameController.text.trim()}'))
+            : (isTextOnly
+                ? 'Text content'
+                : (isMulti
+                    ? '${selectedFiles.length} file(s)'
+                    : (selectedFile?.name ?? '')));
         NotificationService.to.updateToolProgressNotification(
           id: notificationId,
           toolName: tool.name,
@@ -698,7 +1019,71 @@ class ToolExecutorController extends GetxController {
         );
       }
 
-      if (!isTextOnly) {
+      final options = getOptionsJson();
+
+      if (isNoUpload) {
+        if (slug == 'html-to-pdf') {
+          if (htmlToPdfMode == 'url') {
+            final urlText = htmlToPdfUrlController.text.trim();
+            if (urlText.isEmpty || (!urlText.startsWith('http://') && !urlText.startsWith('https://'))) {
+              throw Exception('Please enter a valid webpage URL (starting with http:// or https://).');
+            }
+          } else {
+            final htmlText = htmlToPdfHtmlController.text.trim();
+            if (htmlText.isEmpty) {
+              throw Exception('Please enter HTML content to convert.');
+            }
+          }
+        } else if (slug == 'id-templates' || slug == 'id-certificate-templates' || slug == 'id-generator') {
+          if (idEmployeeNameController.text.trim().isEmpty) {
+            throw Exception('Please enter Employee Name for the ID card.');
+          }
+          if (idCompanyNameController.text.trim().isEmpty) {
+            throw Exception('Please enter Company Name for the ID card.');
+          }
+          String logoId = 'file_logo123';
+          String photoId = 'file_photo123';
+          if (idLogoFile != null) {
+            currentStep = 'uploading';
+            errorMessage = 'Uploading company logo...';
+            update();
+            final physicalLogo = await getOrCreatePhysicalFile(idLogoFile!);
+            logoId = await services.uploadFile(physicalLogo);
+          }
+          if (idPhotoFile != null) {
+            currentStep = 'uploading';
+            errorMessage = 'Uploading employee photo...';
+            update();
+            final physicalPhoto = await getOrCreatePhysicalFile(idPhotoFile!);
+            photoId = await services.uploadFile(physicalPhoto);
+          }
+          options['logo_url'] = logoId;
+          options['photo_url'] = photoId;
+        } else if (slug == 'invoice-generator') {
+          if (invoiceNumberController.text.trim().isEmpty) {
+            throw Exception('Please enter an Invoice Number.');
+          }
+          if (invoiceItems.isEmpty) {
+            throw Exception('Please add at least one line item to the invoice.');
+          }
+        } else if (slug == 'ai-email-writer') {
+          if (emailSubjectController.text.trim().isEmpty) {
+            throw Exception('Please enter an email subject.');
+          }
+        } else if (slug == 'ai-citation') {
+          if (citationSourceController.text.trim().isEmpty) {
+            throw Exception('Please enter source text for citation.');
+          }
+        } else if (slug == 'word-counter' || slug == 'character-counter') {
+          if (counterTextController.text.trim().isEmpty) {
+            throw Exception('Please enter text to count.');
+          }
+        } else if (slug == 'base64-to-image') {
+          if (base64InputController.text.trim().isEmpty) {
+            throw Exception('Please enter a Base64 string to decode.');
+          }
+        }
+      } else if (!isTextOnly) {
         if (isMulti) {
           if (selectedFiles.isEmpty) {
             throw Exception('Please select at least one input file.');
@@ -725,6 +1110,9 @@ class ToolExecutorController extends GetxController {
         } else {
           if (selectedFile == null) {
             throw Exception('Please select an input file.');
+          }
+          if (slug == 'chat-with-pdf' && chatPdfQuestionController.text.trim().isEmpty) {
+            throw Exception('Please enter a question to ask about your PDF.');
           }
           currentStep = 'uploading';
           errorMessage = 'Uploading ${selectedFile!.name}...';
@@ -758,15 +1146,14 @@ class ToolExecutorController extends GetxController {
         );
       }
 
-      final options = getOptionsJson();
       String jobIdLocal = '';
 
       final requestBody = <String, dynamic>{};
-      if (isTextOnly) {
-        // Text-only tool doesn't send file IDs
+      if (isNoUpload || isTextOnly) {
+        // No file IDs needed for URL/HTML or raw text tools
       } else if (isMulti) {
         requestBody['file_ids'] = uploadedFileIds;
-        if (uploadedFileIds.isNotEmpty) {
+        if (slug != 'images-to-pdf' && uploadedFileIds.isNotEmpty) {
           requestBody['file_id'] = uploadedFileIds.first;
         }
       } else {
@@ -823,9 +1210,26 @@ class ToolExecutorController extends GetxController {
       final outputFileId = outputList.first.toString();
 
       final extension = getExpectedExtension();
-      final baseNameWithoutExtension = useRawText 
-          ? '${slug}_result' 
-          : (isMulti ? '${slug}_merged' : selectedFile!.name.split('.').first);
+      final String baseNameWithoutExtension;
+      if (isNoUpload) {
+        if (slug == 'html-to-pdf') {
+          baseNameWithoutExtension = htmlToPdfMode == 'url'
+              ? 'webpage_${Uri.tryParse(htmlToPdfUrlController.text.trim())?.host.replaceAll('.', '_') ?? 'download'}'
+              : 'html_document';
+        } else if (slug == 'invoice-generator') {
+          baseNameWithoutExtension = 'invoice_${invoiceNumberController.text.trim()}';
+        } else if (slug.contains('id-')) {
+          baseNameWithoutExtension = 'id_${idEmployeeIdController.text.trim().replaceAll(' ', '_')}';
+        } else {
+          baseNameWithoutExtension = '${slug}_result';
+        }
+      } else if (useRawText) {
+        baseNameWithoutExtension = '${slug}_result';
+      } else if (isMulti) {
+        baseNameWithoutExtension = '${slug}_merged';
+      } else {
+        baseNameWithoutExtension = selectedFile!.name.split('.').first;
+      }
       final outName = '${baseNameWithoutExtension}_processed.$extension';
       
       final tempDir = Directory.systemTemp;
@@ -1122,6 +1526,229 @@ class ToolExecutorController extends GetxController {
 
   void setCompareMode(String mode) {
     compareMode = mode;
+    update();
+  }
+
+  void setHtmlToPdfMode(String mode) {
+    htmlToPdfMode = mode;
+    update();
+  }
+
+  void setConvertImageTargetFormat(String format) {
+    convertImageTargetFormat = format;
+    update();
+  }
+
+  void setConvertImageQuality(int quality) {
+    convertImageQuality = quality;
+    update();
+  }
+
+  void setCsvDelimiter(String delimiter) {
+    csvDelimiter = delimiter;
+    update();
+  }
+
+  void setExcelSheetIndex(int index) {
+    excelSheetIndex = index;
+    update();
+  }
+
+  void incrementExcelSheetIndex() {
+    excelSheetIndex++;
+    update();
+  }
+
+  void decrementExcelSheetIndex() {
+    if (excelSheetIndex > 0) {
+      excelSheetIndex--;
+      update();
+    }
+  }
+
+  // ID Templates helpers
+  Future<void> pickIdLogo() async {
+    try {
+      final file = await FilePicker.pickFile(type: FileType.image);
+      if (file != null && file.path != null) {
+        scanController.addScan(
+          file.path!,
+          customName: file.name,
+          fileType: file.name.contains('.') ? file.name.split('.').last.toUpperCase() : 'PNG',
+        );
+        if (scanController.scannedFiles.isNotEmpty) {
+          idLogoFile = scanController.scannedFiles.first;
+          update();
+        }
+      }
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to pick logo: $e', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.coral,
+      );
+    }
+  }
+
+  void clearIdLogo() {
+    idLogoFile = null;
+    update();
+  }
+
+  Future<void> pickIdPhoto() async {
+    try {
+      final file = await FilePicker.pickFile(type: FileType.image);
+      if (file != null && file.path != null) {
+        scanController.addScan(
+          file.path!,
+          customName: file.name,
+          fileType: file.name.contains('.') ? file.name.split('.').last.toUpperCase() : 'JPG',
+        );
+        if (scanController.scannedFiles.isNotEmpty) {
+          idPhotoFile = scanController.scannedFiles.first;
+          update();
+        }
+      }
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to pick photo: $e', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.coral,
+      );
+    }
+  }
+
+  void clearIdPhoto() {
+    idPhotoFile = null;
+    update();
+  }
+
+  // N-up PDF helpers
+  void setNUpPages(int n) {
+    nUpPages = n;
+    update();
+  }
+
+  void setNUpOrientation(String orientation) {
+    nUpOrientation = orientation;
+    update();
+  }
+
+  // Print Optimize PDF helpers
+  void setPrintOptType(String type) {
+    printOptType = type;
+    update();
+  }
+
+  void setPrintOptDpi(int dpi) {
+    printOptDpi = dpi;
+    update();
+  }
+
+  void setPrintOptQuality(int quality) {
+    printOptQuality = quality;
+    update();
+  }
+
+  void togglePrintOptGrayscale(bool value) {
+    printOptGrayscale = value;
+    update();
+  }
+
+  // Crop PDF helpers
+  void setCropTop(int val) {
+    cropTop = val;
+    update();
+  }
+
+  void setCropBottom(int val) {
+    cropBottom = val;
+    update();
+  }
+
+  void setCropLeft(int val) {
+    cropLeft = val;
+    update();
+  }
+
+  void setCropRight(int val) {
+    cropRight = val;
+    update();
+  }
+
+  // Invoice Generator helpers
+  void setInvoiceCurrency(String currency) {
+    invoiceCurrency = currency;
+    update();
+  }
+
+  void setInvoiceTaxType(String taxType) {
+    invoiceTaxType = taxType;
+    update();
+  }
+
+  void setInvoiceDiscount(double discount) {
+    invoiceDiscount = discount;
+    update();
+  }
+
+  void setInvoiceShipping(double shipping) {
+    invoiceShipping = shipping;
+    update();
+  }
+
+  void setInvoiceThemeColor(String color) {
+    invoiceThemeColor = color;
+    update();
+  }
+
+  void addInvoiceItem(String description, int quantity, double unitPrice, double taxRate) {
+    invoiceItems.add({
+      'description': description,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'tax_rate': taxRate,
+    });
+    update();
+  }
+
+  void removeInvoiceItem(int index) {
+    if (index >= 0 && index < invoiceItems.length) {
+      invoiceItems.removeAt(index);
+      update();
+    }
+  }
+
+  // AI Email Writer helpers
+  void setEmailTone(String tone) {
+    emailTone = tone;
+    update();
+  }
+
+  // AI Citation helpers
+  void setCitationStyle(String style) {
+    citationStyle = style;
+    update();
+  }
+
+  // AI Flashcards helpers
+  void setFlashcardsCount(int count) {
+    flashcardsCount = count;
+    update();
+  }
+
+  // AI Quiz helpers
+  void setQuizCount(int count) {
+    quizCount = count;
+    update();
+  }
+
+  void setQuizDifficulty(String diff) {
+    quizDifficulty = diff;
+    update();
+  }
+
+  // Metadata Editor helpers
+  void setMetadataAction(String action) {
+    metadataAction = action;
     update();
   }
 
@@ -1424,6 +2051,29 @@ class ToolExecutorController extends GetxController {
     renameSuffixController.dispose();
     renameReplaceFromController.dispose();
     renameReplaceToController.dispose();
+    htmlToPdfUrlController.dispose();
+    htmlToPdfHtmlController.dispose();
+    idCompanyNameController.dispose();
+    idCompanyAddressController.dispose();
+    idCompanyPhoneController.dispose();
+    idEmployeeNameController.dispose();
+    idEmployeeRoleController.dispose();
+    idEmployeeIdController.dispose();
+    invoiceNumberController.dispose();
+    invoiceFromNameController.dispose();
+    invoiceFromEmailController.dispose();
+    invoiceFromPhoneController.dispose();
+    invoiceFromAddressController.dispose();
+    invoiceToNameController.dispose();
+    invoiceToEmailController.dispose();
+    invoiceToAddressController.dispose();
+    emailSubjectController.dispose();
+    emailContextController.dispose();
+    citationSourceController.dispose();
+    chatPdfQuestionController.dispose();
+    atsJobDescriptionController.dispose();
+    counterTextController.dispose();
+    base64InputController.dispose();
     super.onClose();
   }
 }
