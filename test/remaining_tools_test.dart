@@ -699,16 +699,37 @@ void main() {
       Get.delete<ToolExecutorController>();
     });
 
-    test('21. Chat with PDF question options', () {
+    test('21. Chat with PDF question options, chat flow & reset', () async {
       final tool = allPlainscanTools.firstWhere((t) => t.slug == 'chat-with-pdf');
       final controller = Get.put(ToolExecutorController(tool: tool));
 
       expect(controller.getExpectedExtension(), 'txt');
 
+      // Default question if empty
+      controller.chatPdfQuestionController.clear();
+      expect(controller.getOptionsJson(), {
+        'question': 'What is the main topic?',
+      });
+
+      // Custom question
       controller.chatPdfQuestionController.text = 'What is the quarterly growth?';
       expect(controller.getOptionsJson(), {
         'question': 'What is the quarterly growth?',
       });
+
+      // Follow-up interaction
+      controller.chatPdfFollowUpController.text = 'Who is the author?';
+      await controller.sendChatPdfFollowUp();
+      expect(controller.chatPdfMessages.length, 2);
+      expect(controller.chatPdfMessages[0]['role'], 'user');
+      expect(controller.chatPdfMessages[0]['text'], 'Who is the author?');
+      expect(controller.chatPdfMessages[1]['role'], 'assistant');
+
+      // Reset
+      controller.resetChatPdf();
+      expect(controller.chatPdfMessages, isEmpty);
+      expect(controller.chatPdfQuestionController.text, isEmpty);
+      expect(controller.chatPdfFollowUpController.text, isEmpty);
 
       Get.delete<ToolExecutorController>();
     });
@@ -718,14 +739,29 @@ void main() {
       final controller = Get.put(ToolExecutorController(tool: tool));
 
       expect(controller.getExpectedExtension(), 'json');
+      expect(controller.atsScanMode, 'scan');
 
       controller.atsJobDescriptionController.text = 'Senior Flutter Engineer with 5 years experience.';
       expect(controller.getOptionsJson(), {
         'job_description': 'Senior Flutter Engineer with 5 years experience.',
       });
 
+      controller.setAtsScanMode('match');
+      expect(controller.atsScanMode, 'match');
+      expect(controller.getOptionsJson(), {
+        'mode': 'match',
+        'job_description': 'Senior Flutter Engineer with 5 years experience.',
+      });
+
+      controller.resetAtsScanner();
+      expect(controller.atsScanMode, 'scan');
+      expect(controller.atsJobDescriptionController.text, isEmpty);
+      expect(controller.generatedAtsContent, isEmpty);
+      expect(controller.getOptionsJson(), isEmpty);
+
       Get.delete<ToolExecutorController>();
     });
+
 
     test('23. Word Counter & Character Counter options', () {
       final wordTool = allPlainscanTools.firstWhere((t) => t.slug == 'word-counter');

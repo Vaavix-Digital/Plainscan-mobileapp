@@ -111,6 +111,15 @@ class ToolExecutorPage extends StatelessWidget {
                                         buildAdBanner(),
                                       ],
                                     )
+                              : slug == 'ats-scanner'
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildAtsScannerView(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
                               : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -4712,6 +4721,1505 @@ class ToolExecutorPage extends StatelessWidget {
           title: 'Good to know about AI Quiz Generator',
           content:
               'Generated quizzes include full multiple-choice options (A-D), verified correct answers, and thorough explanations. You can copy the quiz or download it as a TXT file anytime.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildChatWithPdfHeader(),
+        if (controller.isRunning) ...[
+          _buildChatWithPdfProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildChatWithPdfChatCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 650;
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildChatWithPdfInputCard(context, controller),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _buildChatWithPdfSettingsCard(context, controller),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildChatWithPdfInputCard(context, controller),
+                    const SizedBox(height: 16),
+                    _buildChatWithPdfSettingsCard(context, controller),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildChatWithPdfTrustFooter(),
+          const SizedBox(height: 24),
+          _buildChatWithPdfInfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'AI Tool',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Free Chat with PDF Online — Ask Document Questions Now',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: controller.selectedFile != null
+          ? Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFECEC),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: Color(0xFFEF4444),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.selectedFile!.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          controller.selectedFile!.sizeKb > 1024
+                              ? '${(controller.selectedFile!.sizeKb / 1024).toStringAsFixed(2)} MB'
+                              : '${controller.selectedFile!.sizeKb.toStringAsFixed(2)} KB',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 20),
+                    onPressed: controller.clearSingleSelectedFile,
+                    tooltip: 'Remove file',
+                  ),
+                ],
+              ),
+            )
+          : GestureDetector(
+              onTap: () => controller.pickFileFromDevice(false),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFCBD5E1),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: const [
+                    Icon(Icons.cloud_upload_outlined, size: 40, color: Color(0xFF6366F1)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Click to browse or drop file here',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Supports PDF documents',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildChatWithPdfSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final readyDetail = controller.selectedFile?.name ?? 'No document selected';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Your Question',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller.chatPdfQuestionController,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+            decoration: InputDecoration(
+              hintText: 'What is the main topic?',
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              filled: true,
+              fillColor: Colors.white,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+              ),
+            ),
+            onChanged: (_) => controller.update(),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ready:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  readyDetail,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF4F46E5),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: controller.executeJobFlow,
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    label: const Text(
+                      'Process with AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatWithPdfProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildChatWithPdfTrustFooter(),
+        const SizedBox(height: 24),
+        _buildChatWithPdfInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfChatCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final messages = controller.chatPdfMessages.isNotEmpty
+        ? controller.chatPdfMessages
+        : [
+            {'role': 'user', 'text': 'what is the main topic ?'},
+            {'role': 'assistant', 'text': 'The main topic of the given text is "Voter Information".'},
+          ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Chat Header banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFAF5FF),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Chat with Document',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Messages list
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    for (var msg in messages) ...[
+                      if (msg['role'] == 'user') ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 420),
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4F46E5),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(4),
+                              ),
+                            ),
+                            child: Text(
+                              msg['text'] ?? '',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(4),
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
+                            ),
+                            child: SelectableText(
+                              msg['text'] ?? '',
+                              style: const TextStyle(
+                                color: Color(0xFF1E293B),
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                    if (controller.isChatPdfFollowUpLoading) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Analyzing document...',
+                                style: TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    // Follow-up Input Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller.chatPdfFollowUpController,
+                            style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                            decoration: InputDecoration(
+                              hintText: 'Ask a follow up question...',
+                              hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              filled: true,
+                              fillColor: Colors.white,
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+                              ),
+                            ),
+                            onSubmitted: (_) => controller.sendChatPdfFollowUp(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: controller.isChatPdfFollowUpLoading
+                              ? null
+                              : controller.sendChatPdfFollowUp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF818CF8),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Send',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Centered "Upload New Document" button
+        Center(
+          child: OutlinedButton(
+            onPressed: controller.resetChatPdf,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Upload New Document',
+              style: TextStyle(
+                color: Color(0xFF334155),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildChatWithPdfTrustFooter(),
+        const SizedBox(height: 24),
+        _buildChatWithPdfInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChatWithPdfInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What Chat with PDF does',
+          content:
+              'Allows you to interactively converse with your PDF documents, query facts, extract citations, and find instant answers to specific questions.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use Chat with PDF',
+          content:
+              '1  Upload your PDF document\n2  Type your question or use the suggested query\n3  Click "Process with AI" to analyze and chat with your document',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about Chat with PDF',
+          content:
+              'You can ask multiple follow-up questions to explore deeper context or click "Upload New Document" to analyze another file anytime.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAtsScannerHeader(),
+        if (controller.isRunning) ...[
+          _buildAtsScannerProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAtsScannerResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 650;
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildAtsScannerInputCard(context, controller),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _buildAtsScannerSettingsCard(context, controller),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildAtsScannerInputCard(context, controller),
+                    const SizedBox(height: 16),
+                    _buildAtsScannerSettingsCard(context, controller),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildAtsScannerTrustFooter(),
+          const SizedBox(height: 24),
+          _buildAtsScannerInfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(height: 12),
+        const Text(
+          'Free ATS Resume Scanner — Check Your Resume Score',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: controller.selectedFile != null
+          ? Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFECEC),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      color: Color(0xFFEF4444),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.selectedFile!.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          controller.selectedFile!.sizeKb > 1024
+                              ? '${(controller.selectedFile!.sizeKb / 1024).toStringAsFixed(2)} MB'
+                              : '${controller.selectedFile!.sizeKb.toStringAsFixed(2)} KB',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 20),
+                    onPressed: controller.clearSingleSelectedFile,
+                    tooltip: 'Remove file',
+                  ),
+                ],
+              ),
+            )
+          : GestureDetector(
+              onTap: () => controller.pickFileFromDevice(false),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFCBD5E1),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: const [
+                    Icon(Icons.cloud_upload_outlined, size: 40, color: Color(0xFF6366F1)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Click to browse or drop file here',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Supports PDF, DOCX',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildAtsModeTabItem({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAtsScannerSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final readyDetail = controller.selectedFile?.name ?? 'No document selected';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Mode Selector
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                _buildAtsModeTabItem(
+                  title: 'Scan My Resume',
+                  isSelected: controller.atsScanMode == 'scan',
+                  onTap: () => controller.setAtsScanMode('scan'),
+                ),
+                _buildAtsModeTabItem(
+                  title: 'Match to a Job',
+                  isSelected: controller.atsScanMode == 'match',
+                  onTap: () => controller.setAtsScanMode('match'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Mode-specific content
+          if (controller.atsScanMode == 'scan') ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'Upload your resume to get a general analysis, including section checks, keyword extraction, and formatting feedback.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ] else ...[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Job Description',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: TextField(
+                    controller: controller.atsJobDescriptionController,
+                    minLines: 4,
+                    maxLines: 6,
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A), height: 1.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Paste target job description or requirements here...',
+                      hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (_) => controller.update(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 18),
+
+          // Ready Box
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ready:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  readyDetail,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF4F46E5),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: controller.executeJobFlow,
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    label: const Text(
+                      'Process with AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAtsScannerProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAtsScannerTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAtsScannerInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedAtsContent.isNotEmpty
+        ? controller.generatedAtsContent
+        : "ATS Score: 100/100\nAnalysis Mode: General Resume Scan\n\nSections Found:\nSummary, Experience, Education, Skills, Certifications, Contact, Languages, References\n\nMatched Keywords:\nSales Executive, Sales & Marketing Executive, Business Executive, Sales Promoter\n\nMissing Keywords:\nLogistics, Transportation, Supply Chain Management, Customer Relationship Management, Project Management, Accounting\n\nIssues Identified:\n- No quantified achievements found — add numbers/metrics (e.g. 'Increased sales by 30%')\n\nSuggestions & Recommendations:\n- Include specific achievements with numbers and metrics in the sales roles, such as 'Increased sales by 30%'\n- Highlight any relevant certifications or training related to logistics or transportation\n- Add a section on references if not already included";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7EE),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SelectableText(
+                  displayText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 500;
+            if (isWide) {
+              return Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: controller.resetAtsScanner,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Process another item',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    onPressed: controller.downloadAtsTxt,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Download TXT',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: controller.copyAtsText,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.resetAtsScanner,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another item',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.downloadAtsTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: controller.copyAtsText,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Copy Text',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _buildAtsScannerTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAtsScannerInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAtsScannerInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What ATS Resume Scanner does',
+          content:
+              'Evaluates your resume against modern Applicant Tracking System (ATS) parsing algorithms, checking structural sections, industry keywords, and formatting compliance.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use ATS Resume Scanner',
+          content:
+              '1  Upload your resume in PDF or DOCX format\n2  Select "Scan My Resume" for general audit or "Match to a Job" to compare against a specific job description\n3  Click "Process with AI" to view your ATS score and optimization tips',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about ATS Resume Scanner',
+          content:
+              'A score above 80 indicates high ATS pass rates. Adding concrete metrics and targeted keywords from the job description significantly improves interview callback rates.',
         ),
       ],
     );
