@@ -834,10 +834,15 @@ void main() {
       expect(base64Controller.isNoUploadTool(), isTrue);
       expect(base64Controller.getExpectedExtension(), 'png');
 
-      base64Controller.base64InputController.text = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...';
+      base64Controller.base64InputController.text = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
       expect(base64Controller.getOptionsJson(), {
-        'base64_string': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB...',
+        'base64_string': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
       });
+      expect(base64Controller.getDecodedImageBytes(), isNotNull);
+
+      base64Controller.resetBase64ToImage();
+      expect(base64Controller.base64InputController.text, isEmpty);
+      expect(base64Controller.getDecodedImageBytes(), isNull);
 
       Get.delete<ToolExecutorController>();
     });

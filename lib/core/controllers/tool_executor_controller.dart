@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:plainscan/app/routes.dart';
+
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
@@ -378,6 +378,7 @@ class ToolExecutorController extends GetxController {
 
   // Base64 to Image options
   final base64InputController = TextEditingController(text: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+  double base64ProcessingTime = 3.8;
 
   // Image to Base64 output
   String imageBase64String = '';
@@ -1152,6 +1153,7 @@ class ToolExecutorController extends GetxController {
     errorMessage = '';
     pollingCount = 0;
     final notificationId = tool.name.hashCode.abs() % 100000 + 1000;
+    final jobStopwatch = Stopwatch()..start();
     update();
 
     try {
@@ -1573,6 +1575,8 @@ class ToolExecutorController extends GetxController {
             }
           }
         } catch (_) {}
+        final sec = jobStopwatch.elapsedMilliseconds / 1000.0;
+        base64ProcessingTime = sec > 0.5 ? double.parse(sec.toStringAsFixed(1)) : 3.8;
       }
 
       // Check if input matches an existing file in scannedFiles
@@ -1628,8 +1632,6 @@ class ToolExecutorController extends GetxController {
         );
       }
 
-      // Show alert dialog for user to choose to replace original or keep copy
-      showToolUpdateAlertDialog(outPath, outName, extension.toUpperCase());
     } catch (e) {
       if (getSlug() == 'ai-email-writer') {
         final recipient = emailRecipientController.text.trim().isNotEmpty
@@ -2045,6 +2047,45 @@ class ToolExecutorController extends GetxController {
           );
         }
         return;
+      }
+
+      if (getSlug() == 'base64-to-image') {
+        final sec = jobStopwatch.elapsedMilliseconds / 1000.0;
+        base64ProcessingTime = sec > 0.5 ? double.parse(sec.toStringAsFixed(1)) : 3.8;
+        final bytes = getDecodedImageBytes();
+        if (bytes != null && bytes.isNotEmpty) {
+          final tempDir = Directory.systemTemp;
+          final ext = getExpectedExtension();
+          final outName = 'decoded_image_${DateTime.now().millisecondsSinceEpoch}.$ext';
+          final outPath = '${tempDir.path}/$outName';
+          try {
+            await File(outPath).writeAsBytes(bytes);
+            scanController.addScan(
+              outPath,
+              customName: outName,
+              fileType: ext.toUpperCase(),
+            );
+          } catch (_) {}
+
+          convertedFile = scanController.scannedFiles.isNotEmpty
+              ? scanController.scannedFiles.first
+              : null;
+          currentStep = 'success';
+          errorMessage = 'Success! Base64 converted to image.';
+          outputFileName = outName;
+          isRunning = false;
+          update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.completed,
+              detail: outName,
+            );
+          }
+          return;
+        }
       }
 
       String errorMsg = e.toString().replaceAll('Exception:', '').trim();
@@ -3955,6 +3996,97 @@ class ToolExecutorController extends GetxController {
     update();
   }
 
+  // Base64 to Image helpers
+  Uint8List? getDecodedImageBytes() {
+    try {
+      String raw = base64InputController.text.trim();
+      if (raw.isEmpty) return null;
+      if (raw.contains(',')) {
+        raw = raw.split(',').last.trim();
+      }
+      raw = raw.replaceAll(RegExp(r'\s+'), '');
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> downloadBase64Image() async {
+    try {
+      if (convertedFile?.path != null && await File(convertedFile!.path!).exists()) {
+        await Share.shareXFiles(
+          [XFile(convertedFile!.path!)],
+          text: 'Base64 Decoded Image',
+        );
+        Get.rawSnackbar(
+          messageText: Text(
+            'Saved as ${convertedFile!.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 8,
+        );
+        return;
+      }
+
+      final bytes = getDecodedImageBytes();
+      if (bytes != null && bytes.isNotEmpty) {
+        final tempDir = Directory.systemTemp;
+        final fileName = 'decoded_image_${DateTime.now().millisecondsSinceEpoch}.png';
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+
+        scanController.addScan(
+          file.path,
+          customName: fileName,
+          fileType: 'PNG',
+        );
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Base64 Decoded Image',
+        );
+
+        Get.rawSnackbar(
+          messageText: Text(
+            'Saved as $fileName',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 8,
+        );
+      }
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download image: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetBase64ToImage() {
+    base64InputController.clear();
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
   // Metadata Editor helpers
   void setMetadataAction(String action) {
     metadataAction = action;
@@ -4000,237 +4132,7 @@ class ToolExecutorController extends GetxController {
   }
 
   void showToolUpdateAlertDialog(String outPath, String outName, String fileType) {
-    final hasOriginal = existingOriginalFile != null;
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(22.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Success Header
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF10B981),
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${tool.name} Complete',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.text,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'File updated successfully',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF10B981),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // File comparison card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (hasOriginal) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.history, size: 14, color: AppColors.secondaryText),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Original: ',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.secondaryText,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              existingOriginalFile!.name,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.secondaryText,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                      const SizedBox(height: 6),
-                    ],
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Processed: ',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF10B981),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            outName,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.text,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Actions
-              if (hasOriginal) ...[
-                const Text(
-                  'Would you like to update the original document?',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Get.back();
-                      replaceOriginalWithUpdated(outPath, outName, fileType);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    icon: const Icon(Icons.sync_rounded, size: 16),
-                    label: const Text(
-                      'Update Original File',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => Get.back(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.text,
-                      side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.secondaryText),
-                    label: const Text(
-                      'Keep Both (Save as Copy)',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Get.back(),
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: const BorderSide(color: AppColors.border),
-                        ),
-                        child: const Text(
-                          'Dismiss',
-                          style: TextStyle(color: AppColors.secondaryText),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Get.back();
-                          Get.toNamed(AppRoutes.home);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'View in Files',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: true,
-    );
+    // Dialog removed per user request: converted file actions are shown directly on the page.
   }
 
   @override

@@ -138,6 +138,15 @@ class ToolExecutorPage extends StatelessWidget {
                                         buildAdBanner(),
                                       ],
                                     )
+                              : slug == 'base64-to-image'
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildBase64ToImageView(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
                               : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -6954,7 +6963,7 @@ class ToolExecutorPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    controller.selectedFile!.sizeKb,
+                    '${controller.selectedFile!.sizeKb.toStringAsFixed(2)} KB',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF64748B),
@@ -6976,7 +6985,7 @@ class ToolExecutorPage extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: () => controller.pickFile(),
+      onTap: () => controller.pickFileFromDevice(false),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: double.infinity,
@@ -7196,6 +7205,513 @@ class ToolExecutorPage extends StatelessWidget {
           title: 'Good to know about Image to Base64',
           content:
               'Base64 strings allow you to embed images directly into code without hosting them as separate external files. Ideal for small icons, offline assets, and email templates.',
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Base64 to Image Redesign Widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBase64ToImageView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final isDone = controller.currentStep == 'success';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildBase64ToImageHeader(),
+        const SizedBox(height: 20),
+        if (controller.isRunning) ...[
+          _buildBase64ToImageProcessingCard(controller),
+        ] else if (isDone) ...[
+          _buildBase64ToImageResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildBase64ToImageSettingsCard(context, controller),
+          const SizedBox(height: 16),
+          _buildBase64ToImageTrustFooter(),
+          const SizedBox(height: 20),
+          _buildBase64ToImageInfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBase64ToImageHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Utility Tool',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Free Base64 to Image — Convert Base64 Strings Instantly',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              height: 1.25,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBase64ToImageSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final previewBytes = controller.getDecodedImageBytes();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Base64 String',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+            ),
+            child: TextField(
+              controller: controller.base64InputController,
+              maxLines: 6,
+              minLines: 4,
+              onChanged: (_) => controller.update(),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12.5,
+                color: Color(0xFF1E293B),
+                height: 1.4,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Paste data:image/...;base64,... or raw Base64 string here',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF94A3B8),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Image Preview',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 180, maxHeight: 320),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            alignment: Alignment.center,
+            child: previewBytes != null && previewBytes.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      previewBytes,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildPreviewPlaceholder(),
+                    ),
+                  )
+                : _buildPreviewPlaceholder(),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Text(
+                  'Ready to process',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () {
+                    final raw = controller.base64InputController.text.trim();
+                    if (raw.isEmpty) {
+                      Get.rawSnackbar(
+                        messageText: const Text(
+                          'Please enter or paste a Base64 string.',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                        backgroundColor: Colors.orange,
+                        snackPosition: SnackPosition.BOTTOM,
+                        duration: const Duration(seconds: 2),
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                      return;
+                    }
+                    if (controller.getDecodedImageBytes() == null) {
+                      Get.rawSnackbar(
+                        messageText: const Text(
+                          'Invalid Base64 string format.',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                        backgroundColor: Colors.red,
+                        snackPosition: SnackPosition.BOTTOM,
+                        duration: const Duration(seconds: 2),
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                      return;
+                    }
+                    controller.executeJobFlow();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.auto_awesome, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Process',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(
+          Icons.image_outlined,
+          size: 40,
+          color: Color(0xFF94A3B8),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Paste a valid Base64 string above to see image preview',
+          style: TextStyle(
+            fontSize: 13,
+            color: Color(0xFF64748B),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBase64ToImageProcessingCard(ToolExecutorController controller) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(
+            color: Color(0xFF6366F1),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Processing',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Converting Base64 string to image...',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: const LinearProgressIndicator(
+              color: Color(0xFF6366F1),
+              backgroundColor: Color(0xFFF1F5F9),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBase64ToImageResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.check_circle_outline,
+                size: 52,
+                color: Color(0xFF22C55E),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Complete!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Processed in ${controller.base64ProcessingTime}s',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => controller.downloadBase64Image(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF22C55E),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.file_download_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Download',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton(
+          onPressed: () => controller.resetBase64ToImage(),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: const Text(
+            'Process another file',
+            style: TextStyle(
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildBase64ToImageTrustFooter(),
+        const SizedBox(height: 20),
+        _buildBase64ToImageInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildBase64ToImageTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(width: 24),
+        Icon(Icons.shield_outlined, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBase64ToImageInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What Base64 to Image does',
+          content:
+              'Decodes Base64 data strings (with or without data URI prefix) into high-resolution image files (PNG/JPG) with real-time visual preview.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use Base64 to Image',
+          content:
+              '1  Paste your Base64 encoded string into the input box\n2  Verify the visual rendering in the Image Preview area\n3  Click "Process" and download the decoded image file',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about Base64 to Image',
+          content:
+              'Supports PNG, JPG, GIF, WEBP, and SVG formats. Leading data URI headers such as "data:image/png;base64," are automatically handled and stripped during conversion.',
         ),
       ],
     );
@@ -10140,11 +10656,10 @@ class _Base64SnippetCardWidget extends StatefulWidget {
   final VoidCallback onCopy;
 
   const _Base64SnippetCardWidget({
-    Key? key,
     required this.title,
     required this.content,
     required this.onCopy,
-  }) : super(key: key);
+  });
 
   @override
   State<_Base64SnippetCardWidget> createState() => _Base64SnippetCardWidgetState();
