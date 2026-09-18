@@ -120,6 +120,24 @@ class ToolExecutorPage extends StatelessWidget {
                                         buildAdBanner(),
                                       ],
                                     )
+                              : (slug == 'word-counter' || slug == 'character-counter')
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildTextCounterView(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
+                              : slug == 'image-to-base64'
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildImageToBase64View(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
                               : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -6225,6 +6243,964 @@ class ToolExecutorPage extends StatelessWidget {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Word & Character Counter Redesign Widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTextCounterView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildTextCounterHeader(controller),
+        if (controller.isRunning) ...[
+          _buildTextCounterProcessingCard(controller),
+        ] else if (controller.currentStep == 'success' &&
+            controller.generatedCounterContent.isNotEmpty) ...[
+          _buildTextCounterResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildTextCounterSettingsCard(context, controller),
+          const SizedBox(height: 16),
+          _buildTextCounterTrustFooter(),
+          const SizedBox(height: 20),
+          _buildTextCounterInfoCards(controller),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTextCounterHeader(ToolExecutorController controller) {
+    final isChar = controller.getSlug() == 'character-counter';
+    final title = isChar
+        ? 'Free Character Counter — Count Words, Characters & Reading Time Instantly'
+        : 'Free Word Counter — Count Words, Characters & Reading Time Instantly';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Utility Tool',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              height: 1.25,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextCounterSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Text to Analyze',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF93C5FD), width: 1.5),
+            ),
+            child: TextField(
+              controller: controller.counterTextController,
+              maxLines: 9,
+              minLines: 6,
+              onChanged: (_) => controller.update(),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF1E293B),
+                height: 1.5,
+              ),
+              decoration: const InputDecoration(
+                hintText:
+                    'The citation you shared appears to be a general or placeholder reference, but you can read actual open-access studies like the CIDDL Report on AI in Education to learn about this topic.',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF94A3B8),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Text(
+                  'Ready to process',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () {
+                    if (controller.counterTextController.text.trim().isEmpty) {
+                      Get.rawSnackbar(
+                        messageText: const Text(
+                          'Please enter or paste text to analyze.',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                        backgroundColor: Colors.orange,
+                        snackPosition: SnackPosition.BOTTOM,
+                        duration: const Duration(seconds: 2),
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                      return;
+                    }
+                    controller.executeJobFlow();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.auto_awesome, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Process',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextCounterProcessingCard(ToolExecutorController controller) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(
+            color: Color(0xFF6366F1),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Processing',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "We're analyzing your text...",
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: const LinearProgressIndicator(
+              color: Color(0xFF6366F1),
+              backgroundColor: Color(0xFFF1F5F9),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextCounterResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    topRight: Radius.circular(15),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF059669), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: SelectableText(
+                  controller.generatedCounterContent,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton(
+              onPressed: () => controller.resetCounter(),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Process another item',
+                style: TextStyle(
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton(
+                  onPressed: () => controller.downloadCounterTxt(),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Download TXT',
+                    style: TextStyle(
+                      color: Color(0xFF334155),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () => controller.copyCounterText(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Copy Text',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildTextCounterTrustFooter(),
+        const SizedBox(height: 20),
+        _buildTextCounterInfoCards(controller),
+      ],
+    );
+  }
+
+  Widget _buildTextCounterTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(width: 24),
+        Icon(Icons.shield_outlined, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextCounterInfoCards(ToolExecutorController controller) {
+    final isChar = controller.getSlug() == 'character-counter';
+    final toolName = isChar ? 'Character Counter' : 'Word Counter';
+
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What $toolName does',
+          content:
+              'Counts words, characters (with and without spaces), sentences, paragraphs, and estimates reading time in real-time.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use $toolName',
+          content:
+              '1  Paste or type your text into the Text to Analyze box\n2  Click "Process" to evaluate\n3  View, copy, or download the comprehensive text statistics instantly',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about $toolName',
+          content:
+              'Standard reading speed is calculated at 200 words per minute. Character counts help ensure your copy stays within platform limits for social posts, SMS, meta descriptions, and essays.',
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Image to Base64 Redesign Widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildImageToBase64View(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final isDone = controller.currentStep == 'success' &&
+        controller.imageBase64String.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isDone) ...[
+          _buildImageToBase64Header(),
+          const SizedBox(height: 20),
+        ],
+        if (controller.isRunning) ...[
+          _buildImageToBase64ProcessingCard(controller),
+        ] else if (isDone) ...[
+          _buildImageToBase64ResultView(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildImageToBase64InputCard(context, controller),
+          const SizedBox(height: 16),
+          _buildImageToBase64TrustFooter(),
+          const SizedBox(height: 20),
+          _buildImageToBase64InfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildImageToBase64Header() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Utility Tool',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Free Image to Base64 — Convert Image to Base64 String & Data URI',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              height: 1.25,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageToBase64InputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Select Image',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildImageToBase64Dropzone(context, controller),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    controller.selectedFile != null
+                        ? 'Ready: ${controller.selectedFile!.name}'
+                        : 'Ready to process',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    if (controller.selectedFile == null) {
+                      Get.rawSnackbar(
+                        messageText: const Text(
+                          'Please select an image file first.',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                        backgroundColor: Colors.orange,
+                        snackPosition: SnackPosition.BOTTOM,
+                        duration: const Duration(seconds: 2),
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 8,
+                      );
+                      return;
+                    }
+                    controller.executeJobFlow();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.auto_awesome, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Process',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageToBase64Dropzone(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    if (controller.selectedFile != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.image_outlined,
+                color: Color(0xFF4F46E5),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    controller.selectedFile!.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    controller.selectedFile!.sizeKb,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                controller.selectedFile = null;
+                controller.update();
+              },
+              icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () => controller.pickFile(),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFCBD5E1),
+            style: BorderStyle.solid,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: const [
+            Icon(
+              Icons.cloud_upload_outlined,
+              size: 38,
+              color: Color(0xFF6366F1),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Tap to browse or choose image',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Supports PNG, JPG, WEBP, GIF, SVG',
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageToBase64ProcessingCard(ToolExecutorController controller) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(
+            color: Color(0xFF6366F1),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Processing',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Converting image to Base64...',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: const LinearProgressIndicator(
+              color: Color(0xFF6366F1),
+              backgroundColor: Color(0xFFF1F5F9),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageToBase64ResultView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Base64SnippetCardWidget(
+          title: 'Base64 String',
+          content: controller.imageBase64String,
+          onCopy: () => controller.copyBase64Snippet(
+            'Base64 String',
+            controller.imageBase64String,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Base64SnippetCardWidget(
+          title: 'HTML Usage',
+          content: controller.getHtmlUsageSnippet(),
+          onCopy: () => controller.copyBase64Snippet(
+            'HTML Usage',
+            controller.getHtmlUsageSnippet(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Base64SnippetCardWidget(
+          title: 'CSS Usage',
+          content: controller.getCssUsageSnippet(),
+          onCopy: () => controller.copyBase64Snippet(
+            'CSS Usage',
+            controller.getCssUsageSnippet(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Base64SnippetCardWidget(
+          title: 'Markdown Usage',
+          content: controller.getMarkdownUsageSnippet(),
+          onCopy: () => controller.copyBase64Snippet(
+            'Markdown Usage',
+            controller.getMarkdownUsageSnippet(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Base64SnippetCardWidget(
+          title: 'JSON Usage',
+          content: controller.getJsonUsageSnippet(),
+          onCopy: () => controller.copyBase64Snippet(
+            'JSON Usage',
+            controller.getJsonUsageSnippet(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton(
+          onPressed: () => controller.resetImageToBase64(),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: const Text(
+            'Process another item',
+            style: TextStyle(
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageToBase64TrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(width: 24),
+        Icon(Icons.shield_outlined, size: 14, color: Color(0xFF64748B)),
+        SizedBox(width: 6),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageToBase64InfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What Image to Base64 does',
+          content:
+              'Converts any uploaded image into a standard Base64 data string and provides copy-ready integration code for HTML, CSS, Markdown, and JSON.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use Image to Base64',
+          content:
+              '1  Upload an image in PNG, JPG, WEBP, GIF, or SVG format\n2  Click "Process"\n3  Copy the Base64 string or the specific code snippet for your project',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about Image to Base64',
+          content:
+              'Base64 strings allow you to embed images directly into code without hosting them as separate external files. Ideal for small icons, offline assets, and email templates.',
+        ),
+      ],
+    );
+  }
+
   Widget _buildCitationInputCard(
     BuildContext context,
     ToolExecutorController controller,
@@ -9154,6 +10130,129 @@ class ToolExecutorPage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _Base64SnippetCardWidget extends StatefulWidget {
+  final String title;
+  final String content;
+  final VoidCallback onCopy;
+
+  const _Base64SnippetCardWidget({
+    Key? key,
+    required this.title,
+    required this.content,
+    required this.onCopy,
+  }) : super(key: key);
+
+  @override
+  State<_Base64SnippetCardWidget> createState() => _Base64SnippetCardWidgetState();
+}
+
+class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              InkWell(
+                onTap: widget.onCopy,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.content_copy_outlined,
+                        size: 14,
+                        color: Color(0xFF64748B),
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Copy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            height: 110,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: SelectableText(
+                  widget.content,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 12.5,
+                    color: Color(0xFF334155),
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

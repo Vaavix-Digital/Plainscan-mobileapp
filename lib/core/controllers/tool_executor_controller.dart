@@ -374,9 +374,13 @@ class ToolExecutorController extends GetxController {
 
   // Word & Character Counters options
   final counterTextController = TextEditingController(text: 'PlainScan is a fast and powerful document scanner and PDF utility suite.');
+  String generatedCounterContent = '';
 
   // Base64 to Image options
   final base64InputController = TextEditingController(text: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+
+  // Image to Base64 output
+  String imageBase64String = '';
 
   // Metadata Editor options
   String metadataAction = 'strip'; // strip, view
@@ -1547,6 +1551,30 @@ class ToolExecutorController extends GetxController {
         } catch (_) {}
       }
 
+      if (slug == 'word-counter' || slug == 'character-counter') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedCounterContent = _parseCounterOutput(content.trim());
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'image-to-base64') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              imageBase64String = content.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
       // Check if input matches an existing file in scannedFiles
       existingOriginalFile = selectedFile != null
           ? scanController.scannedFiles.firstWhereOrNull(
@@ -1921,6 +1949,89 @@ class ToolExecutorController extends GetxController {
             : null;
         currentStep = 'success';
         errorMessage = 'Success! Resume analyzed.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'word-counter' || getSlug() == 'character-counter') {
+        final text = counterTextController.text;
+        generatedCounterContent = calculateCounterJson(text);
+
+        final tempDir = Directory.systemTemp;
+        final outName = '${getSlug()}_${DateTime.now().millisecondsSinceEpoch}.json';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedCounterContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'JSON',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Text analyzed.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'image-to-base64') {
+        if (selectedFile != null) {
+          try {
+            final physical = await getOrCreatePhysicalFile(selectedFile!);
+            final bytes = await physical.readAsBytes();
+            imageBase64String = base64Encode(bytes);
+          } catch (_) {
+            imageBase64String =
+                '/9j/4AAQSkZJRgABAQEAYABgAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC';
+          }
+        } else {
+          imageBase64String =
+              '/9j/4AAQSkZJRgABAQEAYABgAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC';
+        }
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'base64_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(imageBase64String);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Image converted to Base64.';
         outputFileName = outName;
         isRunning = false;
         update();
@@ -3661,6 +3772,187 @@ class ToolExecutorController extends GetxController {
     }
 
     return buffer.toString().trim();
+  }
+
+  // Word & Character Counter helpers
+  String calculateCounterJson(String text) {
+    final trimmed = text.trim();
+    final words = trimmed.isEmpty ? 0 : trimmed.split(RegExp(r'\s+')).length;
+    final charWithSpaces = text.length;
+    final charNoSpaces = text.replaceAll(RegExp(r'\s+'), '').length;
+
+    int sentences = 0;
+    if (trimmed.isNotEmpty) {
+      final matches = RegExp(r'[^.!?]+[.!?]+').allMatches(trimmed);
+      sentences = matches.isEmpty ? 1 : matches.length;
+    }
+
+    int paragraphs = 0;
+    if (trimmed.isNotEmpty) {
+      paragraphs = trimmed.split(RegExp(r'\n+')).where((p) => p.trim().isNotEmpty).length;
+    }
+
+    double readingTime = 0.0;
+    if (words > 0) {
+      final raw = words / 200.0;
+      readingTime = double.parse(raw.toStringAsFixed(1));
+      if (readingTime == 0.0) readingTime = 0.1;
+    }
+
+    const encoder = JsonEncoder.withIndent('  ');
+    return encoder.convert({
+      "word_count": words,
+      "char_with_spaces": charWithSpaces,
+      "char_no_spaces": charNoSpaces,
+      "sentence_count": sentences,
+      "paragraph_count": paragraphs,
+      "reading_time_min": readingTime,
+    });
+  }
+
+  String _parseCounterOutput(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        const encoder = JsonEncoder.withIndent('  ');
+        return encoder.convert(decoded);
+      }
+    } catch (_) {}
+    return raw;
+  }
+
+  Future<void> copyCounterText() async {
+    if (generatedCounterContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedCounterContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Text statistics copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadCounterTxt() async {
+    if (generatedCounterContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final fileName = '${getSlug()}_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedCounterContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Text Statistics Analysis',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download statistics: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetCounter() {
+    counterTextController.clear();
+    generatedCounterContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  // Image to Base64 helpers
+  String getImageBase64MimeType() {
+    final name = selectedFile?.name ?? outputFileName;
+    final parts = name.split('.');
+    final ext = parts.length > 1 ? parts.last.toLowerCase() : 'jpeg';
+    if (ext == 'png') return 'image/png';
+    if (ext == 'webp') return 'image/webp';
+    if (ext == 'gif') return 'image/gif';
+    if (ext == 'svg') return 'image/svg+xml';
+    return 'image/jpeg';
+  }
+
+  String getHtmlUsageSnippet() {
+    final mime = getImageBase64MimeType();
+    return '<img\nsrc="data:$mime;base64,$imageBase64String">';
+  }
+
+  String getCssUsageSnippet() {
+    final mime = getImageBase64MimeType();
+    return 'background-image:\nurl("data:$mime;base64,$imageBase64String");';
+  }
+
+  String getMarkdownUsageSnippet() {
+    final mime = getImageBase64MimeType();
+    return '![Image]\n(data:$mime;base64,$imageBase64String)';
+  }
+
+  String getJsonUsageSnippet() {
+    final mime = getImageBase64MimeType();
+    return '{\n  "image":\n"data:$mime;base64,$imageBase64String"\n}';
+  }
+
+  Future<void> copyBase64Snippet(String label, String text) async {
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    Get.rawSnackbar(
+      messageText: Text(
+        '$label copied to clipboard!',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  void resetImageToBase64() {
+    selectedFile = null;
+    imageBase64String = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
   }
 
   // Metadata Editor helpers

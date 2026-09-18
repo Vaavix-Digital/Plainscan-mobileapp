@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -770,10 +771,27 @@ void main() {
       expect(wordController.isNoUploadTool(), isTrue);
       expect(wordController.getExpectedExtension(), 'json');
 
+      // Test statistics calculation matching reference screenshot
+      const sampleText =
+          'The citation you shared appears to be a general or placeholder reference, but you can read actual open-access studies like the CIDDL Report on AI in Education to learn about this topic.';
+      final jsonOutput = wordController.calculateCounterJson(sampleText);
+      final decoded = jsonDecode(jsonOutput) as Map<String, dynamic>;
+
+      expect(decoded['word_count'], 32);
+      expect(decoded['char_with_spaces'], sampleText.length);
+      expect(decoded['char_no_spaces'], sampleText.replaceAll(' ', '').length);
+      expect(decoded['sentence_count'], 1);
+      expect(decoded['paragraph_count'], 1);
+      expect(decoded['reading_time_min'], 0.2);
+
       wordController.counterTextController.text = 'One two three four five.';
       expect(wordController.getOptionsJson(), {
         'text': 'One two three four five.',
       });
+
+      wordController.resetCounter();
+      expect(wordController.counterTextController.text, isEmpty);
+      expect(wordController.generatedCounterContent, isEmpty);
 
       Get.delete<ToolExecutorController>();
 
@@ -797,6 +815,16 @@ void main() {
 
       expect(imgController.getExpectedExtension(), 'txt');
       expect(imgController.getOptionsJson(), isEmpty);
+
+      imgController.imageBase64String = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+      expect(imgController.getHtmlUsageSnippet(), contains('<img\nsrc="data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB">'));
+      expect(imgController.getCssUsageSnippet(), contains('background-image:\nurl("data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB");'));
+      expect(imgController.getMarkdownUsageSnippet(), contains('![Image]\n(data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB)'));
+      expect(imgController.getJsonUsageSnippet(), contains('"image":\n"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"'));
+
+      imgController.resetImageToBase64();
+      expect(imgController.imageBase64String, isEmpty);
+      expect(imgController.selectedFile, isNull);
 
       Get.delete<ToolExecutorController>();
 
