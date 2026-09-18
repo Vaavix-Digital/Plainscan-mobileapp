@@ -57,64 +57,117 @@ class ToolExecutorPage extends StatelessWidget {
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  
-                  // File / Input Selection
-                  _buildInputSelectionCard(context, controller, isMulti),
-                  const SizedBox(height: 10),
-                  
-                  // Dynamic Options Card
-                  _buildOptionsCard(controller, slug),
-                  const SizedBox(height: 24),
+              child: slug == 'ai-email-writer'
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildAiEmailWriterView(context, controller),
+                        const SizedBox(height: 24),
+                        buildAdBanner(),
+                      ],
+                    )
+                  : slug == 'ai-proofread'
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildAiProofreadView(context, controller),
+                            const SizedBox(height: 24),
+                            buildAdBanner(),
+                          ],
+                        )
+                      : slug == 'ai-citation'
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildAiCitationView(context, controller),
+                                const SizedBox(height: 24),
+                                buildAdBanner(),
+                              ],
+                            )
+                          : slug == 'ai-flashcards'
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildAiFlashcardsView(context, controller),
+                                    const SizedBox(height: 24),
+                                    buildAdBanner(),
+                                  ],
+                                )
+                              : slug == 'ai-quiz'
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildAiQuizView(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
+                              : slug == 'chat-with-pdf'
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildChatWithPdfView(context, controller),
+                                        const SizedBox(height: 24),
+                                        buildAdBanner(),
+                                      ],
+                                    )
+                              : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // File / Input Selection
+                        _buildInputSelectionCard(context, controller, isMulti),
+                        const SizedBox(height: 10),
+                        
+                        // Dynamic Options Card
+                        _buildOptionsCard(controller, slug),
+                        const SizedBox(height: 24),
 
-                  // Execute Button / Running state
-                  if (controller.isRunning) ...[
-                    _buildProgressCard(controller),
-                  ] else ...[
-                    if (controller.currentStep == 'success') ...[
-                      _buildSuccessCard(controller),
-                      const SizedBox(height: 16),
-                    ] else if (controller.currentStep == 'error') ...[
-                      _buildErrorCard(controller),
-                      const SizedBox(height: 16),
-                    ],
-                    ElevatedButton(
-                      onPressed: controller.executeJobFlow,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        minimumSize: const Size(double.infinity, 54),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(tool.icon, color: Colors.white),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Run ${tool.name}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                        // Execute Button / Running state
+                        if (controller.isRunning) ...[
+                          _buildProgressCard(controller),
+                        ] else ...[
+                          if (controller.currentStep == 'success') ...[
+                            _buildSuccessCard(controller),
+                            const SizedBox(height: 16),
+                          ] else if (controller.currentStep == 'error') ...[
+                            _buildErrorCard(controller),
+                            const SizedBox(height: 16),
+                          ],
+                          ElevatedButton(
+                            onPressed: controller.executeJobFlow,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              minimumSize: const Size(double.infinity, 54),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(tool.icon, color: Colors.white),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Run ${tool.name}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          if (controller.currentStep == 'success' &&
+                              controller.convertedFile != null) ...[
+                            const SizedBox(height: 20),
+                            _buildConvertedFileCard(context, controller),
+                          ],
                         ],
-                      ),
+                        const SizedBox(height: 24),
+                        buildAdBanner(),   
+                      ],
                     ),
-                    if (controller.currentStep == 'success' &&
-                        controller.convertedFile != null) ...[
-                      const SizedBox(height: 20),
-                      _buildConvertedFileCard(context, controller),
-                    ],
-                  ],
-                  const SizedBox(height: 24),
-                    buildAdBanner(),   
-                ],
-              ),
             ),
           ),
         );
@@ -949,115 +1002,3718 @@ class ToolExecutorPage extends StatelessWidget {
     );
   }
 
+  Widget _buildAiEmailWriterView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAiEmailWriterHeader(),
+        if (controller.isRunning) ...[
+          _buildAiEmailWriterProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAiEmailWriterResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildAiEmailWriterInputCard(context, controller),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiEmailWriterHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'AI Tool',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Free AI Email Writer — Generate Professional Business Emails Instantly',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   Widget _buildEmailWriterInputCard(
     BuildContext context,
     ToolExecutorController controller,
   ) {
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return _buildAiEmailWriterInputCard(context, controller);
+  }
+
+  Widget _buildAiEmailWriterInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _buildAiEmailFieldLabel('Recipient'),
+          const SizedBox(height: 6),
+          _buildAiEmailTextField(
+            controller: controller.emailRecipientController,
+            hintText: 'HR Manager',
+          ),
+          const SizedBox(height: 16),
+          _buildAiEmailFieldLabel('Purpose'),
+          const SizedBox(height: 6),
+          _buildAiEmailTextField(
+            controller: controller.emailPurposeController,
+            hintText: 'Follow up on interview',
+          ),
+          const SizedBox(height: 16),
+          _buildAiEmailFieldLabel('Key Points'),
+          const SizedBox(height: 6),
+          _buildAiEmailTextField(
+            controller: controller.emailKeyPointsController,
+            hintText: 'Thank them, ask about next steps',
+            maxLines: 4,
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 500) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildAiEmailFieldLabel('Tone'),
+                          const SizedBox(height: 6),
+                          _buildAiEmailToneDropdown(controller),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildAiEmailFieldLabel('Sender Name'),
+                          const SizedBox(height: 6),
+                          _buildAiEmailTextField(
+                            controller: controller.emailSenderNameController,
+                            hintText: 'Your Name',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAiEmailFieldLabel('Tone'),
+                    const SizedBox(height: 6),
+                    _buildAiEmailToneDropdown(controller),
+                    const SizedBox(height: 16),
+                    _buildAiEmailFieldLabel('Sender Name'),
+                    const SizedBox(height: 6),
+                    _buildAiEmailTextField(
+                      controller: controller.emailSenderNameController,
+                      hintText: 'Your Name',
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.email_outlined,
-                    color: Color(0xFF2563EB),
-                    size: 22,
+                const Text(
+                  'Ready to process',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (controller.emailPurposeController.text.trim().isNotEmpty) {
+                      controller.emailSubjectController.text = controller.emailPurposeController.text.trim();
+                    }
+                    if (controller.emailKeyPointsController.text.trim().isNotEmpty) {
+                      controller.emailContextController.text = controller.emailKeyPointsController.text.trim();
+                    }
+                    controller.executeJobFlow();
+                  },
+                  icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                  label: const Text(
+                    'Process with AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiEmailWriterProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiEmailTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiEmailInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiEmailWriterResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedEmailContent.isNotEmpty
+        ? controller.generatedEmailContent
+        : 'Subject: ${controller.emailPurposeController.text.isNotEmpty ? controller.emailPurposeController.text : "Follow-Up on Your Support"}\n\nDear ${controller.emailRecipientController.text.isNotEmpty ? controller.emailRecipientController.text : "Hr"},\n\n${controller.emailKeyPointsController.text.isNotEmpty ? controller.emailKeyPointsController.text : "Thank you for your assistance. I wanted to express my gratitude once again."}\n\nBest regards,\n${controller.emailSenderNameController.text.isNotEmpty ? controller.emailSenderNameController.text : "Abhinav"}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Light green banner header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7EE),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Email body
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SelectableText(
+                  displayText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // 3 Action buttons: "Process another item", "Download TXT", "Copy Text"
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 500;
+            if (isWide) {
+              return Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: controller.resetEmailWriter,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Process another item',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    onPressed: controller.downloadEmailTxt,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Download TXT',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: controller.copyEmailText,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        'AI Email Writer',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: AppColors.text,
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.resetEmailWriter,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another item',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Draft an email from subject, context, and desired tone.',
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.downloadEmailTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: controller.copyEmailText,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Copy Text',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.secondaryText,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _buildAiEmailTrustFooter(),
+      ],
+    );
+  }
+
+  Widget _buildAiEmailTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiEmailInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What AI Email Writer does',
+          content:
+              'Generates a well-structured email subject and body based on a few bullet points of context, tailored to your chosen tone and audience.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use AI Email Writer',
+          content:
+              '1  Enter the purpose and key points of your email\n2  Select your desired tone and sender details\n3  Click "Process with AI" to generate your email',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about AI Email Writer',
+          content:
+              'Your files and prompts are processed securely and never stored permanently. You can copy the text or download it as a TXT file immediately.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiEmailInfoCard({required String title, required String content}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiEmailFieldLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF334155),
+      ),
+    );
+  }
+
+  Widget _buildAiEmailTextField({
+    required TextEditingController controller,
+    required String hintText,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        filled: true,
+        fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiEmailToneDropdown(ToolExecutorController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: controller.selectedEmailTone,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          style: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w500,
+          ),
+          items: ToolExecutorController.emailToneOptions.map((tone) {
+            return DropdownMenuItem<String>(
+              value: tone,
+              child: Text(tone),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              controller.setEmailTone(val);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // AI Proofreader Dedicated UI Suite
+  // ==========================================
+
+  Widget _buildAiProofreadView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAiProofreadHeader(),
+        if (controller.isRunning) ...[
+          _buildAiProofreadProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAiProofreadResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildAiProofreadInputCard(context, controller),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiProofreadHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(height: 8),
+        const Text(
+          'Free AI Proofreader — Fix Grammar,\nSpelling, and Style Instantly',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildAiProofreadInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Big text input area with dynamic character counter
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: controller.proofreadTextController,
+                  minLines: 8,
+                  maxLines: 12,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.5),
+                  decoration: const InputDecoration(
+                    hintText: 'Paste or type your text here to proofread...',
+                    hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: (text) {
+                    controller.update();
+                  },
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Text(
+                    '${controller.proofreadTextController.text.length} characters',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Focus Area dropdown
+          const Text(
+            'Focus Area',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: controller.selectedProofreadFocusArea,
+                isExpanded: true,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w500,
+                ),
+                items: ToolExecutorController.proofreadFocusAreaOptions.map((area) {
+                  return DropdownMenuItem<String>(
+                    value: area,
+                    child: Text(area),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    controller.setProofreadFocusArea(val);
+                  }
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Bottom Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Ready to process',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (controller.proofreadTextController.text.trim().isNotEmpty) {
+                      controller.rawTextController.text = controller.proofreadTextController.text.trim();
+                      controller.useRawText = true;
+                    }
+                    controller.executeJobFlow();
+                  },
+                  icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                  label: const Text(
+                    'Process with AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiProofreadProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiEmailTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiProofreadInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiProofreadResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedProofreadContent.isNotEmpty
+        ? controller.generatedProofreadContent
+        : (controller.proofreadTextController.text.isNotEmpty
+            ? controller.proofreadTextController.text
+            : 'Text proofread and corrected.');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Light green banner header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7EE),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Corrected text body
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SelectableText(
+                  displayText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Action buttons: "Process another item", "Download TXT", "Copy Text"
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 500;
+            if (isWide) {
+              return Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: controller.resetProofreader,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Process another item',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    onPressed: controller.downloadProofreadTxt,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Download TXT',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: controller.copyProofreadText,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.resetProofreader,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another item',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.downloadProofreadTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: controller.copyProofreadText,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Copy Text',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _buildAiEmailTrustFooter(),
+      ],
+    );
+  }
+
+  Widget _buildAiProofreadInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What AI Proofreader does',
+          content:
+              'Analyzes and refines your text for grammatical accuracy, spelling corrections, stylistic improvements, and overall readability.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use AI Proofreader',
+          content:
+              '1  Paste or type your text in the input area\n2  Select your desired focus area\n3  Click "Process with AI" to instantly polish your writing',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about AI Proofreader',
+          content:
+              'Your text is processed securely and never stored permanently. You can copy the corrected text or download it right away.',
+        ),
+      ],
+    );
+  }
+
+  // ==========================================
+  // AI Citation Generator Dedicated UI Suite
+  // ==========================================
+
+  Widget _buildAiCitationView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAiCitationHeader(),
+        if (controller.isRunning) ...[
+          _buildAiCitationProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAiCitationResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          _buildAiCitationInputCard(context, controller),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiCitationHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'AI Tool',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'AI Citation Generator — Create APA,\nMLA & Chicago Citations Instantly',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 480;
+
+                  Widget buildRow(Widget left, Widget right) {
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: left),
+                          const SizedBox(width: 16),
+                          Expanded(child: right),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          left,
+                          const SizedBox(height: 14),
+                          right,
+                        ],
+                      );
+                    }
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row 1: Style | Title
+                      buildRow(
+                        _buildAiCitationStyleField(controller),
+                        _buildAiCitationField(
+                          label: 'Title',
+                          hintText: 'Title of the work',
+                          controller: controller.citationTitleController,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Row 2: Authors | Year
+                      buildRow(
+                        _buildAiCitationField(
+                          label: 'Authors',
+                          hintText: 'Last, First; Last2, First2',
+                          controller: controller.citationAuthorsController,
+                        ),
+                        _buildAiCitationField(
+                          label: 'Year',
+                          hintText: 'e.g. 2024',
+                          controller: controller.citationYearController,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Row 3: URL | DOI
+                      buildRow(
+                        _buildAiCitationField(
+                          label: 'URL',
+                          hintText: 'https://...',
+                          controller: controller.citationUrlController,
+                          keyboardType: TextInputType.url,
+                        ),
+                        _buildAiCitationField(
+                          label: 'DOI',
+                          hintText: '10.1000/xyz123',
+                          controller: controller.citationDoiController,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Row 4: Publisher | Journal
+                      buildRow(
+                        _buildAiCitationField(
+                          label: 'Publisher',
+                          hintText: 'Publisher Name',
+                          controller: controller.citationPublisherController,
+                        ),
+                        _buildAiCitationField(
+                          label: 'Journal',
+                          hintText: 'Journal Name',
+                          controller: controller.citationJournalController,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Row 5: Volume | Pages
+                      buildRow(
+                        _buildAiCitationField(
+                          label: 'Volume',
+                          hintText: 'e.g. 12',
+                          controller: controller.citationVolumeController,
+                        ),
+                        _buildAiCitationField(
+                          label: 'Pages',
+                          hintText: 'e.g. 45-67',
+                          controller: controller.citationPagesController,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Ready to process',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        controller.executeJobFlow();
+                      },
+                      icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                      label: const Text(
+                        'Process with AI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7C3AED),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiCitationTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiCitationInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            filled: true,
+            fillColor: Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationStyleField(ToolExecutorController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Style',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: controller.selectedCitationStyle,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF0F172A),
+                fontWeight: FontWeight.w500,
+              ),
+              items: ToolExecutorController.citationStyleOptions.map((style) {
+                return DropdownMenuItem<String>(
+                  value: style,
+                  child: Text(style),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  controller.setCitationStyle(val);
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiCitationTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiCitationInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedCitationContent.isNotEmpty
+        ? controller.generatedCitationContent
+        : 'Smith, J. (2005). Artificial Intelligence in Education. Journal of Technology, 7(2), 25-40. [Online]. Available: https://...';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF10B981), width: 3),
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Color(0xFF10B981),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Complete!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Processed in ${controller.citationExecutionDuration}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CITATION (${controller.selectedCitationStyle.toUpperCase()})',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      displayText,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 500;
+                  if (isWide) {
+                    return Row(
+                      children: [
+                        OutlinedButton(
+                          onPressed: controller.resetCitationGenerator,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another file',
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        OutlinedButton(
+                          onPressed: controller.downloadCitationTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: controller.copyCitationText,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7C3AED),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Copy Citation',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: controller.resetCitationGenerator,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Process another file',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFF334155),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: controller.downloadCitationTxt,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Download TXT',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFF334155),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: controller.copyCitationText,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7C3AED),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Copy Citation',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiCitationTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiCitationInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiCitationInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What AI Citation Generator does',
+          content:
+              'Generates accurately formatted academic citations in APA, MLA, Chicago, Harvard, IEEE, and BibTeX styles from your source details.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use AI Citation Generator',
+          content:
+              '1  Select your preferred citation style (e.g. APA, MLA)\n2  Enter the title, author(s), year, and other source details\n3  Click "Process with AI" to generate the complete citation',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about AI Citation Generator',
+          content:
+              'Your citations are created securely and ready to copy or download as TXT instantly for research papers, essays, and bibliographies.',
+        ),
+      ],
+    );
+  }
+
+  // ==========================================
+  // AI Flashcards Dedicated UI Suite
+  // ==========================================
+
+  Widget _buildAiFlashcardsView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAiFlashcardsHeader(),
+        if (controller.isRunning) ...[
+          _buildAiFlashcardsProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAiFlashcardsResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 650;
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildAiFlashcardsInputCard(context, controller),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _buildAiFlashcardsSettingsCard(context, controller),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildAiFlashcardsInputCard(context, controller),
+                    const SizedBox(height: 16),
+                    _buildAiFlashcardsSettingsCard(context, controller),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildAiFlashcardsTrustFooter(),
+          const SizedBox(height: 24),
+          _buildAiFlashcardsInfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiFlashcardsHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'AI Tool',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'AI Flashcard Generator — Create Study Cards From Any PDF or Document',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildAiFlashcardsInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Segmented Tabs: File Upload | Link | Paste Text
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                _buildFlashcardTabItem(
+                  title: 'File Upload',
+                  isSelected: controller.flashcardInputMode == 'file',
+                  onTap: () => controller.setFlashcardInputMode('file'),
+                ),
+                _buildFlashcardTabItem(
+                  title: 'Link',
+                  isSelected: controller.flashcardInputMode == 'link',
+                  onTap: () => controller.setFlashcardInputMode('link'),
+                ),
+                _buildFlashcardTabItem(
+                  title: 'Paste Text',
+                  isSelected: controller.flashcardInputMode == 'text',
+                  onTap: () => controller.setFlashcardInputMode('text'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Tab content
+          if (controller.flashcardInputMode == 'file') ...[
+            if (controller.selectedFile != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        color: Color(0xFF2563EB),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.selectedFile!.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${controller.selectedFile!.sizeKb.toStringAsFixed(2)} KB',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 20),
+                      onPressed: controller.clearSingleSelectedFile,
+                      tooltip: 'Remove file',
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              GestureDetector(
+                onTap: () => controller.pickFileFromDevice(false),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFCBD5E1),
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.cloud_upload_outlined, size: 40, color: Color(0xFF6366F1)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Click to browse or drop file here',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Supports PDF, DOCX, TXT, PPTX',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller.emailSubjectController,
-              decoration: InputDecoration(
-                labelText: 'Email Subject *',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+          ] else if (controller.flashcardInputMode == 'link') ...[
             TextField(
-              controller: controller.emailContextController,
-              maxLines: 4,
+              controller: controller.flashcardUrlController,
+              keyboardType: TextInputType.url,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
-                labelText: 'Context / Message Goal *',
-                hintText: 'Brief description of what the email should say...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.all(12),
+                prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF64748B)),
+                hintText: 'https://example.com/article-or-document',
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+                ),
               ),
+              onChanged: (_) => controller.update(),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Writing Tone',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.text),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildChoiceChip(
-                  label: 'Professional',
-                  icon: Icons.business_center_outlined,
-                  isSelected: controller.emailTone == 'professional',
-                  onTap: () => controller.setEmailTone('professional'),
-                ),
-                const SizedBox(width: 8),
-                _buildChoiceChip(
-                  label: 'Casual',
-                  icon: Icons.chat_bubble_outline,
-                  isSelected: controller.emailTone == 'casual',
-                  onTap: () => controller.setEmailTone('casual'),
-                ),
-                const SizedBox(width: 8),
-                _buildChoiceChip(
-                  label: 'Friendly',
-                  icon: Icons.sentiment_satisfied_alt_outlined,
-                  isSelected: controller.emailTone == 'friendly',
-                  onTap: () => controller.setEmailTone('friendly'),
-                ),
-              ],
+          ] else ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: controller.flashcardTextController,
+                    minLines: 6,
+                    maxLines: 10,
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Paste your study text, notes, or article content here...',
+                      hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (_) => controller.update(),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      '${controller.flashcardTextController.text.length} characters',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlashcardTabItem({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAiFlashcardsSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    String readyDetail = 'No document selected';
+    if (controller.flashcardInputMode == 'file') {
+      readyDetail = controller.selectedFile?.name ?? 'No document selected';
+    } else if (controller.flashcardInputMode == 'link') {
+      readyDetail = controller.flashcardUrlController.text.trim().isNotEmpty
+          ? controller.flashcardUrlController.text.trim()
+          : 'Enter URL';
+    } else {
+      final text = controller.flashcardTextController.text.trim();
+      readyDetail = text.isNotEmpty
+          ? '${text.split(RegExp(r"\s+")).length} words'
+          : 'Enter text';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Number of Flashcards: ${controller.flashcardsCount}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFF6366F1),
+              inactiveTrackColor: const Color(0xFFE2E8F0),
+              thumbColor: Colors.white,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9, elevation: 2),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: controller.flashcardsCount.toDouble().clamp(1.0, 30.0),
+              min: 1,
+              max: 30,
+              divisions: 29,
+              onChanged: (val) {
+                controller.setFlashcardsCount(val.round());
+              },
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ready:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  readyDetail,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF4F46E5),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: controller.executeJobFlow,
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    label: const Text(
+                      'Process with AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiFlashcardsProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiFlashcardsTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiFlashcardsInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiFlashcardsResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedFlashcardsContent.isNotEmpty
+        ? controller.generatedFlashcardsContent
+        : 'Card 1:\nQ: What is the first step in setting up a WhatsApp Business Account?\nA: Create a Facebook Account\n\nCard 2:\nQ: After logging into Meta Business Suite, what should you do next?\nA: Select or create your Business Portfolio and complete business information.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7EE),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SelectableText(
+                  displayText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 500;
+            if (isWide) {
+              return Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: controller.resetFlashcardGenerator,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Process another item',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    onPressed: controller.downloadFlashcardsTxt,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Download TXT',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: controller.copyFlashcardsText,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.resetFlashcardGenerator,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another item',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.downloadFlashcardsTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: controller.copyFlashcardsText,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Copy Text',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _buildAiFlashcardsTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiFlashcardsInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiFlashcardsTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiFlashcardsInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What AI Flashcard Generator does',
+          content:
+              'Transforms any document, presentation, notes, or article link into structured, question-and-answer study flashcards instantly.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use AI Flashcard Generator',
+          content:
+              '1  Upload your document, paste a link, or enter study text\n2  Choose your desired number of flashcards using the slider\n3  Click "Process with AI" to generate your study cards',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about AI Flashcard Generator',
+          content:
+              'Flashcards are generated for active recall and spaced repetition learning. You can copy the cards or download them as a TXT file anytime.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiQuizView(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildAiQuizHeader(),
+        if (controller.isRunning) ...[
+          _buildAiQuizProcessingCard(controller),
+        ] else if (controller.currentStep == 'success') ...[
+          _buildAiQuizResultCard(context, controller),
+        ] else ...[
+          if (controller.currentStep == 'error') ...[
+            _buildErrorCard(controller),
+            const SizedBox(height: 16),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 650;
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildAiQuizInputCard(context, controller),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _buildAiQuizSettingsCard(context, controller),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildAiQuizInputCard(context, controller),
+                    const SizedBox(height: 16),
+                    _buildAiQuizSettingsCard(context, controller),
+                  ],
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildAiQuizTrustFooter(),
+          const SizedBox(height: 24),
+          _buildAiQuizInfoCards(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiQuizHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'AI Tool',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'AI Quiz Generator — Create Quizzes from Any PDF, Document, or Text',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A00),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
+              SizedBox(width: 5),
+              Text(
+                'Pro Feature',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildAiQuizInputCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Segmented Tabs: File Upload | Link | Paste Text
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                _buildQuizTabItem(
+                  title: 'File Upload',
+                  isSelected: controller.quizInputMode == 'file',
+                  onTap: () => controller.setQuizInputMode('file'),
+                ),
+                _buildQuizTabItem(
+                  title: 'Link',
+                  isSelected: controller.quizInputMode == 'link',
+                  onTap: () => controller.setQuizInputMode('link'),
+                ),
+                _buildQuizTabItem(
+                  title: 'Paste Text',
+                  isSelected: controller.quizInputMode == 'text',
+                  onTap: () => controller.setQuizInputMode('text'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Tab content
+          if (controller.quizInputMode == 'file') ...[
+            if (controller.selectedFile != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFECEC),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: Color(0xFFEF4444),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.selectedFile!.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.selectedFile!.sizeKb > 1024
+                                ? '${(controller.selectedFile!.sizeKb / 1024).toStringAsFixed(2)} MB'
+                                : '${controller.selectedFile!.sizeKb.toStringAsFixed(2)} KB',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 20),
+                      onPressed: controller.clearSingleSelectedFile,
+                      tooltip: 'Remove file',
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              GestureDetector(
+                onTap: () => controller.pickFileFromDevice(false),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFCBD5E1),
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.cloud_upload_outlined, size: 40, color: Color(0xFF6366F1)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Click to browse or drop file here',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Supports PDF, DOCX, TXT, PPTX',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ] else if (controller.quizInputMode == 'link') ...[
+            TextField(
+              controller: controller.quizUrlController,
+              keyboardType: TextInputType.url,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF64748B)),
+                hintText: 'https://example.com/article-or-document',
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+                ),
+              ),
+              onChanged: (_) => controller.update(),
+            ),
+          ] else ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: controller.quizTextController,
+                    minLines: 6,
+                    maxLines: 10,
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.5),
+                    decoration: const InputDecoration(
+                      hintText: 'Paste your quiz source material, notes, or document content here...',
+                      hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (_) => controller.update(),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      '${controller.quizTextController.text.length} characters',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizTabItem({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiQuizSettingsCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    String readyDetail = 'No document selected';
+    if (controller.quizInputMode == 'file') {
+      readyDetail = controller.selectedFile?.name ?? 'No document selected';
+    } else if (controller.quizInputMode == 'link') {
+      readyDetail = controller.quizUrlController.text.trim().isNotEmpty
+          ? controller.quizUrlController.text.trim()
+          : 'Enter URL';
+    } else {
+      final text = controller.quizTextController.text.trim();
+      readyDetail = text.isNotEmpty
+          ? '${text.split(RegExp(r"\s+")).length} words'
+          : 'Enter text';
+    }
+
+    final difficultyItems = [
+      {'value': 'easy', 'label': 'Easy'},
+      {'value': 'medium', 'label': 'Medium'},
+      {'value': 'hard', 'label': 'Hard'},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Number of Questions: ${controller.quizCount}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFF6366F1),
+              inactiveTrackColor: const Color(0xFFE2E8F0),
+              thumbColor: Colors.white,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9, elevation: 2),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: controller.quizCount.toDouble().clamp(1.0, 30.0),
+              min: 1,
+              max: 30,
+              divisions: 29,
+              onChanged: (val) {
+                controller.setQuizCount(val.round());
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Difficulty',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: Colors.white,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: difficultyItems.any((item) => item['value'] == controller.quizDifficulty.toLowerCase())
+                    ? controller.quizDifficulty.toLowerCase()
+                    : 'medium',
+                isExpanded: true,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                items: difficultyItems.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item['value'],
+                    child: Text(item['label']!),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    controller.setQuizDifficulty(val);
+                  }
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ready:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  readyDetail,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF4F46E5),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: controller.executeJobFlow,
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    label: const Text(
+                      'Process with AI',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiQuizProcessingCard(ToolExecutorController controller) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(
+                width: 46,
+                height: 46,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Processing',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "We're working on your file...",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 6,
+                  color: const Color(0xFFE2E8F0),
+                  child: const LinearProgressIndicator(
+                    backgroundColor: Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildAiQuizTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiQuizInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiQuizResultCard(
+    BuildContext context,
+    ToolExecutorController controller,
+  ) {
+    final displayText = controller.generatedQuizContent.isNotEmpty
+        ? controller.generatedQuizContent
+        : "Question 1: In which year did the first episode of 'FOMBIEN B0)' air?\n\nOptions:\nA) 2018\nB) 2006\nC) 2009\nD) 2015\n\nCorrect Answer: B\nExplanation: The text mentions that the first episode of 'FOMBIEN B0)' aired in 2006.\n\n----------------------------\n\nQuestion 2: Which character is described as 'the best' by 'FOMBIEN B0)'?\n\nOptions:\nA) Agent Blue\nB) Captain Nova\nC) Dr. Sterling\nD) Commander Jax\n\nCorrect Answer: A\nExplanation: Agent Blue is highlighted throughout the text as the premier protagonist.";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7EE),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Corrected Text',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SelectableText(
+                  displayText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 500;
+            if (isWide) {
+              return Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: controller.resetQuizGenerator,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Process another item',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  OutlinedButton(
+                    onPressed: controller.downloadQuizTxt,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Download TXT',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: controller.copyQuizText,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.resetQuizGenerator,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Process another item',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: controller.downloadQuizTxt,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Download TXT',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: controller.copyQuizText,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Copy Text',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 20),
+        _buildAiQuizTrustFooter(),
+        const SizedBox(height: 24),
+        _buildAiQuizInfoCards(),
+      ],
+    );
+  }
+
+  Widget _buildAiQuizTrustFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.access_time_rounded, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Auto-delete in 24 hours',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+        SizedBox(width: 20),
+        Icon(Icons.verified_user_outlined, color: Color(0xFF64748B), size: 15),
+        SizedBox(width: 5),
+        Text(
+          'Secure server processing',
+          style: TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiQuizInfoCards() {
+    return Column(
+      children: [
+        _buildAiEmailInfoCard(
+          title: 'What AI Quiz Generator does',
+          content:
+              'Transforms any document, presentation, notes, or article link into comprehensive multiple-choice quizzes and test preparation questions.',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'How to use AI Quiz Generator',
+          content:
+              '1  Upload your document, paste a link, or enter text\n2  Choose your desired number of questions and difficulty level\n3  Click "Process with AI" to generate your customized quiz',
+        ),
+        const SizedBox(height: 12),
+        _buildAiEmailInfoCard(
+          title: 'Good to know about AI Quiz Generator',
+          content:
+              'Generated quizzes include full multiple-choice options (A-D), verified correct answers, and thorough explanations. You can copy the quiz or download it as a TXT file anytime.',
+        ),
+      ],
     );
   }
 

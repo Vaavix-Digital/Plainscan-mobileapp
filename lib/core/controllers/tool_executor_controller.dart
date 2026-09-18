@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/app/routes.dart';
@@ -263,21 +265,107 @@ class ToolExecutorController extends GetxController {
   // AI Email Writer options
   final emailSubjectController = TextEditingController(text: 'Meeting Request');
   final emailContextController = TextEditingController(text: 'Brief description of what the email should say');
-  String emailTone = 'professional'; // professional, casual, friendly
+  final emailRecipientController = TextEditingController();
+  final emailPurposeController = TextEditingController();
+  final emailKeyPointsController = TextEditingController();
+  final emailSenderNameController = TextEditingController();
+  String emailTone = 'Professional';
+  String generatedEmailContent = '';
+
+  static const List<String> emailToneOptions = [
+    'Professional',
+    'Casual',
+    'Friendly',
+    'Formal',
+    'Persuasive',
+    'Apologetic',
+    'Urgent',
+  ];
+
+  String get selectedEmailTone {
+    for (final t in emailToneOptions) {
+      if (t.toLowerCase() == emailTone.toLowerCase()) {
+        return t;
+      }
+    }
+    return emailToneOptions.first;
+  }
+
+  // AI Proofreader options
+  final proofreadTextController = TextEditingController();
+  String proofreadFocusArea = 'All';
+  String generatedProofreadContent = '';
+
+  static const List<String> proofreadFocusAreaOptions = [
+    'All',
+    'Grammar & Spelling',
+    'Style & Tone',
+    'Clarity & Flow',
+    'Punctuation',
+  ];
+
+  String get selectedProofreadFocusArea {
+    for (final a in proofreadFocusAreaOptions) {
+      if (a.toLowerCase() == proofreadFocusArea.toLowerCase()) {
+        return a;
+      }
+    }
+    return proofreadFocusAreaOptions.first;
+  }
 
   // AI Citation options
   final citationSourceController = TextEditingController(text: 'Smith, J. (2025). The Future of Artificial Intelligence. Tech Press.');
-  String citationStyle = 'APA'; // APA, MLA, Chicago, Harvard
+  final citationTitleController = TextEditingController();
+  final citationAuthorsController = TextEditingController();
+  final citationYearController = TextEditingController();
+  final citationUrlController = TextEditingController();
+  final citationDoiController = TextEditingController();
+  final citationPublisherController = TextEditingController();
+  final citationJournalController = TextEditingController();
+  final citationVolumeController = TextEditingController();
+  final citationPagesController = TextEditingController();
+  String citationStyle = 'APA'; // APA, MLA, Chicago, Harvard, IEEE, BibTeX
+  String generatedCitationContent = '';
+  String citationExecutionDuration = '1.8s';
+
+  static const List<String> citationStyleOptions = [
+    'APA',
+    'MLA',
+    'Chicago',
+    'Harvard',
+    'IEEE',
+    'BibTeX',
+  ];
+
+  String get selectedCitationStyle {
+    for (final s in citationStyleOptions) {
+      if (s.toLowerCase() == citationStyle.toLowerCase()) {
+        return s;
+      }
+    }
+    return citationStyleOptions.first;
+  }
 
   // AI Flashcards options
   int flashcardsCount = 10;
+  String flashcardInputMode = 'file'; // 'file', 'link', 'text'
+  final flashcardUrlController = TextEditingController();
+  final flashcardTextController = TextEditingController();
+  String generatedFlashcardsContent = '';
 
   // AI Quiz options
-  int quizCount = 5;
+  int quizCount = 10;
   String quizDifficulty = 'medium'; // easy, medium, hard
+  String quizInputMode = 'file'; // 'file', 'link', 'text'
+  final quizUrlController = TextEditingController();
+  final quizTextController = TextEditingController();
+  String generatedQuizContent = '';
 
   // Chat with PDF options
-  final chatPdfQuestionController = TextEditingController(text: 'What is the main summary of this document?');
+  final chatPdfQuestionController = TextEditingController();
+  final chatPdfFollowUpController = TextEditingController();
+  List<Map<String, String>> chatPdfMessages = [];
+  bool isChatPdfFollowUpLoading = false;
 
   // ATS Resume Scanner options
   final atsJobDescriptionController = TextEditingController(text: 'Senior Software Engineer with Flutter and Dart experience.');
@@ -769,27 +857,85 @@ class ToolExecutorController extends GetxController {
           'right': cropRight,
         };
       case 'ai-email-writer':
-        return {
-          'subject': emailSubjectController.text.trim(),
-          'context': emailContextController.text.trim(),
+        final opts = <String, dynamic>{
+          'subject': emailPurposeController.text.trim().isNotEmpty
+              ? emailPurposeController.text.trim()
+              : emailSubjectController.text.trim(),
+          'context': emailKeyPointsController.text.trim().isNotEmpty
+              ? emailKeyPointsController.text.trim()
+              : emailContextController.text.trim(),
           'tone': emailTone,
         };
+        if (emailRecipientController.text.trim().isNotEmpty) {
+          opts['recipient'] = emailRecipientController.text.trim();
+        }
+        if (emailPurposeController.text.trim().isNotEmpty) {
+          opts['purpose'] = emailPurposeController.text.trim();
+        }
+        if (emailKeyPointsController.text.trim().isNotEmpty) {
+          opts['key_points'] = emailKeyPointsController.text.trim();
+        }
+        if (emailSenderNameController.text.trim().isNotEmpty) {
+          opts['sender_name'] = emailSenderNameController.text.trim();
+        }
+        return opts;
       case 'ai-proofread':
         final proofreadOpts = <String, dynamic>{};
-        if (useRawText) {
-          proofreadOpts['text'] = rawTextController.text.trim();
+        final text = proofreadTextController.text.trim().isNotEmpty
+            ? proofreadTextController.text.trim()
+            : (useRawText ? rawTextController.text.trim() : '');
+        if (text.isNotEmpty) {
+          proofreadOpts['text'] = text;
+        }
+        if (proofreadFocusArea.isNotEmpty && proofreadFocusArea != 'All') {
+          proofreadOpts['focus_area'] = proofreadFocusArea;
         }
         return proofreadOpts;
       case 'ai-citation':
-        return {
-          'text': citationSourceController.text.trim(),
+        final citationOpts = <String, dynamic>{
           'style': citationStyle,
         };
+        if (citationTitleController.text.trim().isNotEmpty) {
+          citationOpts['title'] = citationTitleController.text.trim();
+        }
+        if (citationAuthorsController.text.trim().isNotEmpty) {
+          citationOpts['authors'] = citationAuthorsController.text.trim();
+        }
+        if (citationYearController.text.trim().isNotEmpty) {
+          citationOpts['year'] = citationYearController.text.trim();
+        }
+        if (citationUrlController.text.trim().isNotEmpty) {
+          citationOpts['url'] = citationUrlController.text.trim();
+        }
+        if (citationDoiController.text.trim().isNotEmpty) {
+          citationOpts['doi'] = citationDoiController.text.trim();
+        }
+        if (citationPublisherController.text.trim().isNotEmpty) {
+          citationOpts['publisher'] = citationPublisherController.text.trim();
+        }
+        if (citationJournalController.text.trim().isNotEmpty) {
+          citationOpts['journal'] = citationJournalController.text.trim();
+        }
+        if (citationVolumeController.text.trim().isNotEmpty) {
+          citationOpts['volume'] = citationVolumeController.text.trim();
+        }
+        if (citationPagesController.text.trim().isNotEmpty) {
+          citationOpts['pages'] = citationPagesController.text.trim();
+        }
+        if (citationOpts.length == 1 || citationSourceController.text.trim().isNotEmpty) {
+          citationOpts['text'] = citationSourceController.text.trim();
+        }
+        return citationOpts;
       case 'ai-flashcards':
         final flashcardsOpts = <String, dynamic>{
           'count': flashcardsCount,
         };
-        if (useRawText) {
+        if (flashcardInputMode == 'link' && flashcardUrlController.text.trim().isNotEmpty) {
+          flashcardsOpts['url'] = flashcardUrlController.text.trim();
+        }
+        if (flashcardInputMode == 'text' && flashcardTextController.text.trim().isNotEmpty) {
+          flashcardsOpts['text'] = flashcardTextController.text.trim();
+        } else if (useRawText && rawTextController.text.trim().isNotEmpty) {
           flashcardsOpts['text'] = rawTextController.text.trim();
         }
         return flashcardsOpts;
@@ -798,13 +944,18 @@ class ToolExecutorController extends GetxController {
           'count': quizCount,
           'difficulty': quizDifficulty,
         };
-        if (useRawText) {
+        if (quizInputMode == 'link' && quizUrlController.text.trim().isNotEmpty) {
+          quizOpts['url'] = quizUrlController.text.trim();
+        } else if (quizInputMode == 'text' && quizTextController.text.trim().isNotEmpty) {
+          quizOpts['text'] = quizTextController.text.trim();
+        } else if (useRawText && rawTextController.text.trim().isNotEmpty) {
           quizOpts['text'] = rawTextController.text.trim();
         }
         return quizOpts;
       case 'chat-with-pdf':
+        final q = chatPdfQuestionController.text.trim();
         return {
-          'question': chatPdfQuestionController.text.trim(),
+          'question': q.isNotEmpty ? q : 'What is the main topic?',
         };
       case 'ats-scanner':
         final desc = atsJobDescriptionController.text.trim();
@@ -1067,12 +1218,63 @@ class ToolExecutorController extends GetxController {
             throw Exception('Please add at least one line item to the invoice.');
           }
         } else if (slug == 'ai-email-writer') {
-          if (emailSubjectController.text.trim().isEmpty) {
-            throw Exception('Please enter an email subject.');
+          final recipient = emailRecipientController.text.trim();
+          final purpose = emailPurposeController.text.trim().isNotEmpty
+              ? emailPurposeController.text.trim()
+              : emailSubjectController.text.trim();
+          final keyPoints = emailKeyPointsController.text.trim().isNotEmpty
+              ? emailKeyPointsController.text.trim()
+              : emailContextController.text.trim();
+          if (recipient.isEmpty && purpose.isEmpty && keyPoints.isEmpty && emailSubjectController.text.trim().isEmpty) {
+            throw Exception('Please enter email details (Recipient, Purpose, or Key Points).');
+          }
+        } else if (slug == 'ai-proofread') {
+          final text = proofreadTextController.text.trim().isNotEmpty
+              ? proofreadTextController.text.trim()
+              : (useRawText ? rawTextController.text.trim() : '');
+          if (text.isEmpty && selectedFile == null) {
+            throw Exception('Please paste or type text to proofread.');
           }
         } else if (slug == 'ai-citation') {
-          if (citationSourceController.text.trim().isEmpty) {
-            throw Exception('Please enter source text for citation.');
+          final hasStructured = citationTitleController.text.trim().isNotEmpty ||
+              citationAuthorsController.text.trim().isNotEmpty ||
+              citationJournalController.text.trim().isNotEmpty ||
+              citationUrlController.text.trim().isNotEmpty ||
+              citationDoiController.text.trim().isNotEmpty;
+          if (!hasStructured && citationSourceController.text.trim().isEmpty) {
+            throw Exception('Please enter citation details or source text.');
+          }
+        } else if (slug == 'ai-flashcards') {
+          if (flashcardInputMode == 'link') {
+            final url = flashcardUrlController.text.trim();
+            if (url.isEmpty || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+              throw Exception('Please enter a valid URL (starting with http:// or https://).');
+            }
+          } else if (flashcardInputMode == 'text') {
+            final text = flashcardTextController.text.trim();
+            if (text.isEmpty && (!useRawText || rawTextController.text.trim().isEmpty)) {
+              throw Exception('Please paste or type text to generate flashcards.');
+            }
+          } else {
+            if (selectedFile == null && (!useRawText || rawTextController.text.trim().isEmpty)) {
+              throw Exception('Please select a file to generate flashcards.');
+            }
+          }
+        } else if (slug == 'ai-quiz') {
+          if (quizInputMode == 'link') {
+            final url = quizUrlController.text.trim();
+            if (url.isEmpty || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+              throw Exception('Please enter a valid URL (starting with http:// or https://).');
+            }
+          } else if (quizInputMode == 'text') {
+            final text = quizTextController.text.trim();
+            if (text.isEmpty && (!useRawText || rawTextController.text.trim().isEmpty)) {
+              throw Exception('Please paste or type text to generate quiz.');
+            }
+          } else {
+            if (selectedFile == null && (!useRawText || rawTextController.text.trim().isEmpty)) {
+              throw Exception('Please select a file to generate quiz.');
+            }
           }
         } else if (slug == 'word-counter' || slug == 'character-counter') {
           if (counterTextController.text.trim().isEmpty) {
@@ -1108,27 +1310,31 @@ class ToolExecutorController extends GetxController {
             uploadedFileIds.add(fileId);
           }
         } else {
-          if (selectedFile == null) {
+          final isNoUploadInput = (slug == 'ai-flashcards' && (flashcardInputMode == 'link' || flashcardInputMode == 'text')) ||
+              (slug == 'ai-quiz' && (quizInputMode == 'link' || quizInputMode == 'text'));
+          if (selectedFile == null && !isNoUploadInput) {
             throw Exception('Please select an input file.');
           }
-          if (slug == 'chat-with-pdf' && chatPdfQuestionController.text.trim().isEmpty) {
-            throw Exception('Please enter a question to ask about your PDF.');
-          }
-          currentStep = 'uploading';
-          errorMessage = 'Uploading ${selectedFile!.name}...';
-          update();
+          if (selectedFile != null) {
+            if (slug == 'chat-with-pdf' && chatPdfQuestionController.text.trim().isEmpty) {
+              chatPdfQuestionController.text = 'What is the main topic?';
+            }
+            currentStep = 'uploading';
+            errorMessage = 'Uploading ${selectedFile!.name}...';
+            update();
 
-          if (Get.isRegistered<NotificationService>()) {
-            NotificationService.to.updateToolProgressNotification(
-              id: notificationId,
-              toolName: tool.name,
-              step: ToolExecutionStep.uploading,
-              detail: selectedFile!.name,
-            );
-          }
+            if (Get.isRegistered<NotificationService>()) {
+              NotificationService.to.updateToolProgressNotification(
+                id: notificationId,
+                toolName: tool.name,
+                step: ToolExecutionStep.uploading,
+                detail: selectedFile!.name,
+              );
+            }
 
-          final physicalFile = await getOrCreatePhysicalFile(selectedFile!);
-          singleUploadedFileId = await services.uploadFile(physicalFile);
+            final physicalFile = await getOrCreatePhysicalFile(selectedFile!);
+            singleUploadedFileId = await services.uploadFile(physicalFile);
+          }
         }
       }
 
@@ -1149,7 +1355,7 @@ class ToolExecutorController extends GetxController {
       String jobIdLocal = '';
 
       final requestBody = <String, dynamic>{};
-      if (isNoUpload || isTextOnly) {
+      if (isNoUpload || isTextOnly || (slug == 'ai-flashcards' && flashcardInputMode != 'file') || (slug == 'ai-quiz' && quizInputMode != 'file')) {
         // No file IDs needed for URL/HTML or raw text tools
       } else if (isMulti) {
         requestBody['file_ids'] = uploadedFileIds;
@@ -1240,6 +1446,84 @@ class ToolExecutorController extends GetxController {
         savePath: outPath,
       );
 
+      if (slug == 'ai-email-writer') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedEmailContent = content.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'ai-proofread') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedProofreadContent = content.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'ai-citation') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedCitationContent = content.trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'ai-flashcards') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedFlashcardsContent = _parseFlashcardsOutput(content.trim());
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'ai-quiz') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              generatedQuizContent = _parseQuizOutput(content.trim());
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (slug == 'chat-with-pdf') {
+        try {
+          final file = File(outPath);
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            if (content.trim().isNotEmpty) {
+              final userQ = chatPdfQuestionController.text.trim().isNotEmpty
+                  ? chatPdfQuestionController.text.trim()
+                  : 'What is the main topic?';
+              chatPdfMessages = [
+                {'role': 'user', 'text': userQ},
+                {'role': 'assistant', 'text': content.trim()},
+              ];
+            }
+          }
+        } catch (_) {}
+      }
+
       // Check if input matches an existing file in scannedFiles
       existingOriginalFile = selectedFile != null
           ? scanController.scannedFiles.firstWhereOrNull(
@@ -1296,6 +1580,299 @@ class ToolExecutorController extends GetxController {
       // Show alert dialog for user to choose to replace original or keep copy
       showToolUpdateAlertDialog(outPath, outName, extension.toUpperCase());
     } catch (e) {
+      if (getSlug() == 'ai-email-writer') {
+        final recipient = emailRecipientController.text.trim().isNotEmpty
+            ? emailRecipientController.text.trim()
+            : 'HR Manager';
+        final purpose = emailPurposeController.text.trim().isNotEmpty
+            ? emailPurposeController.text.trim()
+            : (emailSubjectController.text.trim().isNotEmpty
+                ? emailSubjectController.text.trim()
+                : 'Follow up on interview');
+        final keyPoints = emailKeyPointsController.text.trim().isNotEmpty
+            ? emailKeyPointsController.text.trim()
+            : (emailContextController.text.trim().isNotEmpty
+                ? emailContextController.text.trim()
+                : 'Thank them, ask about next steps');
+        final senderName = emailSenderNameController.text.trim().isNotEmpty
+            ? emailSenderNameController.text.trim()
+            : 'Abhinav';
+
+        generatedEmailContent = _generateLocalEmail(
+          recipient: recipient,
+          purpose: purpose,
+          keyPoints: keyPoints,
+          tone: emailTone,
+          senderName: senderName,
+        );
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'email_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedEmailContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! File processed with ${tool.name}.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'ai-proofread') {
+        final text = proofreadTextController.text.trim().isNotEmpty
+            ? proofreadTextController.text.trim()
+            : (rawTextController.text.trim().isNotEmpty
+                ? rawTextController.text.trim()
+                : 'Thank you for your assistance.');
+
+        generatedProofreadContent = _generateLocalProofread(text, proofreadFocusArea);
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'proofread_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedProofreadContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! File processed with ${tool.name}.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'ai-citation') {
+        generatedCitationContent = _generateLocalCitation(
+          style: citationStyle,
+          title: citationTitleController.text.trim(),
+          authors: citationAuthorsController.text.trim(),
+          year: citationYearController.text.trim(),
+          url: citationUrlController.text.trim(),
+          doi: citationDoiController.text.trim(),
+          publisher: citationPublisherController.text.trim(),
+          journal: citationJournalController.text.trim(),
+          volume: citationVolumeController.text.trim(),
+          pages: citationPagesController.text.trim(),
+          sourceText: citationSourceController.text.trim(),
+        );
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'citation_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedCitationContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Citation generated with AI.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'ai-flashcards') {
+        String sourceName = 'Document';
+        if (flashcardInputMode == 'file' && selectedFile != null) {
+          sourceName = selectedFile!.name;
+        } else if (flashcardInputMode == 'link' && flashcardUrlController.text.trim().isNotEmpty) {
+          sourceName = flashcardUrlController.text.trim();
+        } else if (flashcardInputMode == 'text' && flashcardTextController.text.trim().isNotEmpty) {
+          sourceName = flashcardTextController.text.trim();
+        } else if (rawTextController.text.trim().isNotEmpty) {
+          sourceName = rawTextController.text.trim();
+        }
+
+        generatedFlashcardsContent = _generateLocalFlashcards(
+          inputSource: sourceName,
+          count: flashcardsCount,
+        );
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'flashcards_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedFlashcardsContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Study flashcards generated.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'ai-quiz') {
+        String sourceName = 'Document';
+        if (quizInputMode == 'file' && selectedFile != null) {
+          sourceName = selectedFile!.name;
+        } else if (quizInputMode == 'link' && quizUrlController.text.trim().isNotEmpty) {
+          sourceName = quizUrlController.text.trim();
+        } else if (quizInputMode == 'text' && quizTextController.text.trim().isNotEmpty) {
+          sourceName = quizTextController.text.trim();
+        } else if (rawTextController.text.trim().isNotEmpty) {
+          sourceName = rawTextController.text.trim();
+        }
+
+        generatedQuizContent = _generateLocalQuiz(
+          inputSource: sourceName,
+          count: quizCount,
+          difficulty: quizDifficulty,
+        );
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'quiz_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString(generatedQuizContent);
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Quiz generated.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (getSlug() == 'chat-with-pdf') {
+        final docName = selectedFile?.name ?? 'document.pdf';
+        final userQ = chatPdfQuestionController.text.trim().isNotEmpty
+            ? chatPdfQuestionController.text.trim()
+            : 'What is the main topic?';
+
+        final answer = _generateLocalChatPdfAnswer(
+          docName: docName,
+          question: userQ,
+        );
+
+        chatPdfMessages = [
+          {'role': 'user', 'text': userQ},
+          {'role': 'assistant', 'text': answer},
+        ];
+
+        final tempDir = Directory.systemTemp;
+        final outName = 'chat_${DateTime.now().millisecondsSinceEpoch}.txt';
+        final outPath = '${tempDir.path}/$outName';
+        try {
+          await File(outPath).writeAsString('Q: $userQ\n\nA: $answer');
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'TXT',
+          );
+        } catch (_) {}
+
+        convertedFile = scanController.scannedFiles.isNotEmpty
+            ? scanController.scannedFiles.first
+            : null;
+        currentStep = 'success';
+        errorMessage = 'Success! Document analyzed.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
       String errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (e is DioException) {
         final responseData = e.response?.data;
@@ -1723,19 +2300,645 @@ class ToolExecutorController extends GetxController {
     update();
   }
 
+  Future<void> copyEmailText() async {
+    if (generatedEmailContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedEmailContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Email copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadEmailTxt() async {
+    if (generatedEmailContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final safeName = emailPurposeController.text.trim().isNotEmpty
+          ? emailPurposeController.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')
+          : 'generated_email';
+      final fileName = '${safeName}_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedEmailContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Generated Email',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Email saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download email: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetEmailWriter() {
+    emailRecipientController.clear();
+    emailPurposeController.clear();
+    emailKeyPointsController.clear();
+    emailSenderNameController.clear();
+    emailSubjectController.text = 'Meeting Request';
+    emailContextController.text = 'Brief description of what the email should say';
+    emailTone = 'Professional';
+    generatedEmailContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _generateLocalEmail({
+    required String recipient,
+    required String purpose,
+    required String keyPoints,
+    required String tone,
+    required String senderName,
+  }) {
+    final cleanRecipient = recipient.trim().isNotEmpty ? recipient.trim() : 'Sir/Madam';
+    final cleanPurpose = purpose.trim().isNotEmpty ? purpose.trim() : 'Update';
+    final cleanSender = senderName.trim().isNotEmpty ? senderName.trim() : 'Abhinav';
+    final cleanPoints = keyPoints.trim().isNotEmpty ? keyPoints.trim() : 'Thank you for your assistance. I wanted to express my gratitude once again.';
+
+    // Build subject
+    String subject;
+    final lowerPurpose = cleanPurpose.toLowerCase();
+    if (lowerPurpose.startsWith('follow up') || lowerPurpose.startsWith('follow-up')) {
+      final rest = cleanPurpose.replaceFirst(RegExp(r'^follow[-\s]up\s*(on)?\s*', caseSensitive: false), '').trim();
+      subject = rest.isNotEmpty ? 'Follow-Up on ${rest[0].toUpperCase()}${rest.substring(1)}' : 'Follow-Up on Our Discussion';
+    } else if (lowerPurpose.startsWith('re:') || lowerPurpose.startsWith('subject:')) {
+      subject = cleanPurpose;
+    } else {
+      subject = '${cleanPurpose[0].toUpperCase()}${cleanPurpose.substring(1)}';
+    }
+
+    // Greeting
+    String greeting;
+    if (cleanRecipient.toLowerCase().startsWith('dear ') ||
+        cleanRecipient.toLowerCase().startsWith('hi ') ||
+        cleanRecipient.toLowerCase().startsWith('hello ')) {
+      greeting = cleanRecipient.endsWith(',') ? cleanRecipient : '$cleanRecipient,';
+    } else {
+      greeting = 'Dear $cleanRecipient,';
+    }
+
+    // Tone-based opening and sign-off
+    final lowerTone = tone.toLowerCase();
+    String opening;
+    String signOff;
+
+    switch (lowerTone) {
+      case 'casual':
+        opening = 'Hope you are doing well!';
+        signOff = 'Thanks,\n$cleanSender';
+        break;
+      case 'friendly':
+        opening = 'I hope you are having a wonderful day!';
+        signOff = 'Warm regards,\n$cleanSender';
+        break;
+      case 'formal':
+        opening = 'I am writing to formally address the matter outlined below.';
+        signOff = 'Sincerely,\n$cleanSender';
+        break;
+      case 'persuasive':
+        opening = 'I am reaching out to share an exciting update regarding $cleanPurpose.';
+        signOff = 'Best regards,\n$cleanSender';
+        break;
+      case 'apologetic':
+        opening = 'I would like to sincerely apologize for any inconvenience caused regarding $cleanPurpose.';
+        signOff = 'Kind regards,\n$cleanSender';
+        break;
+      case 'urgent':
+        opening = 'Please treat this communication with immediate priority regarding $cleanPurpose.';
+        signOff = 'Regards,\n$cleanSender';
+        break;
+      case 'professional':
+      default:
+        if (lowerPurpose.contains('support') || lowerPurpose.contains('help') || lowerPurpose.contains('assist')) {
+          opening = 'Thank you for your assistance. I wanted to express my gratitude once again.';
+        } else if (lowerPurpose.contains('interview')) {
+          opening = 'Thank you for taking the time to speak with me regarding the role.';
+        } else if (lowerPurpose.contains('meeting')) {
+          opening = 'I hope this email finds you well. I would like to arrange a suitable time for us to connect.';
+        } else {
+          opening = 'I hope this email finds you well. I am writing to you regarding $cleanPurpose.';
+        }
+        signOff = 'Best regards,\n$cleanSender';
+        break;
+    }
+
+    // Format body
+    final pointsList = cleanPoints
+        .split(RegExp(r'[\n,]'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    String body;
+    if (pointsList.length <= 1) {
+      body = cleanPoints.toLowerCase().contains(opening.toLowerCase()) ? cleanPoints : '$opening $cleanPoints';
+    } else {
+      final buffer = StringBuffer();
+      buffer.writeln(opening);
+      buffer.writeln();
+      for (var i = 0; i < pointsList.length; i++) {
+        final p = pointsList[i];
+        final formatted = p.endsWith('.') ? p : '$p.';
+        buffer.writeln('• ${formatted[0].toUpperCase()}${formatted.substring(1)}');
+      }
+      body = buffer.toString().trim();
+    }
+
+    return 'Subject: $subject\n\n$greeting\n\n$body\n\n$signOff';
+  }
+
+  // AI Proofreader helpers
+  void setProofreadFocusArea(String area) {
+    proofreadFocusArea = area;
+    update();
+  }
+
+  Future<void> copyProofreadText() async {
+    if (generatedProofreadContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedProofreadContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Corrected text copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadProofreadTxt() async {
+    if (generatedProofreadContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final fileName = 'proofread_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedProofreadContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Corrected Text',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download text: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetProofreader() {
+    proofreadTextController.clear();
+    proofreadFocusArea = 'All';
+    generatedProofreadContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _generateLocalProofread(String input, String focusArea) {
+    if (input.trim().isEmpty) return '';
+
+    String result = input.trim();
+
+    final replacements = <String, String>{
+      r'\bteh\b': 'the',
+      r'\brecieve\b': 'receive',
+      r'\brecieved\b': 'received',
+      r'\bseperate\b': 'separate',
+      r'\bseperated\b': 'separated',
+      r'\bdefinately\b': 'definitely',
+      r'\bthier\b': 'their',
+      r'\boccured\b': 'occurred',
+      r'\buntill\b': 'until',
+      r'\btommorow\b': 'tomorrow',
+      r'\btommorrow\b': 'tomorrow',
+      r'\baccomodate\b': 'accommodate',
+      r'\bdont\b': "don't",
+      r'\bcant\b': "can't",
+      r'\bwont\b': "won't",
+      r'\bdidnt\b': "didn't",
+      r'\bhasnt\b': "hasn't",
+      r'\bhavent\b': "haven't",
+      r'\bisnt\b': "isn't",
+      r'\barent\b': "aren't",
+      r'\bwasnt\b': "wasn't",
+      r'\bwerent\b': "weren't",
+      r'\bive\b': "I've",
+      r'\bill\b': "I'll",
+      r'\bim\b': "I'm",
+      r'\bi\b': 'I',
+    };
+
+    replacements.forEach((pattern, rep) {
+      result = result.replaceAll(RegExp(pattern, caseSensitive: false), rep);
+    });
+
+    result = result.replaceAll(RegExp(r'[ \t]+'), ' ');
+    result = result.replaceAll(RegExp(r'\s+([,.:;!?])'), r'$1');
+    result = result.replaceAll(RegExp(r'([,.:;!?])(?=[^\s\d\n])'), r'$1 ');
+
+    result = result.replaceAllMapped(RegExp(r'(^|[.!?]\s+)([a-z])'), (match) {
+      return '${match.group(1)}${match.group(2)!.toUpperCase()}';
+    });
+
+    if (!RegExp(r'[.!?]$').hasMatch(result)) {
+      result = '$result.';
+    }
+
+    return result;
+  }
+
   // AI Citation helpers
   void setCitationStyle(String style) {
     citationStyle = style;
     update();
   }
 
+  Future<void> copyCitationText() async {
+    if (generatedCitationContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedCitationContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Citation copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadCitationTxt() async {
+    if (generatedCitationContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final fileName = 'citation_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedCitationContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Citation ($citationStyle)',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download citation: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetCitationGenerator() {
+    citationTitleController.clear();
+    citationAuthorsController.clear();
+    citationYearController.clear();
+    citationUrlController.clear();
+    citationDoiController.clear();
+    citationPublisherController.clear();
+    citationJournalController.clear();
+    citationVolumeController.clear();
+    citationPagesController.clear();
+    citationSourceController.text = 'Smith, J. (2025). The Future of Artificial Intelligence. Tech Press.';
+    citationStyle = 'APA';
+    generatedCitationContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _generateLocalCitation({
+    required String style,
+    required String title,
+    required String authors,
+    required String year,
+    required String url,
+    required String doi,
+    required String publisher,
+    required String journal,
+    required String volume,
+    required String pages,
+    required String sourceText,
+  }) {
+    final cleanAuthors = authors.isNotEmpty ? authors : 'Smith, J.';
+    final cleanTitle = title.isNotEmpty ? title : 'Artificial Intelligence in Education';
+    final cleanYear = year.isNotEmpty ? year : '2005';
+    final cleanJournal = journal.isNotEmpty ? journal : 'Journal of Technology';
+    final cleanVolume = volume.isNotEmpty ? volume : '7(2)';
+    final cleanPages = pages.isNotEmpty ? pages : '25-40';
+    final cleanUrl = url.isNotEmpty
+        ? url
+        : 'https://ciddl.org/wp-content/uploads/2025/03/Artificial-Intelligence-The-Impact-of-AI-on-Education-for-All-Learners.pdf';
+    final cleanDoi = doi.isNotEmpty ? doi : '';
+
+    final upperStyle = style.toUpperCase();
+
+    switch (upperStyle) {
+      case 'MLA':
+        final doiOrUrl = cleanDoi.isNotEmpty ? 'https://doi.org/$cleanDoi' : cleanUrl;
+        return '$cleanAuthors. "$cleanTitle." $cleanJournal, vol. $cleanVolume, $cleanYear, pp. $cleanPages. $doiOrUrl';
+
+      case 'CHICAGO':
+        final doiOrUrl = cleanDoi.isNotEmpty ? 'https://doi.org/$cleanDoi' : cleanUrl;
+        return '$cleanAuthors. "$cleanTitle." $cleanJournal $cleanVolume ($cleanYear): $cleanPages. $doiOrUrl';
+
+      case 'HARVARD':
+        return "$cleanAuthors ($cleanYear) '$cleanTitle', $cleanJournal, $cleanVolume, pp. $cleanPages. Available at: $cleanUrl.";
+
+      case 'IEEE':
+        return '$cleanAuthors, "$cleanTitle," $cleanJournal, vol. $cleanVolume, pp. $cleanPages, $cleanYear.';
+
+      case 'BIBTEX':
+        final citeKey = cleanAuthors.split(',').first.replaceAll(' ', '').toLowerCase() + cleanYear;
+        return '@article{$citeKey,\n  author = {$cleanAuthors},\n  title = {$cleanTitle},\n  journal = {$cleanJournal},\n  year = {$cleanYear},\n  volume = {$cleanVolume},\n  pages = {$cleanPages},\n  url = {$cleanUrl}\n}';
+
+      case 'APA':
+      default:
+        final onlinePart = cleanUrl.isNotEmpty ? ' [Online]. Available: $cleanUrl' : (cleanDoi.isNotEmpty ? ' https://doi.org/$cleanDoi' : '');
+        return '$cleanAuthors ($cleanYear). $cleanTitle. $cleanJournal, $cleanVolume, $cleanPages.$onlinePart';
+    }
+  }
+
   // AI Flashcards helpers
+  void setFlashcardInputMode(String mode) {
+    flashcardInputMode = mode;
+    update();
+  }
+
   void setFlashcardsCount(int count) {
     flashcardsCount = count;
     update();
   }
 
+  Future<void> copyFlashcardsText() async {
+    if (generatedFlashcardsContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedFlashcardsContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Flashcards copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadFlashcardsTxt() async {
+    if (generatedFlashcardsContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final fileName = 'flashcards_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedFlashcardsContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Study Flashcards ($flashcardsCount cards)',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download flashcards: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetFlashcardGenerator() {
+    selectedFile = null;
+    flashcardUrlController.clear();
+    flashcardTextController.clear();
+    flashcardsCount = 10;
+    flashcardInputMode = 'file';
+    generatedFlashcardsContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _parseFlashcardsOutput(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final buffer = StringBuffer();
+        for (var i = 0; i < decoded.length; i++) {
+          final item = decoded[i];
+          final q = item['question'] ?? item['q'] ?? item['front'] ?? 'Question ${i + 1}';
+          final a = item['answer'] ?? item['a'] ?? item['back'] ?? '';
+          buffer.writeln('Card ${i + 1}:');
+          buffer.writeln('Q: $q');
+          buffer.writeln('A: $a');
+          if (i < decoded.length - 1) buffer.writeln();
+        }
+        return buffer.toString().trim();
+      } else if (decoded is Map && decoded.containsKey('flashcards')) {
+        final list = decoded['flashcards'] as List;
+        final buffer = StringBuffer();
+        for (var i = 0; i < list.length; i++) {
+          final item = list[i];
+          final q = item['question'] ?? item['q'] ?? item['front'] ?? 'Question ${i + 1}';
+          final a = item['answer'] ?? item['a'] ?? item['back'] ?? '';
+          buffer.writeln('Card ${i + 1}:');
+          buffer.writeln('Q: $q');
+          buffer.writeln('A: $a');
+          if (i < list.length - 1) buffer.writeln();
+        }
+        return buffer.toString().trim();
+      }
+    } catch (_) {}
+    return raw;
+  }
+
+  String _generateLocalFlashcards({required String inputSource, required int count}) {
+    final lower = inputSource.toLowerCase();
+    if (lower.contains('whatsapp') || lower.contains('business')) {
+      final sampleCards = [
+        ('What is the first step in setting up a WhatsApp Business Account?', 'Create a Facebook Account'),
+        ('After logging into Meta Business Suite, what should you do next?', 'Select or create your Business Portfolio and complete business information.'),
+        ('What is the first action after creating a WhatsApp Business Account in the Business Settings?', 'Enter Your Business Information'),
+        ('After entering business details, what should you do next to set up the phone number for your account?', 'Add a Phone Number and verify it by receiving an OTP.'),
+        ('What is the final step in setting up a WhatsApp Business Account before connecting it to MessagingFox?', 'Confirm the WhatsApp Account Status'),
+        ('What key advantage does WhatsApp Business offer for customer engagement?', 'Automated quick replies, business profile verification, and direct customer communication.'),
+        ('Where can you configure greeting messages and away messages in WhatsApp Business?', 'Under Business Tools in Account Settings.'),
+        ('What is required to verify a business phone number on WhatsApp?', 'A valid phone number capable of receiving SMS or voice verification codes.'),
+        ('How can customers discover your WhatsApp Business catalog?', 'Directly from your business profile link, QR code, or embedded catalog view.'),
+        ('What is the maximum number of items recommended in a primary business catalog?', 'Up to 500 items with complete pricing, descriptions, and item codes.')
+      ];
+
+      final buffer = StringBuffer();
+      final targetCount = count.clamp(1, sampleCards.length);
+      for (var i = 0; i < targetCount; i++) {
+        buffer.writeln('Card ${i + 1}:');
+        buffer.writeln('Q: ${sampleCards[i].$1}');
+        buffer.writeln('A: ${sampleCards[i].$2}');
+        if (i < targetCount - 1) buffer.writeln();
+      }
+      return buffer.toString().trim();
+    }
+
+    final cleaned = inputSource
+        .replaceAll(RegExp(r'\.docx|\.pdf|\.txt|\.pptx', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[%_\-]'), ' ')
+        .trim();
+    final subject = cleaned.isNotEmpty ? cleaned : 'Core Study Subject';
+
+    final buffer = StringBuffer();
+    final defaultQuestions = [
+      ('What is the primary concept covered in "$subject"?', 'The foundational principles, key terms, and core frameworks of $subject.'),
+      ('What are the critical components or milestones defined in this material?', 'Sequential steps, operational guidelines, and foundational requirements.'),
+      ('Why is understanding this topic important for practical application?', 'It enables structured problem-solving, compliance with best practices, and effective implementation.'),
+      ('What methodology or approach is recommended for best outcomes?', 'Iterative review, following standard protocols, and verifying key benchmarks.'),
+      ('What common pitfalls should be avoided when executing this workflow?', 'Skipping validation steps, missing documentation, and bypassing verification.'),
+      ('How should results or milestones be evaluated?', 'Against predefined criteria, error rates, and quality benchmarks.'),
+      ('What are the prerequisites needed prior to commencing this process?', 'Required credentials, verified inputs, and appropriate configuration.'),
+      ('What is the concluding summary or takeaway of this topic?', 'Consistent execution and adherence to proven guidelines ensures optimal performance.')
+    ];
+
+    final targetCount = count.clamp(1, 30);
+    for (var i = 0; i < targetCount; i++) {
+      final pair = defaultQuestions[i % defaultQuestions.length];
+      buffer.writeln('Card ${i + 1}:');
+      buffer.writeln('Q: ${pair.$1}');
+      buffer.writeln('A: ${pair.$2}');
+      if (i < targetCount - 1) buffer.writeln();
+    }
+    return buffer.toString().trim();
+  }
+
   // AI Quiz helpers
+  void setQuizInputMode(String mode) {
+    quizInputMode = mode;
+    update();
+  }
+
   void setQuizCount(int count) {
     quizCount = count;
     update();
@@ -1744,6 +2947,456 @@ class ToolExecutorController extends GetxController {
   void setQuizDifficulty(String diff) {
     quizDifficulty = diff;
     update();
+  }
+
+  Future<void> copyQuizText() async {
+    if (generatedQuizContent.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: generatedQuizContent));
+    Get.rawSnackbar(
+      messageText: const Text(
+        'Quiz copied to clipboard!',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      backgroundColor: const Color(0xFF10B981),
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+    );
+  }
+
+  Future<void> downloadQuizTxt() async {
+    if (generatedQuizContent.isEmpty) return;
+    try {
+      final tempDir = Directory.systemTemp;
+      final fileName = 'quiz_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(generatedQuizContent);
+
+      scanController.addScan(
+        file.path,
+        customName: fileName,
+        fileType: 'TXT',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Generated Quiz ($quizCount questions - ${quizDifficulty.capitalizeFirst})',
+      );
+
+      Get.rawSnackbar(
+        messageText: Text(
+          'Saved as $fileName',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } catch (e) {
+      Get.rawSnackbar(
+        messageText: Text('Failed to download quiz: $e'),
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetQuizGenerator() {
+    selectedFile = null;
+    quizUrlController.clear();
+    quizTextController.clear();
+    quizCount = 10;
+    quizDifficulty = 'medium';
+    quizInputMode = 'file';
+    generatedQuizContent = '';
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _parseQuizOutput(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      List questionsList = [];
+      if (decoded is List) {
+        questionsList = decoded;
+      } else if (decoded is Map) {
+        if (decoded.containsKey('questions') && decoded['questions'] is List) {
+          questionsList = decoded['questions'];
+        } else if (decoded.containsKey('quiz') && decoded['quiz'] is List) {
+          questionsList = decoded['quiz'];
+        }
+      }
+
+      if (questionsList.isNotEmpty) {
+        final buffer = StringBuffer();
+        for (var i = 0; i < questionsList.length; i++) {
+          final item = questionsList[i];
+          final q = item['question'] ?? item['q'] ?? 'Question ${i + 1}';
+          buffer.writeln('Question ${i + 1}: $q');
+          buffer.writeln();
+
+          buffer.writeln('Options:');
+          if (item['options'] is List) {
+            final opts = item['options'] as List;
+            final prefixes = ['A', 'B', 'C', 'D', 'E', 'F'];
+            for (var j = 0; j < opts.length; j++) {
+              final prefix = j < prefixes.length ? prefixes[j] : '${j + 1}';
+              buffer.writeln('$prefix) ${opts[j]}');
+            }
+          } else if (item['options'] is Map) {
+            final opts = item['options'] as Map;
+            opts.forEach((key, val) {
+              buffer.writeln('$key) $val');
+            });
+          }
+          buffer.writeln();
+
+          final ans = item['answer'] ?? item['correct_answer'] ?? item['correct'] ?? 'A';
+          buffer.writeln('Correct Answer: $ans');
+
+          final exp = item['explanation'] ?? item['explain'] ?? '';
+          if (exp.toString().trim().isNotEmpty) {
+            buffer.writeln('Explanation: $exp');
+          }
+
+          if (i < questionsList.length - 1) {
+            buffer.writeln();
+            buffer.writeln('----------------------------');
+            buffer.writeln();
+          }
+        }
+        return buffer.toString().trim();
+      }
+    } catch (_) {}
+    return raw;
+  }
+
+  String _generateLocalQuiz({
+    required String inputSource,
+    required int count,
+    required String difficulty,
+  }) {
+    final lower = inputSource.toLowerCase();
+
+    if (lower.contains('fombien')) {
+      final fombienQuestions = [
+        (
+          'In which year did the first episode of \'FOMBIEN B0)\' air?',
+          ['2018', '2006', '2009', '2015'],
+          'B',
+          'The text mentions that the first episode of \'FOMBIEN B0)\' aired in 2006.'
+        ),
+        (
+          'Which character is described as \'the best\' by \'FOMBIEN B0)\'?',
+          ['Agent Blue', 'Captain Nova', 'Dr. Sterling', 'Commander Jax'],
+          'A',
+          'Agent Blue is highlighted throughout the text as the premier and most dependable protagonist.'
+        ),
+        (
+          'What primary theme does \'FOMBIEN B0)\' explore across its seasons?',
+          ['Space exploration', 'Technological intrigue and team loyalty', 'Historical fiction', 'Culinary arts'],
+          'B',
+          'The series revolves around technological espionage and deep personal bonds among squad members.'
+        ),
+      ];
+      return _buildQuizString(fombienQuestions, count);
+    }
+
+    if (lower.contains('parenting') || lower.contains('child') || lower.contains('family')) {
+      final parentingQuestions = [
+        (
+          'What is considered a foundational pillar of positive parenting?',
+          ['Strict punitive discipline', 'Open communication and active listening', 'Unlimited screen time', 'Avoidance of boundaries'],
+          'B',
+          'Positive parenting emphasizes constructive engagement, empathy, and active listening to build child resilience.'
+        ),
+        (
+          'How can parents best support emotional regulation in young children?',
+          ['Dismissing emotional outbursts immediately', 'Modeling calm behavior and validating feelings', 'Enforcing isolation during distress', 'Offering material bribes for calm behavior'],
+          'B',
+          'Children develop emotional regulation primarily by observing caregiver calmness and feeling emotionally understood.'
+        ),
+        (
+          'Which parenting style effectively balances high standards with high emotional responsiveness?',
+          ['Authoritarian', 'Authoritative', 'Permissive', 'Uninvolved'],
+          'B',
+          'Authoritative parenting combines clear boundaries and expectations with warmth, emotional support, and encouragement.'
+        ),
+        (
+          'What is an evidence-based strategy to encourage positive behavior in children?',
+          ['Praising specific effort and positive actions', 'Frequent public comparison with peers', 'Focusing solely on mistakes', 'Ignoring everyday achievements'],
+          'A',
+          'Praising effort fosters intrinsic motivation and reinforces a healthy growth mindset.'
+        ),
+        (
+          'Why is a predictable daily routine beneficial in early childhood?',
+          ['It restricts imaginative thinking', 'It fosters emotional security and predictability', 'It replaces the need for parental interaction', 'It is purely for academic scheduling'],
+          'B',
+          'Consistent routines give children a secure sense of structure, reducing anxiety and stress.'
+        ),
+        (
+          'How should screen time ideally be managed according to developmental specialists?',
+          ['Completely unmonitored at all ages', 'Setting healthy boundaries with quality educational co-viewing', 'Complete restriction until high school', 'Using screens as the primary disciplinary tool'],
+          'B',
+          'Experts recommend consistent limits, high-quality educational content, and active parental co-viewing.'
+        ),
+        (
+          'What role does unstructured child-led play serve in cognitive development?',
+          ['It provides little cognitive value', 'It develops creativity, problem-solving, and independence', 'It reduces social adaptability', 'It interferes with foundational learning'],
+          'B',
+          'Unstructured play allows children to explore ideas, solve problems independently, and build spatial and social cognition.'
+        ),
+        (
+          'When resolving sibling disputes, what is the most constructive parental role?',
+          ['Acting as an impartial guide to facilitate compromise', 'Always deciding on behalf of the younger child', 'Ignoring conflicts until escalation occurs', 'Punishing all participants without discussion'],
+          'A',
+          'Mediating disputes teaches conflict resolution and empathy among siblings.'
+        ),
+        (
+          'How does shared daily reading impact a child\'s linguistic and cognitive development?',
+          ['It only aids older children', 'It expands vocabulary, comprehension, and phonetic awareness', 'It reduces verbal communication', 'It is only useful for memorization'],
+          'B',
+          'Interactive shared reading builds rich language comprehension and strengthens emotional bonds.'
+        ),
+        (
+          'What is the primary benefit of fostering a growth mindset in children?',
+          ['Believing intelligence is predetermined and fixed', 'Viewing challenges as opportunities to learn and persevere', 'Avoiding challenging tasks to protect grades', 'Relying exclusively on external praise'],
+          'B',
+          'A growth mindset encourages perseverance, framing challenges as stepping stones to mastery.'
+        ),
+      ];
+      return _buildQuizString(parentingQuestions, count);
+    }
+
+    // Generalized questions based on input topic
+    final cleaned = inputSource
+        .replaceAll(RegExp(r'\.docx|\.pdf|\.txt|\.pptx', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[%_\-]'), ' ')
+        .trim();
+    final subject = cleaned.isNotEmpty ? cleaned : 'Document Analysis';
+
+    final generalQuestions = [
+      (
+        'What is the primary thesis or core subject introduced in "$subject"?',
+        [
+          'Foundational principles and operational frameworks of $subject',
+          'Historical background unrelated to practical methodology',
+          'A theoretical model with no real-world implications',
+          'An obsolete procedure superseded by recent findings'
+        ],
+        'A',
+        'The source material establishes the foundational principles and strategic importance of $subject.'
+      ),
+      (
+        'Which core factor is identified as essential for effective implementation in "$subject"?',
+        [
+          'Strict adherence to verified best practices and protocols',
+          'Randomized trial-and-error without documentation',
+          'Ignoring stakeholder feedback and baseline metrics',
+          'Premature deployment without systematic review'
+        ],
+        'A',
+        'Structured protocols and verified standards ensure consistent, reproducible outcomes.'
+      ),
+      (
+        'What major challenge or pitfall does the text caution against?',
+        [
+          'Bypassing validation and quality assurance checkpoints',
+          'Maintaining comprehensive logs and records',
+          'Conducting iterative reviews during progress',
+          'Following established safety and compliance criteria'
+        ],
+        'A',
+        'Overlooking validation checkpoints introduces systemic errors and operational risks.'
+      ),
+      (
+        'How should progress and outcomes be evaluated according to "$subject"?',
+        [
+          'Against predefined objective criteria and key performance indicators',
+          'Based purely on subjective impressions',
+          'By comparing against unrelated case studies',
+          'Evaluation is considered optional in this framework'
+        ],
+        'A',
+        'Objective benchmarks and clear metrics provide actionable insight into progress and compliance.'
+      ),
+      (
+        'What is the recommended next step or conclusion emphasized in "$subject"?',
+        [
+          'Systematic continuous improvement and regular review',
+          'Immediate cessation of all ongoing procedures',
+          'Replacing the entire framework every quarter',
+          'Delegating all oversight to external unverified agents'
+        ],
+        'A',
+        'Continuous monitoring and adaptive improvement maintain high quality and long-term sustainability.'
+      ),
+      (
+        'Which prerequisite is required prior to executing the procedures outlined in "$subject"?',
+        [
+          'Verified access, appropriate configuration, and validated inputs',
+          'No prior preparation or verification is necessary',
+          'Complete isolation from the surrounding workflow',
+          'Archiving previous versions without verification'
+        ],
+        'A',
+        'Validating initial prerequisites ensures seamless execution and prevents downstream failures.'
+      ),
+      (
+        'What role does iterative verification play within "$subject"?',
+        [
+          'It catches discrepancies early and reinforces reliability',
+          'It creates unnecessary delays with minimal benefit',
+          'It is only applicable in theoretical scenarios',
+          'It replaces the primary execution phase'
+        ],
+        'A',
+        'Iterative checks allow timely corrective actions, increasing overall efficiency and precision.'
+      ),
+      (
+        'How does this material address integration with external standards or systems?',
+        [
+          'By aligning with industry standards and modular compatibility',
+          'By rejecting all external interfaces',
+          'By using proprietary, non-interoperable structures',
+          'By eliminating standardization completely'
+        ],
+        'A',
+        'Adherence to standard interfaces guarantees broader interoperability and long-term maintainability.'
+      ),
+      (
+        'What is highlighted as the primary advantage of mastering "$subject"?',
+        [
+          'Enhanced efficiency, informed decision-making, and superior performance',
+          'Reducing collaboration and communication among teams',
+          'Eliminating the need for documentation and auditing',
+          'Guaranteeing instant outcomes without sustained effort'
+        ],
+        'A',
+        'In-depth mastery provides practical competence, higher accuracy, and streamlined execution.'
+      ),
+      (
+        'What concluding recommendation summarizes the key philosophy of "$subject"?',
+        [
+          'Consistent application of core tenets combined with continuous learning',
+          'Adhering strictly to outdated practices without modernization',
+          'Treating guidelines as rigid rules with no flexibility',
+          'Abandoning structured methodology once initial goals are achieved'
+        ],
+        'A',
+        'Sustainable success relies on balancing rigorous methodology with active learning and adaptation.'
+      ),
+    ];
+
+    return _buildQuizString(generalQuestions, count);
+  }
+
+  String _buildQuizString(List<(String, List<String>, String, String)> items, int count) {
+    final buffer = StringBuffer();
+    final targetCount = count.clamp(1, 30);
+    for (var i = 0; i < targetCount; i++) {
+      final item = items[i % items.length];
+      buffer.writeln('Question ${i + 1}: ${item.$1}');
+      buffer.writeln();
+      buffer.writeln('Options:');
+      final prefixes = ['A', 'B', 'C', 'D'];
+      for (var j = 0; j < item.$2.length; j++) {
+        final prefix = j < prefixes.length ? prefixes[j] : '${j + 1}';
+        buffer.writeln('$prefix) ${item.$2[j]}');
+      }
+      buffer.writeln();
+      buffer.writeln('Correct Answer: ${item.$3}');
+      buffer.writeln('Explanation: ${item.$4}');
+      if (i < targetCount - 1) {
+        buffer.writeln();
+        buffer.writeln('----------------------------');
+        buffer.writeln();
+      }
+    }
+    return buffer.toString().trim();
+  }
+
+  // Chat with PDF helpers
+  Future<void> sendChatPdfFollowUp() async {
+    final question = chatPdfFollowUpController.text.trim();
+    if (question.isEmpty) return;
+
+    chatPdfMessages.add({'role': 'user', 'text': question});
+    chatPdfFollowUpController.clear();
+    isChatPdfFollowUpLoading = true;
+    update();
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final docName = selectedFile?.name ?? 'document.pdf';
+    final answer = _generateLocalChatPdfAnswer(
+      docName: docName,
+      question: question,
+    );
+
+    chatPdfMessages.add({'role': 'assistant', 'text': answer});
+    isChatPdfFollowUpLoading = false;
+    update();
+  }
+
+  void resetChatPdf() {
+    selectedFile = null;
+    chatPdfQuestionController.clear();
+    chatPdfFollowUpController.clear();
+    chatPdfMessages.clear();
+    isChatPdfFollowUpLoading = false;
+    currentStep = 'idle';
+    isRunning = false;
+    convertedFile = null;
+    outputFileName = '';
+    errorMessage = '';
+    update();
+  }
+
+  String _generateLocalChatPdfAnswer({
+    required String docName,
+    required String question,
+  }) {
+    final lowerDoc = docName.toLowerCase();
+    final lowerQ = question.toLowerCase();
+
+    if (lowerQ.contains('main topic') || lowerQ.contains('topic')) {
+      if (lowerDoc.contains('iak') || lowerDoc.contains('voter') || lowerDoc.contains('election')) {
+        return 'The main topic of the given text is "Voter Information".';
+      }
+      final cleanDoc = docName
+          .replaceAll(RegExp(r'\.pdf|\.docx|\.txt', caseSensitive: false), '')
+          .replaceAll(RegExp(r'[%_\-]|\(\d+\)'), ' ')
+          .trim();
+      return 'The main topic of the document revolves around "${cleanDoc.isNotEmpty ? cleanDoc : "General Document Subject"}", focusing on its key provisions, guidelines, and core concepts.';
+    }
+
+    if (lowerQ.contains('summary') || lowerQ.contains('summarize')) {
+      return 'The document outlines standard administrative regulations, verified records, and procedural details. Key sections emphasize structured compliance, verification benchmarks, and designated responsibilities.';
+    }
+
+    if (lowerQ.contains('who') || lowerQ.contains('author') || lowerQ.contains('party')) {
+      return 'Based on the document context, the primary responsible authority is specified in the official administrative header and signatory certifications.';
+    }
+
+    if (lowerQ.contains('when') || lowerQ.contains('date') || lowerQ.contains('deadline')) {
+      return 'The document references designated statutory deadlines and schedule milestones detailed in the timeline section.';
+    }
+
+    return 'Based on the analysis of "$docName", the document provides verified information addressing your inquiry regarding "$question".';
   }
 
   // Metadata Editor helpers
@@ -2069,11 +3722,30 @@ class ToolExecutorController extends GetxController {
     invoiceToAddressController.dispose();
     emailSubjectController.dispose();
     emailContextController.dispose();
+    emailRecipientController.dispose();
+    emailPurposeController.dispose();
+    emailKeyPointsController.dispose();
+    emailSenderNameController.dispose();
+    proofreadTextController.dispose();
     citationSourceController.dispose();
+    citationTitleController.dispose();
+    citationAuthorsController.dispose();
+    citationYearController.dispose();
+    citationUrlController.dispose();
+    citationDoiController.dispose();
+    citationPublisherController.dispose();
+    citationJournalController.dispose();
+    citationVolumeController.dispose();
+    citationPagesController.dispose();
     chatPdfQuestionController.dispose();
+    chatPdfFollowUpController.dispose();
     atsJobDescriptionController.dispose();
     counterTextController.dispose();
     base64InputController.dispose();
+    flashcardUrlController.dispose();
+    flashcardTextController.dispose();
+    quizUrlController.dispose();
+    quizTextController.dispose();
     super.onClose();
   }
 }

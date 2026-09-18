@@ -468,6 +468,28 @@ void main() {
       controller.setEmailTone('friendly');
       expect(controller.getOptionsJson()['tone'], 'friendly');
 
+      // Extended fields: recipient, purpose, key_points, sender_name
+      controller.emailRecipientController.text = 'HR Manager';
+      controller.emailPurposeController.text = 'Follow up on interview';
+      controller.emailKeyPointsController.text = 'Thank them, ask about next steps';
+      controller.emailSenderNameController.text = 'Abhinav';
+      controller.setEmailTone('Professional');
+
+      final fullOptions = controller.getOptionsJson();
+      expect(fullOptions['recipient'], 'HR Manager');
+      expect(fullOptions['purpose'], 'Follow up on interview');
+      expect(fullOptions['key_points'], 'Thank them, ask about next steps');
+      expect(fullOptions['sender_name'], 'Abhinav');
+      expect(fullOptions['subject'], 'Follow up on interview');
+
+      // Test resetEmailWriter()
+      controller.resetEmailWriter();
+      expect(controller.emailRecipientController.text, isEmpty);
+      expect(controller.emailPurposeController.text, isEmpty);
+      expect(controller.emailKeyPointsController.text, isEmpty);
+      expect(controller.emailSenderNameController.text, isEmpty);
+      expect(controller.currentStep, 'idle');
+
       Get.delete<ToolExecutorController>();
     });
 
@@ -488,6 +510,20 @@ void main() {
       // File upload mode
       controller.useRawText = false;
       expect(controller.getOptionsJson(), isEmpty);
+
+      // Dedicated Proofreader UI options
+      controller.proofreadTextController.text = 'This is a test text with teh typo.';
+      controller.setProofreadFocusArea('Grammar & Spelling');
+      expect(controller.getOptionsJson(), {
+        'text': 'This is a test text with teh typo.',
+        'focus_area': 'Grammar & Spelling',
+      });
+
+      // Test resetProofreader()
+      controller.resetProofreader();
+      expect(controller.proofreadTextController.text, isEmpty);
+      expect(controller.proofreadFocusArea, 'All');
+      expect(controller.currentStep, 'idle');
 
       Get.delete<ToolExecutorController>();
     });
@@ -516,6 +552,44 @@ void main() {
       controller.setCitationStyle('Harvard');
       expect(controller.getOptionsJson()['style'], 'Harvard');
 
+      // Structured citation settings
+      controller.citationTitleController.text = 'Artificial Intelligence in Education';
+      controller.citationAuthorsController.text = 'Smith, J.';
+      controller.citationYearController.text = '2005';
+      controller.citationUrlController.text = 'https://example.com/ai';
+      controller.citationDoiController.text = '10.1000/xyz123';
+      controller.citationPublisherController.text = 'Tech Press';
+      controller.citationJournalController.text = 'Journal of Technology';
+      controller.citationVolumeController.text = '7';
+      controller.citationPagesController.text = '25-40';
+      controller.setCitationStyle('APA');
+
+      final structuredOpts = controller.getOptionsJson();
+      expect(structuredOpts['style'], 'APA');
+      expect(structuredOpts['title'], 'Artificial Intelligence in Education');
+      expect(structuredOpts['authors'], 'Smith, J.');
+      expect(structuredOpts['year'], '2005');
+      expect(structuredOpts['url'], 'https://example.com/ai');
+      expect(structuredOpts['doi'], '10.1000/xyz123');
+      expect(structuredOpts['publisher'], 'Tech Press');
+      expect(structuredOpts['journal'], 'Journal of Technology');
+      expect(structuredOpts['volume'], '7');
+      expect(structuredOpts['pages'], '25-40');
+
+      // Test resetCitationGenerator()
+      controller.resetCitationGenerator();
+      expect(controller.citationTitleController.text, isEmpty);
+      expect(controller.citationAuthorsController.text, isEmpty);
+      expect(controller.citationYearController.text, isEmpty);
+      expect(controller.citationUrlController.text, isEmpty);
+      expect(controller.citationDoiController.text, isEmpty);
+      expect(controller.citationPublisherController.text, isEmpty);
+      expect(controller.citationJournalController.text, isEmpty);
+      expect(controller.citationVolumeController.text, isEmpty);
+      expect(controller.citationPagesController.text, isEmpty);
+      expect(controller.citationStyle, 'APA');
+      expect(controller.currentStep, 'idle');
+
       Get.delete<ToolExecutorController>();
     });
 
@@ -542,6 +616,30 @@ void main() {
         'count': 15,
       });
 
+      // Link mode
+      controller.setFlashcardInputMode('link');
+      controller.flashcardUrlController.text = 'https://example.com/guide';
+      expect(controller.getOptionsJson(), {
+        'count': 15,
+        'url': 'https://example.com/guide',
+      });
+
+      // Paste text mode
+      controller.setFlashcardInputMode('text');
+      controller.flashcardTextController.text = 'WhatsApp Business Account Setup Guide notes';
+      expect(controller.getOptionsJson(), {
+        'count': 15,
+        'text': 'WhatsApp Business Account Setup Guide notes',
+      });
+
+      // Test resetFlashcardGenerator()
+      controller.resetFlashcardGenerator();
+      expect(controller.flashcardUrlController.text, isEmpty);
+      expect(controller.flashcardTextController.text, isEmpty);
+      expect(controller.flashcardsCount, 10);
+      expect(controller.flashcardInputMode, 'file');
+      expect(controller.currentStep, 'idle');
+
       Get.delete<ToolExecutorController>();
     });
 
@@ -555,7 +653,26 @@ void main() {
       controller.setQuizCount(10);
       controller.setQuizDifficulty('hard');
 
-      // Raw text mode
+      // Link mode
+      controller.setQuizInputMode('link');
+      controller.quizUrlController.text = 'https://example.com/quiz-article';
+      expect(controller.getOptionsJson(), {
+        'count': 10,
+        'difficulty': 'hard',
+        'url': 'https://example.com/quiz-article',
+      });
+
+      // Text mode
+      controller.setQuizInputMode('text');
+      controller.quizTextController.text = 'Biology cell structure notes.';
+      expect(controller.getOptionsJson(), {
+        'count': 10,
+        'difficulty': 'hard',
+        'text': 'Biology cell structure notes.',
+      });
+
+      // Raw text mode (backward compatibility)
+      controller.setQuizInputMode('file');
       controller.useRawText = true;
       controller.rawTextController.text = 'World History Chapter 4.';
       expect(controller.getOptionsJson(), {
@@ -564,12 +681,20 @@ void main() {
         'text': 'World History Chapter 4.',
       });
 
-      // File mode
+      // File mode without raw text
       controller.useRawText = false;
       expect(controller.getOptionsJson(), {
         'count': 10,
         'difficulty': 'hard',
       });
+
+      // Test reset
+      controller.resetQuizGenerator();
+      expect(controller.quizInputMode, 'file');
+      expect(controller.quizCount, 10);
+      expect(controller.quizDifficulty, 'medium');
+      expect(controller.quizUrlController.text, isEmpty);
+      expect(controller.quizTextController.text, isEmpty);
 
       Get.delete<ToolExecutorController>();
     });

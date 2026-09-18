@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppUpdateService {
   static const String currentVersion = '1.0.0';
@@ -178,25 +179,20 @@ class AppUpdateService {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Get.back();
-                        Get.rawSnackbar(
-                          titleText: const Text(
-                            'Updating PlainScan',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          messageText: const Text(
-                            'PlainScan tools have been updated to the latest release!',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          backgroundColor: AppColors.primary,
-                          snackPosition: SnackPosition.BOTTOM,
-                          margin: const EdgeInsets.all(12),
-                          borderRadius: 10,
-                        );
+                        const playStoreUrl = 'market://details?id=com.plainscan.app';
+                        const webPlayStoreUrl =
+                            'https://play.google.com/store/apps/details?id=com.plainscan.app';
+                        final uri = Uri.parse(playStoreUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          await launchUrl(
+                            Uri.parse(webPlayStoreUrl),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
