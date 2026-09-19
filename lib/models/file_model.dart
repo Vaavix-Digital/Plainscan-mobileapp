@@ -35,4 +35,26 @@ class FileModel {
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'createdDate': createdDate.toIso8601String(),
+        'sizeKb': sizeKb,
+        'fileType': fileType,
+        'path': path,
+        'isFavorite': isFavorite,
+      };
+
+  factory FileModel.fromJson(Map<String, dynamic> json) => FileModel(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        createdDate: json['createdDate'] != null
+            ? DateTime.tryParse(json['createdDate'] as String) ?? DateTime.now()
+            : DateTime.now(),
+        sizeKb: (json['sizeKb'] as num?)?.toDouble() ?? 0.0,
+        fileType: json['fileType'] as String? ?? 'PDF',
+        path: json['path'] as String?,
+        isFavorite: json['isFavorite'] as bool? ?? false,
+      );
 }

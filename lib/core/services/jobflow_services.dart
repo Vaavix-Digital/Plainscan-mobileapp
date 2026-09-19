@@ -57,10 +57,21 @@ class JobflowApiServices {
   }
 
   Future<String> uploadFile(File file) async {
+    String cleanPath = file.path;
+    if (cleanPath.startsWith('file://')) {
+      try {
+        cleanPath = Uri.parse(cleanPath).toFilePath();
+      } catch (_) {
+        cleanPath = cleanPath.replaceFirst('file://', '');
+      }
+    }
+    final normalizedFile = File(cleanPath);
+    final filename = cleanPath.split(Platform.isWindows ? '\\' : '/').last.split('/').last;
+
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
-        file.path,
-        filename: file.path.split('/').last,
+        normalizedFile.path,
+        filename: filename,
       ),
     });
 

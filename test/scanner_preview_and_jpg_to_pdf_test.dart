@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
-import 'package:plainscan/features/scanner/pages/scan_preview_page.dart';
+import 'package:plainscan/core/utils/local_image_to_pdf_generator.dart';
+import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
 
@@ -14,6 +19,7 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     Get.reset();
+    Get.testMode = true;
     Get.put(ScanController());
   });
 
@@ -61,25 +67,112 @@ void main() {
       expect(controller.selectedFiles[1].name, 'Scan_Page_2.jpg');
     });
 
-    testWidgets('ScanPreviewPage displays captured photos count and layout selector', (WidgetTester tester) async {
-      final samplePaths = [
-        'test_photo_1.jpg',
-        'test_photo_2.jpg',
-      ];
+    testWidgets('ScanController openScanner captures images and directly opens JPG to PDF tool', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const GetMaterialApp(
+          home: Scaffold(body: Center(child: Text('Home'))),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scanController = Get.find<ScanController>();
+      await scanController.openScanner();
+      await tester.pumpAndSettle();
+
+      // Verify that ToolExecutorPage for JPG to PDF tool is launched directly
+      expect(find.byType(ToolExecutorPage), findsOneWidget);
+      expect(find.text('JPG to PDF'), findsWidgets);
+
+      final executorController = Get.find<ToolExecutorController>();
+      expect(executorController.selectedFiles.isNotEmpty, isTrue);
+      expect(executorController.selectedFiles.first.fileType, 'JPG');
+      expect(executorController.tool.id, 'jpg-to-pdf');
+    });
+
+    test('ToolExecutorController scanDocumentWithCamera captures images and uploads to tool', () async {
+      final tool = allPlainscanTools.firstWhere((t) => t.id == 'jpg-to-pdf');
+      final controller = Get.put(ToolExecutorController(tool: tool));
+
+      expect(controller.selectedFiles, isEmpty);
+
+      // Trigger camera scan upload
+      await controller.scanDocumentWithCamera(true);
+
+      expect(controller.selectedFiles.isNotEmpty, isTrue);
+      expect(controller.selectedFiles.first.fileType, 'JPG');
+      expect(controller.selectedFiles.first.name, contains('Scan_'));
+    });
+
+    testWidgets('ToolExecutorPage displays Scan Document action button', (WidgetTester tester) async {
+      final tool = allPlainscanTools.firstWhere((t) => t.id == 'jpg-to-pdf');
 
       await tester.pumpWidget(
         GetMaterialApp(
-          home: ScanPreviewPage(imagePaths: samplePaths),
+          home: ToolExecutorPage(tool: tool),
         ),
       );
 
-      // Verify page count header and title
-      expect(find.text('Scan Preview'), findsOneWidget);
-      expect(find.text('2 pages captured'), findsOneWidget);
-      expect(find.text('Page 1 of 2'), findsOneWidget);
-      expect(find.text('PDF Page Layout'), findsOneWidget);
-      expect(find.text('Convert to PDF (2 pages)'), findsOneWidget);
-      expect(find.text('JPG to PDF'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Device Upload'), findsOneWidget);
+      expect(find.text('Scan Document'), findsOneWidget);
+    });
+
+    test('JPG to PDF executeJobFlow successfully converts multiple scanned JPGs to PDF', () async {
+      final tool = allPlainscanTools.firstWhere((t) => t.id == 'jpg-to-pdf');
+      final testFiles = [
+        FileModel(
+          id: 'scan_1',
+          name: 'Scan_1789818376757_Page1.jpg',
+          createdDate: DateTime.now(),
+          sizeKb: 500,
+          fileType: 'JPG',
+          path: 'Scan_1789818376757_Page1.jpg',
+        ),
+        FileModel(
+          id: 'scan_2',
+          name: 'Scan_1789818398786_Page1.jpg',
+          createdDate: DateTime.now(),
+          sizeKb: 600,
+          fileType: 'JPG',
+          path: 'Scan_1789818398786_Page1.jpg',
+        ),
+      ];
+
+      final controller = Get.put(ToolExecutorController(
+        tool: tool,
+        initialFiles: testFiles,
+      ));
+      controller.tokenController.text = 'test_token';
+
+      await controller.executeJobFlow();
+
+      expect(controller.currentStep, 'success');
+      expect(controller.convertedFile, isNotNull);
+      expect(controller.convertedFile!.fileType, 'PDF');
+      expect(controller.convertedFile!.name, contains('.pdf'));
+    });
+
+    test('LocalImageToPdfGenerator creates PDF with correct page count for multiple images', () async {
+      final tempDir = Directory.systemTemp;
+      final img1 = File('${tempDir.path}/test_img1.jpg');
+      final img2 = File('${tempDir.path}/test_img2.jpg');
+      await img1.writeAsBytes(LocalImageToPdfGenerator.minimalJpegBytes);
+      await img2.writeAsBytes(LocalImageToPdfGenerator.minimalJpegBytes);
+
+      final outPdf = '${tempDir.path}/test_multi_out.pdf';
+      final pdfFile = await LocalImageToPdfGenerator.convertImagesToPdf(
+        imageFiles: [img1, img2],
+        outputFilePath: outPdf,
+        pageSize: 'A4',
+      );
+
+      expect(await pdfFile.exists(), isTrue);
+      final pdfContent = await pdfFile.readAsString(encoding: latin1);
+      expect(pdfContent, contains('/Count 2'));
+      expect(pdfContent, contains('/Type /Page'));
+      expect(pdfContent, contains('/Type /Pages'));
+      expect(pdfContent, contains('startxref'));
     });
   });
 }

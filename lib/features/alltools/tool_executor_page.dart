@@ -174,9 +174,13 @@ class ToolExecutorPage extends StatelessWidget {
                             const SizedBox(height: 16),
                           ],
                           ElevatedButton(
-                            onPressed: controller.executeJobFlow,
+                            onPressed: controller.isExecutionDisabled
+                                ? null
+                                : controller.executeJobFlow,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
+                              disabledBackgroundColor: Colors.grey.shade300,
+                              disabledForegroundColor: Colors.grey.shade500,
                               minimumSize: const Size(double.infinity, 54),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -185,12 +189,21 @@ class ToolExecutorPage extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(tool.icon, color: Colors.white),
+                                Icon(
+                                  tool.icon,
+                                  color: controller.isExecutionDisabled
+                                      ? Colors.grey.shade500
+                                      : Colors.white,
+                                ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'Run ${tool.name}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  controller.isExecutionDisabled
+                                      ? 'Document Already Unlocked'
+                                      : 'Run ${tool.name}',
+                                  style: TextStyle(
+                                    color: controller.isExecutionDisabled
+                                        ? Colors.grey.shade500
+                                        : Colors.white,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -8308,25 +8321,24 @@ class ToolExecutorPage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Expanded(
-            //   child: OutlinedButton.icon(
-            //     onPressed: () =>
-            //         _showScansSelectorBottomSheet(context, controller, true),
-            //     style: OutlinedButton.styleFrom(
-            //       foregroundColor: AppColors.primary,
-            //       side: const BorderSide(color: AppColors.primary),
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(8),
-            //       ),
-            //       padding: const EdgeInsets.symmetric(vertical: 10),
-            //     ),
-            //     icon: const Icon(Icons.folder_open, size: 14),
-            //     label: const Text(
-            //       'Add from Scans',
-            //       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-            //     ),
-            //   ),
-            // ),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => controller.scanDocumentWithCamera(true),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary, width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                icon: const Icon(Icons.document_scanner_outlined, size: 14),
+                label: const Text(
+                  'Scan with Camera',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -8367,29 +8379,51 @@ class ToolExecutorPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Please upload a file from your device to begin.',
+            'Upload a file from your device or scan images with your camera.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => controller.pickFileFromDevice(isMulti),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => controller.pickFileFromDevice(isMulti),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.phone_android, size: 15),
+                  label: const Text(
+                    'Device Upload',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              icon: const Icon(Icons.phone_android, size: 16),
-              label: const Text(
-                'Device Upload',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => controller.scanDocumentWithCamera(isMulti),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.document_scanner_outlined, size: 15),
+                  label: const Text(
+                    'Scan Document',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -8866,7 +8900,7 @@ class ToolExecutorPage extends StatelessWidget {
                               ? 'This document is encrypted. Enter the correct password below to unlock and remove security restrictions.'
                               : hasFile
                                   ? 'This file is already unlocked and does not require password removal. You can open and edit it freely without unlocking.'
-                                  : 'Enter the password to remove security and encryption from your protected PDF.',
+                                  : 'Upload a password-protected PDF file to check its security status and remove encryption.',
                           style: TextStyle(
                             fontSize: 11,
                             color: isLocked
@@ -8909,31 +8943,33 @@ class ToolExecutorPage extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 14),
-            const Text(
-              'Enter Document Password',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller.passwordController,
-              obscureText: !controller.isUnlockPasswordVisible,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: hasFile && !isLocked ? 'No password required for this file' : 'Enter password to unlock',
-                prefixIcon: const Icon(Icons.key_outlined, size: 20),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    controller.isUnlockPasswordVisible
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 20,
-                  ),
-                  onPressed: controller.toggleUnlockPasswordVisibility,
-                ),
-                border: const OutlineInputBorder(),
+            if (hasFile && isLocked) ...[
+              const SizedBox(height: 14),
+              const Text(
+                'Enter Document Password',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
-            ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller.passwordController,
+                obscureText: !controller.isUnlockPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  hintText: 'Enter password to unlock',
+                  prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.isUnlockPasswordVisible
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 20,
+                    ),
+                    onPressed: controller.toggleUnlockPasswordVisibility,
+                  ),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
           ],
         );
         break;
@@ -10404,13 +10440,28 @@ class ToolExecutorPage extends StatelessWidget {
 
   Widget _buildErrorCard(ToolExecutorController controller) {
     final isPasswordErr = controller.isPasswordError;
+    final lowerErr = controller.errorMessage.toLowerCase();
+    final isFileErr = lowerErr.contains('select') ||
+        lowerErr.contains('upload') ||
+        lowerErr.contains('no file') ||
+        lowerErr.contains('please upload');
+
+    final headerTitle = isFileErr
+        ? 'No File Selected'
+        : (isPasswordErr ? 'Invalid Password' : 'Execution Failed');
+    final headerIcon = isFileErr
+        ? Icons.upload_file_outlined
+        : (isPasswordErr ? Icons.lock_outline : Icons.error_outline);
+    final themeColor = isFileErr ? AppColors.coral : Colors.red.shade700;
+    final bgColor = isFileErr ? const Color(0xFFFFF7ED) : Colors.red.shade50;
+    final borderColor = isFileErr ? const Color(0xFFFFEDD5) : Colors.red.shade200;
 
     return Card(
-      color: Colors.red.shade50,
+      color: bgColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.red.shade200),
+        side: BorderSide(color: borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -10420,16 +10471,16 @@ class ToolExecutorPage extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  isPasswordErr ? Icons.lock_outline : Icons.error_outline,
-                  color: Colors.red.shade700,
+                  headerIcon,
+                  color: themeColor,
                   size: 24,
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  isPasswordErr ? 'Invalid Password' : 'Execution Failed',
+                  headerTitle,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.red.shade900,
+                    color: isFileErr ? const Color(0xFF9A3412) : Colors.red.shade900,
                     fontSize: 14,
                   ),
                 ),
@@ -10438,9 +10489,30 @@ class ToolExecutorPage extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               controller.errorMessage,
-              style: TextStyle(color: Colors.red.shade900, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: isFileErr ? const Color(0xFF7C2D12) : Colors.red.shade900,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
-            if (isPasswordErr) ...[
+            if (isFileErr) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => controller.pickFileFromDevice(controller.isMultiFileTool()),
+                icon: const Icon(Icons.phone_android, size: 16, color: Colors.white),
+                label: const Text(
+                  'Upload File from Device',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+              ),
+            ] else if (isPasswordErr) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(10),

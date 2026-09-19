@@ -75,26 +75,42 @@ void main() {
   group('Referral APIs tests', () {
     test('parses referral info payload accurately from GET /api/auth/me/referral', () {
       final json = {
-        'referral_code': 'XYZ987',
-        'invite_link': 'https://plainscan.com/login?ref=XYZ987',
+        'referral_code': 'ABC12345',
+        'invite_link': 'https://play.google.com/store/apps/details?id=com.plainscan.app&referral=ABC12345',
+        'play_store_link': 'https://play.google.com/store/apps/details?id=com.plainscan.app&referral=ABC12345',
+        'app_store_link': 'https://apps.apple.com/app/id1234567890?referral=ABC12345',
+        'web_link': 'https://plainscan.com/signup?ref=ABC12345',
         'referral_count': 0,
         'message': 'Share this link! If a friend signs up, you get 1 month of Pro automatically.',
       };
 
       final info = ReferralInfo.fromJson(json);
 
-      expect(info.referralCode, 'XYZ987');
-      expect(info.inviteLink, 'https://plainscan.com/login?ref=XYZ987');
-      expect(info.shareLink, 'https://plainscan.com/login?ref=XYZ987');
+      expect(info.referralCode, 'ABC12345');
+      expect(info.inviteLink, contains('details?id=com.plainscan.app&referral=ABC12345'));
+      expect(info.playStoreLink, contains('details?id=com.plainscan.app&referral=ABC12345'));
+      expect(info.appStoreLink, contains('id1234567890?referral=ABC12345'));
+      expect(info.webLink, 'https://plainscan.com/signup?ref=ABC12345');
       expect(info.referralCount, 0);
       expect(info.totalReferred, 0);
       expect(info.message, 'Share this link! If a friend signs up, you get 1 month of Pro automatically.');
     });
 
-    test('captures referral code from invite URL (e.g. https://plainscan.com/login?ref=XYZ987)', () async {
-      final uri = Uri.parse('https://plainscan.com/login?ref=XYZ987');
-      final captured = await StorageService.captureReferralFromUri(uri);
+    test('captures referral code from Play Store install referrer string and URLs', () async {
+      // 1. Play Store raw install referrer string
+      const rawPlayReferrer = 'utm_source=google-play&utm_medium=organic&referral=ABC12345';
+      final parsed1 = StorageService.parseReferralCodeFromString(rawPlayReferrer);
+      expect(parsed1, equals('ABC12345'));
 
+      // 2. Play store full URL
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.plainscan.app&referral=ABC12345';
+      final parsed2 = StorageService.parseReferralCodeFromString(playStoreUrl);
+      expect(parsed2, equals('ABC12345'));
+
+      // 3. Web URL
+      const webUrl = 'https://plainscan.com/login?ref=XYZ987';
+      final uri = Uri.parse(webUrl);
+      final captured = await StorageService.captureReferralFromUri(uri);
       expect(captured, equals('XYZ987'));
       expect(await StorageService.getPendingReferralCode(), equals('XYZ987'));
     });

@@ -44,7 +44,7 @@ class _AuthScreenState extends State<AuthScreen>
         Get.parameters['code'];
 
     if (code == null || code.trim().isEmpty) {
-      code = await StorageService.captureReferralFromUri();
+      code = await StorageService.captureReferral();
     }
     if (code == null || code.trim().isEmpty) {
       code = await StorageService.getPendingReferralCode();

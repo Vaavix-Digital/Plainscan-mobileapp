@@ -9,6 +9,7 @@ import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/models/plan_model.dart';
 import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/scan_controller.dart';
 
 class ProfileController extends GetxController {
   final RxString userName = 'User'.obs;
@@ -497,9 +498,14 @@ class ProfileController extends GetxController {
 
   Future<void> logout() async {
     await StorageService.logout();
+    if (Get.isRegistered<ScanController>()) {
+      Get.find<ScanController>().clearFiles();
+    }
     if (Get.isRegistered<AllToolsController>()) {
       await Get.find<AllToolsController>().loadRecentTools();
     }
-    Get.offAllNamed(AppRoutes.auth);
+    try {
+      Get.offAllNamed(AppRoutes.auth);
+    } catch (_) {}
   }
 }

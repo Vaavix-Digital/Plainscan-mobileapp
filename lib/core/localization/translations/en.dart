@@ -116,6 +116,8 @@ const Map<String, String> enTranslations = {
   'View All': 'View All',
   'Recent Tools': 'Recent Tools',
   'No recent tools used yet': 'No recent tools used yet',
+  'There is no tool selected': 'There is no tool selected',
+  'Select a tool from above to get started': 'Select a tool from above to get started',
   'Smart Document Scanner': 'Smart Document Scanner',
   'Auto-crop & contrast enhance': 'Auto-crop & contrast enhance',
   '56+ PDF & Conversion Tools': '56+ PDF & Conversion Tools',

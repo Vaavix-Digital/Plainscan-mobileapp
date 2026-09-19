@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class AuthResult {
@@ -105,7 +106,7 @@ class AuthService {
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
         await StorageService.savePlan(plan.toString());
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else {
@@ -189,7 +190,7 @@ class AuthService {
           await StorageService.saveMyReferralCode(uniqueCode);
         }
 
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         return AuthResult(
           success: true,
@@ -233,7 +234,7 @@ class AuthService {
 
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else {
@@ -309,7 +310,7 @@ class AuthService {
           await StorageService.saveMyReferralCode(uniqueCode);
         }
 
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         if (pendingReferral != null && pendingReferral.isNotEmpty) {
           await StorageService.clearPendingReferralCode();
@@ -407,7 +408,7 @@ class AuthService {
           await StorageService.saveMyReferralCode(uniqueCode);
         }
 
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         if (pendingReferral != null && pendingReferral.isNotEmpty) {
           await StorageService.clearPendingReferralCode();
@@ -494,7 +495,7 @@ class AuthService {
           await StorageService.saveMyReferralCode(uniqueCode);
         }
 
-        await _refreshRecentTools();
+        await _refreshUserSessionState();
 
         if (pendingReferral != null && pendingReferral.isNotEmpty) {
           await StorageService.clearPendingReferralCode();
@@ -617,11 +618,18 @@ class AuthService {
       );
     } catch (_) {}
     await StorageService.logout();
-    await _refreshRecentTools();
+    await _refreshUserSessionState(isLogout: true);
   }
 
-  static Future<void> _refreshRecentTools() async {
+  static Future<void> _refreshUserSessionState({bool isLogout = false}) async {
     try {
+      if (Get.isRegistered<ScanController>()) {
+        if (isLogout) {
+          Get.find<ScanController>().clearFiles();
+        } else {
+          await Get.find<ScanController>().loadUserFiles();
+        }
+      }
       if (Get.isRegistered<AllToolsController>()) {
         await Get.find<AllToolsController>().loadRecentTools();
       }

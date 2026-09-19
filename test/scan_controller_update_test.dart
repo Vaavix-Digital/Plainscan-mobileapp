@@ -11,6 +11,15 @@ void main() {
   setUp(() {
     Get.reset();
     controller = Get.put(ScanController());
+    controller.scannedFiles.value = [
+      FileModel(
+        id: '1',
+        name: 'Tax_Return_2026.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 1024.5,
+        fileType: 'PDF',
+      ),
+    ];
   });
 
   tearDown(() {

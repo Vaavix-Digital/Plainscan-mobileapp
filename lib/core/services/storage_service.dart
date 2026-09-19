@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
+import 'package:plainscan/models/file_model.dart';
+import 'package:play_install_referrer/play_install_referrer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -143,20 +146,87 @@ class StorageService {
     await prefs.remove(_keyPendingReferralCode);
   }
 
-  static Future<String?> captureReferralFromUri([Uri? uri]) async {
+  /// Parses referral code from query string, deep link, or Play Store referrer string
+  static String? parseReferralCodeFromString(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
     try {
-      final targetUri = uri ?? Uri.base;
-      final ref = targetUri.queryParameters['ref'] ??
-          targetUri.queryParameters['referral'] ??
-          targetUri.queryParameters['referral_code'] ??
-          targetUri.queryParameters['code'];
-      if (ref != null && ref.trim().isNotEmpty) {
-        final cleanRef = ref.trim().toUpperCase();
-        await setPendingReferralCode(cleanRef);
-        return cleanRef;
+      final decoded = Uri.decodeFull(raw.trim());
+      // 1. Check for standard URI query params
+      if (decoded.contains('?') || decoded.contains('://')) {
+        final uri = Uri.tryParse(decoded);
+        if (uri != null && uri.hasQuery) {
+          final code = uri.queryParameters['referral'] ??
+              uri.queryParameters['ref'] ??
+              uri.queryParameters['referral_code'] ??
+              uri.queryParameters['code'];
+          if (code != null && code.trim().isNotEmpty) {
+            return code.trim().toUpperCase();
+          }
+        }
+      }
+
+      // 2. Check for key=value pairs (e.g. "utm_source=...&referral=ABC12345")
+      final pairs = decoded.split(RegExp(r'[&?]'));
+      for (final pair in pairs) {
+        final parts = pair.split('=');
+        if (parts.length == 2) {
+          final k = parts[0].trim().toLowerCase();
+          final v = parts[1].trim();
+          if (['referral', 'ref', 'referral_code', 'code'].contains(k) && v.isNotEmpty) {
+            return v.toUpperCase();
+          }
+        }
+      }
+
+      // 3. Fallback regex
+      final reg = RegExp(r'(?:referral|referral_code|ref|code)=([a-zA-Z0-9_-]+)', caseSensitive: false);
+      final match = reg.firstMatch(decoded);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!.trim().toUpperCase();
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Captures Google Play Install Referrer on Android post-install
+  static Future<String?> captureInstallReferrer() async {
+    try {
+      final details = await PlayInstallReferrer.installReferrer;
+      final rawReferrer = details.installReferrer;
+      if (rawReferrer != null && rawReferrer.isNotEmpty) {
+        final parsed = parseReferralCodeFromString(rawReferrer);
+        if (parsed != null && parsed.isNotEmpty) {
+          await setPendingReferralCode(parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // Non-Android platforms, test environments, or Play Services unavailable
+    }
+    return null;
+  }
+
+  static Future<String?> captureReferralFromUri([Uri? uri]) async {
+    try {
+      final targetUri = uri ?? Uri.base;
+      final parsed = parseReferralCodeFromString(targetUri.toString());
+      if (parsed != null && parsed.isNotEmpty) {
+        await setPendingReferralCode(parsed);
+        return parsed;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Comprehensive referral capture checking Deep Links, URI, and Install Referrer
+  static Future<String?> captureReferral({Uri? uri}) async {
+    final uriCode = await captureReferralFromUri(uri);
+    if (uriCode != null && uriCode.isNotEmpty) return uriCode;
+
+    final installCode = await captureInstallReferrer();
+    if (installCode != null && installCode.isNotEmpty) return installCode;
+
+    return await getPendingReferralCode();
   }
 
   static Future<void> saveInviteLink(String link) async {
@@ -401,5 +471,50 @@ class StorageService {
     final userKey = _getUserRecentToolsKey(prefs);
     await prefs.remove(userKey);
     await prefs.remove(_keyRecentTools);
+  }
+
+  static const String _keyScannedFiles = 'user_scanned_files';
+
+  static String _getUserScannedFilesKey(SharedPreferences prefs) {
+    final userId = prefs.getString(_keyUserId);
+    if (userId != null && userId.isNotEmpty) {
+      return 'user_scanned_files_$userId';
+    }
+    final email = prefs.getString(_keyEmail);
+    if (email != null && email.isNotEmpty) {
+      return 'user_scanned_files_${email.toLowerCase().trim()}';
+    }
+    return _keyScannedFiles;
+  }
+
+  static Future<List<FileModel>> getUserScannedFiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userKey = _getUserScannedFilesKey(prefs);
+    final rawList = prefs.getStringList(userKey);
+    if (rawList == null || rawList.isEmpty) {
+      return [];
+    }
+    final result = <FileModel>[];
+    for (final str in rawList) {
+      try {
+        final map = jsonDecode(str) as Map<String, dynamic>;
+        result.add(FileModel.fromJson(map));
+      } catch (_) {}
+    }
+    return result;
+  }
+
+  static Future<void> saveUserScannedFiles(List<FileModel> files) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userKey = _getUserScannedFilesKey(prefs);
+    final rawList = files.map((f) => jsonEncode(f.toJson())).toList();
+    await prefs.setStringList(userKey, rawList);
+  }
+
+  static Future<void> clearUserScannedFiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userKey = _getUserScannedFilesKey(prefs);
+    await prefs.remove(userKey);
+    await prefs.remove(_keyScannedFiles);
   }
 }

@@ -9,6 +9,9 @@ import 'package:plainscan/core/services/storage_service.dart';
 class ReferralInfo {
   final String referralCode;
   final String inviteLink;
+  final String playStoreLink;
+  final String appStoreLink;
+  final String webLink;
   final String shareLink;
   final int referralCount;
   final int totalReferred;
@@ -18,20 +21,32 @@ class ReferralInfo {
   ReferralInfo({
     required this.referralCode,
     required this.inviteLink,
-    required this.shareLink,
+    String? playStoreLink,
+    String? appStoreLink,
+    String? webLink,
+    String? shareLink,
     required this.referralCount,
     required this.totalReferred,
     required this.creditsEarned,
     required this.message,
-  });
+  })  : playStoreLink = playStoreLink ?? inviteLink,
+        appStoreLink = appStoreLink ?? 'https://apps.apple.com/app/id1234567890?referral=$referralCode',
+        webLink = webLink ?? 'https://plainscan.com/signup?ref=$referralCode',
+        shareLink = shareLink ?? inviteLink;
 
   factory ReferralInfo.fromJson(Map<String, dynamic> json) {
     final code = json['referral_code']?.toString() ??
         json['code']?.toString() ??
         StorageService.generateUniqueReferralCode();
     final link = json['invite_link']?.toString() ??
+        json['play_store_link']?.toString() ??
         json['share_link']?.toString() ??
-        'https://plainscan.com/login?ref=$code';
+        'https://play.google.com/store/apps/details?id=com.plainscan.app&referral=$code';
+    final playStore = json['play_store_link']?.toString() ?? link;
+    final appStore = json['app_store_link']?.toString() ??
+        'https://apps.apple.com/app/id1234567890?referral=$code';
+    final web = json['web_link']?.toString() ??
+        'https://plainscan.com/signup?ref=$code';
     final count = (json['referral_count'] as num?)?.toInt() ??
         (json['total_referred'] as num?)?.toInt() ??
         0;
@@ -42,6 +57,9 @@ class ReferralInfo {
     return ReferralInfo(
       referralCode: code,
       inviteLink: link,
+      playStoreLink: playStore,
+      appStoreLink: appStore,
+      webLink: web,
       shareLink: link,
       referralCount: count,
       totalReferred: count,
@@ -53,6 +71,9 @@ class ReferralInfo {
   Map<String, dynamic> toJson() => {
     'referral_code': referralCode,
     'invite_link': inviteLink,
+    'play_store_link': playStoreLink,
+    'app_store_link': appStoreLink,
+    'web_link': webLink,
     'share_link': shareLink,
     'referral_count': referralCount,
     'total_referred': totalReferred,
@@ -62,10 +83,14 @@ class ReferralInfo {
 
   static ReferralInfo get mockDefault {
     final code = StorageService.generateUniqueReferralCode();
+    final link = 'https://play.google.com/store/apps/details?id=com.plainscan.app&referral=$code';
     return ReferralInfo(
       referralCode: code,
-      inviteLink: 'https://plainscan.com/login?ref=$code',
-      shareLink: 'https://plainscan.com/login?ref=$code',
+      inviteLink: link,
+      playStoreLink: link,
+      appStoreLink: 'https://apps.apple.com/app/id1234567890?referral=$code',
+      webLink: 'https://plainscan.com/signup?ref=$code',
+      shareLink: link,
       referralCount: 0,
       totalReferred: 0,
       creditsEarned: 250,

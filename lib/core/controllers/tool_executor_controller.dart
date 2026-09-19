@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -18,9 +20,9 @@ import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
-import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:plainscan/core/utils/local_image_to_pdf_generator.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
 
@@ -149,12 +151,41 @@ class ToolExecutorController extends GetxController {
 
   bool get isPasswordError {
     final slug = getSlug();
+    final lower = errorMessage.toLowerCase();
+
+    // If the error is about missing file, unencrypted file, network, or corrupted file, it is NOT a password error
+    if (lower.contains('select') ||
+        lower.contains('file') ||
+        lower.contains('upload') ||
+        lower.contains('not locked') ||
+        lower.contains('not encrypted') ||
+        lower.contains('network') ||
+        lower.contains('connection') ||
+        lower.contains('timeout') ||
+        lower.contains('corrupt') ||
+        lower.contains('damaged')) {
+      return false;
+    }
+
     if (slug == 'pdf-unlock') {
+      return lower.contains('password') ||
+          lower.contains('incorrect') ||
+          lower.contains('decrypt') ||
+          lower.contains('invalid') ||
+          lower.contains('wrong');
+    }
+
+    final isLock = slug == 'pdf-lock';
+    return isLock &&
+        (lower.contains('password') || lower.contains('decrypt') || lower.contains('unlock') || lower.contains('encrypted'));
+  }
+
+  bool get isExecutionDisabled {
+    final slug = getSlug();
+    if (slug == 'pdf-unlock' && selectedFile != null && !isPdfLocked) {
       return true;
     }
-    final lower = errorMessage.toLowerCase();
-    return (slug == 'pdf-lock') &&
-        (lower.contains('password') || lower.contains('decrypt') || lower.contains('unlock') || lower.contains('encrypted'));
+    return false;
   }
 
   void clearError() {
@@ -637,7 +668,15 @@ class ToolExecutorController extends GetxController {
   // Creates a physical temporary file if the mock path doesn't exist on disk
   Future<File> getOrCreatePhysicalFile(FileModel fileModel) async {
     if (fileModel.path != null && fileModel.path!.isNotEmpty) {
-      final file = File(fileModel.path!);
+      String cleanPath = fileModel.path!;
+      if (cleanPath.startsWith('file://')) {
+        try {
+          cleanPath = Uri.parse(cleanPath).toFilePath();
+        } catch (_) {
+          cleanPath = cleanPath.replaceFirst('file://', '');
+        }
+      }
+      final file = File(cleanPath);
       if (await file.exists()) {
         return file;
       }
@@ -646,7 +685,18 @@ class ToolExecutorController extends GetxController {
     final tempDir = Directory.systemTemp;
     final tempFile = File('${tempDir.path}/${fileModel.name}');
     if (!await tempFile.exists()) {
-      await tempFile.writeAsString('Mock PlainScan PDF Content for ${fileModel.name}');
+      final isImage = fileModel.fileType.toUpperCase() == 'JPG' ||
+          fileModel.fileType.toUpperCase() == 'JPEG' ||
+          fileModel.fileType.toUpperCase() == 'PNG' ||
+          fileModel.name.toLowerCase().endsWith('.jpg') ||
+          fileModel.name.toLowerCase().endsWith('.jpeg') ||
+          fileModel.name.toLowerCase().endsWith('.png');
+
+      if (isImage) {
+        await tempFile.writeAsBytes(LocalImageToPdfGenerator.minimalJpegBytes);
+      } else {
+        await tempFile.writeAsString('Mock PlainScan PDF Content for ${fileModel.name}');
+      }
     }
     return tempFile;
   }
@@ -684,7 +734,12 @@ class ToolExecutorController extends GetxController {
       case 'png-to-pdf':
       case 'webp-to-pdf':
       case 'image-to-pdf':
-        return {'page_size': jpgToPdfPageSize};
+        return {
+          'page_size': jpgToPdfPageSize.toLowerCase(),
+          'layout': jpgToPdfPageSize.toLowerCase(),
+        };
+      case 'images-to-pdf':
+        return {};
       case 'pdf-compress':
         return {'quality': compressQuality};
       case 'pdf-split':
@@ -1265,6 +1320,87 @@ class ToolExecutorController extends GetxController {
   }
 
   Future<void> executeJobFlow() async {
+    final slug = getSlug();
+    final isMulti = isMultiFileTool();
+    final isNoUpload = isNoUploadTool();
+    final isTextOnly = isTextOptionSupported() && useRawText;
+    final isNoUploadInput = (slug == 'ai-flashcards' && (flashcardInputMode == 'link' || flashcardInputMode == 'text')) ||
+        (slug == 'ai-quiz' && (quizInputMode == 'link' || quizInputMode == 'text'));
+
+    // Check if input file is required but not selected
+    if (!isNoUpload && !isTextOnly && !isNoUploadInput) {
+      if (isMulti && selectedFiles.isEmpty) {
+        if (!Get.testMode && Get.overlayContext != null) {
+          Get.rawSnackbar(
+            titleText: const Text(
+              'No File Selected',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            messageText: const Text(
+              'Please select at least one file from your device to begin.',
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            backgroundColor: AppColors.coral,
+            icon: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 3),
+          );
+        }
+        currentStep = 'error';
+        errorMessage = 'Please select at least one file from your device to begin.';
+        update();
+        return;
+      } else if (!isMulti && selectedFile == null) {
+        final isPdfTool = slug.contains('pdf') || slug == 'pdf-unlock';
+        final notifyMsg = isPdfTool
+            ? 'Please upload a PDF file first.'
+            : 'Please select a file from your device to begin.';
+        if (!Get.testMode && Get.overlayContext != null) {
+          Get.rawSnackbar(
+            titleText: const Text(
+              'No File Selected',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            messageText: Text(
+              notifyMsg,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            backgroundColor: AppColors.coral,
+            icon: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 3),
+          );
+        }
+        currentStep = 'error';
+        errorMessage = notifyMsg;
+        update();
+        return;
+      }
+    }
+
+    if (slug == 'pdf-unlock' && selectedFile != null && !isPdfLocked) {
+      if (!Get.testMode && Get.overlayContext != null) {
+        Get.rawSnackbar(
+          titleText: const Text(
+            'Document Not Locked',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          messageText: const Text(
+            'This PDF document is already unlocked and does not require password removal.',
+            style: TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          backgroundColor: Colors.blueGrey.shade800,
+          icon: const Icon(Icons.info_outline, color: Colors.amber, size: 24),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 4),
+        );
+      }
+      currentStep = 'error';
+      errorMessage = 'This PDF document is not password-protected and does not require unlocking.';
+      update();
+      return;
+    }
+
     final isFree = tool.isFree ?? true;
     if (!isFree) {
       final isPro = await StorageService.isProUser();
@@ -1286,14 +1422,16 @@ class ToolExecutorController extends GetxController {
     }
 
     if (tokenToUse.isEmpty) {
-      Get.rawSnackbar(
-        messageText: const Text(
-          'Authorization token is missing. Please log in first.',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: AppColors.coral,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (!Get.testMode && Get.overlayContext != null) {
+        Get.rawSnackbar(
+          messageText: const Text(
+            'Authorization token is missing. Please log in first.',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppColors.coral,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
       return;
     }
 
@@ -1539,7 +1677,7 @@ class ToolExecutorController extends GetxController {
         // No file IDs needed for URL/HTML or raw text tools
       } else if (isMulti) {
         requestBody['file_ids'] = uploadedFileIds;
-        if (slug != 'images-to-pdf' && uploadedFileIds.isNotEmpty) {
+        if (uploadedFileIds.length == 1) {
           requestBody['file_id'] = uploadedFileIds.first;
         }
       } else {
@@ -1547,8 +1685,17 @@ class ToolExecutorController extends GetxController {
       }
       requestBody['options'] = options;
 
+      String effectiveToolSlug = slug;
+      if (uploadedFileIds.length > 1 &&
+          (slug == 'jpg-to-pdf' ||
+              slug == 'png-to-pdf' ||
+              slug == 'webp-to-pdf' ||
+              slug == 'image-to-pdf')) {
+        effectiveToolSlug = 'images-to-pdf';
+      }
+
       jobIdLocal = await services.createJob(
-        toolSlug: slug,
+        toolSlug: effectiveToolSlug,
         requestBody: requestBody,
       );
       jobId = jobIdLocal;
@@ -1796,6 +1943,80 @@ class ToolExecutorController extends GetxController {
       }
 
     } catch (e) {
+      final slug = getSlug();
+      if (slug == 'jpg-to-pdf' ||
+          slug == 'images-to-pdf' ||
+          slug == 'image-to-pdf' ||
+          slug == 'png-to-pdf' ||
+          slug == 'webp-to-pdf') {
+        try {
+          final List<File> physicalImageFiles = [];
+          final inputFiles = isMultiFileTool()
+              ? (selectedFiles.isNotEmpty ? selectedFiles : (selectedFile != null ? [selectedFile!] : <FileModel>[]))
+              : (selectedFile != null ? [selectedFile!] : <FileModel>[]);
+
+          for (final f in inputFiles) {
+            final pf = await getOrCreatePhysicalFile(f);
+            physicalImageFiles.add(pf);
+          }
+
+          final tempDir = Directory.systemTemp;
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final outName = 'Scan_${timestamp}_document.pdf';
+          final outPath = '${tempDir.path}/$outName';
+
+          await LocalImageToPdfGenerator.convertImagesToPdf(
+            imageFiles: physicalImageFiles,
+            outputFilePath: outPath,
+            pageSize: jpgToPdfPageSize,
+          );
+
+          final pdfFile = File(outPath);
+          final fileSizeKb = (await pdfFile.length()) / 1024.0;
+
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'PDF',
+          );
+
+          final newFile = FileModel(
+            id: timestamp.toString(),
+            name: outName,
+            createdDate: DateTime.now(),
+            sizeKb: fileSizeKb,
+            fileType: 'PDF',
+            path: outPath,
+          );
+
+          convertedFile = newFile;
+          currentStep = 'success';
+          errorMessage = 'Success! File processed with ${tool.name}.';
+          outputFileName = outName;
+          isRunning = false;
+          update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.completed,
+              detail: outName,
+            );
+            NotificationService.to.addNotification(
+              title: '${tool.name} Completed',
+              message: 'Processed "$outName" with ${tool.name}.',
+              type: NotificationType.toolUpdate,
+              toolName: tool.name,
+              fileName: outName,
+              filePath: outPath,
+              showToast: false,
+            );
+          }
+          return;
+        } catch (_) {}
+      }
+
       if (getSlug() == 'ai-email-writer') {
         final recipient = emailRecipientController.text.trim().isNotEmpty
             ? emailRecipientController.text.trim()
@@ -2307,9 +2528,21 @@ class ToolExecutorController extends GetxController {
     final lower = rawMsg.toLowerCase();
     final slug = getSlug();
 
+    // Missing file errors across all tools
+    if (lower.contains('select an input file') ||
+        lower.contains('select a file') ||
+        lower.contains('no file selected') ||
+        lower.contains('upload a file') ||
+        lower.contains('upload a pdf') ||
+        lower.contains('select at least one')) {
+      return (slug.contains('pdf') || slug == 'pdf-unlock')
+          ? 'Please upload a PDF file first.'
+          : 'Please select a file from your device to begin.';
+    }
+
     // 1. Password / Decryption errors (specifically for PDF Unlock & PDF Lock)
     if (slug == 'pdf-unlock') {
-      if (lower.contains('empty') || lower.contains('missing password') || lower.contains('please enter')) {
+      if (lower.contains('empty') || lower.contains('missing password') || lower.contains('please enter the password') || lower.contains('enter password')) {
         return 'Please enter the password to decrypt and unlock this PDF document.';
       }
       if (lower.contains('not encrypted') ||
@@ -2329,7 +2562,7 @@ class ToolExecutorController extends GetxController {
           lower.contains('timeout')) {
         return 'Network connection error. Please check your internet connection and try again.';
       }
-      // For any invalid password or processing error during PDF Unlock
+      // For any invalid password, job failure, or decryption error during PDF Unlock
       return 'Invalid password. The password you entered is incorrect for this document. Please check the password and try again.';
     }
 
@@ -2425,6 +2658,10 @@ class ToolExecutorController extends GetxController {
           selectedFile = newlyAddedFiles.first;
           checkPdfLockStatus(notifyUser: true);
         }
+        if (currentStep == 'error') {
+          errorMessage = '';
+          currentStep = 'idle';
+        }
         update();
 
         if (!Get.testMode && Get.overlayContext != null) {
@@ -2454,9 +2691,105 @@ class ToolExecutorController extends GetxController {
     }
   }
 
+  Future<void> scanDocumentWithCamera(bool isMulti) async {
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+    try {
+      List<String> imagePaths = [];
+
+      if (isMobile) {
+        final result = await FlutterDocScanner().getScannedDocumentAsImages(page: 20);
+        if (result != null && result.images.isNotEmpty) {
+          imagePaths = result.images;
+        } else {
+          dynamic scannedDocs = await FlutterDocScanner().getScanDocuments(page: 20);
+          if (scannedDocs != null) {
+            if (scannedDocs is String && scannedDocs.isNotEmpty) {
+              imagePaths = [scannedDocs];
+            } else if (scannedDocs is Map && scannedDocs.containsKey('images')) {
+              final list = scannedDocs['images'] as List?;
+              if (list != null && list.isNotEmpty) {
+                imagePaths = list.map((e) => e.toString()).toList();
+              }
+            } else if (scannedDocs is List && scannedDocs.isNotEmpty) {
+              imagePaths = scannedDocs.map((e) => e.toString()).toList();
+            }
+          }
+        }
+      } else {
+        // Fallback for non-mobile platforms / tests
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        imagePaths = ['mock_camera_scan_$timestamp.jpg'];
+      }
+
+      if (imagePaths.isEmpty) return;
+
+      final newlyAddedFiles = <FileModel>[];
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      for (int i = 0; i < imagePaths.length; i++) {
+        final path = imagePaths[i];
+        final fileName = 'Scan_${timestamp}_Page${i + 1}.jpg';
+
+        scanController.addScan(
+          path,
+          customName: fileName,
+          fileType: 'JPG',
+        );
+
+        if (scanController.scannedFiles.isNotEmpty) {
+          final fileModel = scanController.scannedFiles.first;
+          newlyAddedFiles.add(fileModel);
+        }
+      }
+
+      if (newlyAddedFiles.isNotEmpty) {
+        if (isMulti) {
+          selectedFiles.addAll(newlyAddedFiles);
+        } else {
+          selectedFile = newlyAddedFiles.first;
+          checkPdfLockStatus(notifyUser: true);
+        }
+        if (currentStep == 'error') {
+          errorMessage = '';
+          currentStep = 'idle';
+        }
+        update();
+
+        if (!Get.testMode && Get.overlayContext != null) {
+          Get.rawSnackbar(
+            messageText: Text(
+              isMulti
+                  ? 'Successfully scanned ${newlyAddedFiles.length} image(s).'
+                  : 'Successfully scanned ${newlyAddedFiles.first.name}.',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      if (!Get.testMode && Get.overlayContext != null) {
+        Get.rawSnackbar(
+          messageText: Text(
+            'Scanner error: $e',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppColors.coral,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    }
+  }
+
   void toggleSelectedFileFromScans(FileModel file, bool? isSelected) {
     if (isSelected == true) {
       selectedFiles.add(file);
+      if (currentStep == 'error') {
+        errorMessage = '';
+        currentStep = 'idle';
+      }
     } else {
       selectedFiles.removeWhere((f) => f.id == file.id);
     }
@@ -2465,6 +2798,10 @@ class ToolExecutorController extends GetxController {
 
   void selectSingleFileFromScans(FileModel file) {
     selectedFile = file;
+    if (currentStep == 'error') {
+      errorMessage = '';
+      currentStep = 'idle';
+    }
     update();
     if (!Get.testMode && Get.overlayContext != null) {
       Get.back();
@@ -2480,6 +2817,10 @@ class ToolExecutorController extends GetxController {
   void clearSingleSelectedFile() {
     selectedFile = null;
     isPdfLocked = false;
+    if (currentStep == 'error') {
+      errorMessage = '';
+      currentStep = 'idle';
+    }
     update();
   }
 

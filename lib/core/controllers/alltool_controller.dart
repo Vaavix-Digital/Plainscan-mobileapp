@@ -97,25 +97,10 @@ class AllToolsController extends GetxController {
 
   Future<void> loadRecentTools() async {
     final ids = await StorageService.getRecentToolIds();
-    if (ids.isEmpty) {
-      const defaultIds = [
-        'scan-ocr',
-        'pdf-to-word',
-        'pdf-merge',
-        'pdf-compress',
-        'pdf-sign',
-        'ai-summarize',
-      ];
-      recentTools.value = defaultIds
-          .map((id) => findToolByIdOrSlug(id))
-          .whereType<ToolModel>()
-          .toList();
-    } else {
-      recentTools.value = ids
-          .map((id) => findToolByIdOrSlug(id))
-          .whereType<ToolModel>()
-          .toList();
-    }
+    recentTools.value = ids
+        .map((id) => findToolByIdOrSlug(id))
+        .whereType<ToolModel>()
+        .toList();
   }
 
   Future<void> recordToolUsage(String toolId) async {

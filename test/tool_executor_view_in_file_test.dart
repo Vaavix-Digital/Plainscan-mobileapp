@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
+import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
 import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +19,7 @@ void main() {
     late ScanController scanController;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       Get.reset();
       scanController = Get.put(ScanController());
       Get.put(HomeScreenController());
@@ -275,5 +279,122 @@ void main() {
       expect(find.text('Share'), findsOneWidget);
       expect(find.text('Open'), findsNothing);
     });
+
+    testWidgets('PDF Unlock hides password field and disables Run button when selected PDF is not password-protected', (WidgetTester tester) async {
+      final unlockTool = const ToolModel(
+        id: 'pdf-unlock',
+        name: 'PDF Unlock (Remove Password)',
+        icon: Icons.lock_open,
+        color: Colors.red,
+        categoryId: 'pdf_tools',
+        category: 'PDF Tools',
+      );
+
+      final unencryptedFile = FileModel(
+        id: 'unlocked_file_1',
+        name: 'Statement_Public.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 1024,
+        fileType: 'PDF',
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: ToolExecutorPage(
+            tool: unlockTool,
+            initialFiles: [unencryptedFile],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller = Get.find<ToolExecutorController>();
+      expect(controller.selectedFile, isNotNull);
+      expect(controller.isPdfLocked, isFalse);
+      expect(controller.isExecutionDisabled, isTrue);
+
+      // Verify Note that document has no password protection is displayed
+      expect(find.text('Note: This document has no password protection. Unlocking is not needed.'), findsOneWidget);
+
+      // Verify Password TextField is NOT displayed
+      expect(find.text('Enter Document Password'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+
+      // Verify disabled state of Run button
+      expect(find.text('Document Already Unlocked'), findsOneWidget);
+      final runButton = tester.widget<ElevatedButton>(find.byType(ElevatedButton).last);
+      expect(runButton.onPressed, isNull);
+    });
+
+    testWidgets('PDF Unlock hides password field when no file is selected yet', (WidgetTester tester) async {
+      final unlockTool = const ToolModel(
+        id: 'pdf-unlock',
+        name: 'PDF Unlock (Remove Password)',
+        icon: Icons.lock_open,
+        color: Colors.red,
+        categoryId: 'pdf_tools',
+        category: 'PDF Tools',
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: ToolExecutorPage(
+            tool: unlockTool,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller = Get.find<ToolExecutorController>();
+      expect(controller.selectedFile, isNull);
+
+      // Verify Password TextField is NOT displayed
+      expect(find.text('Enter Document Password'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Upload a password-protected PDF file to check its security status and remove encryption.'), findsOneWidget);
+    });
+
+    testWidgets('PDF Unlock displays password field only when a password-protected PDF is selected', (WidgetTester tester) async {
+      final unlockTool = const ToolModel(
+        id: 'pdf-unlock',
+        name: 'PDF Unlock (Remove Password)',
+        icon: Icons.lock_open,
+        color: Colors.red,
+        categoryId: 'pdf_tools',
+        category: 'PDF Tools',
+      );
+
+      final lockedFile = FileModel(
+        id: 'locked_file_1',
+        name: 'Financial_Report_Locked.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 512,
+        fileType: 'PDF',
+      );
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: ToolExecutorPage(
+            tool: unlockTool,
+            initialFiles: [lockedFile],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller = Get.find<ToolExecutorController>();
+      expect(controller.selectedFile, isNotNull);
+      expect(controller.isPdfLocked, isTrue);
+      expect(controller.isExecutionDisabled, isFalse);
+
+      // Verify Password-Protected PDF Recognized banner is displayed
+      expect(find.text('Password-Protected PDF Recognized'), findsOneWidget);
+
+      // Verify Password TextField IS displayed
+      expect(find.text('Enter Document Password'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('Enter password to unlock'), findsOneWidget);
+    });
   });
 }
+

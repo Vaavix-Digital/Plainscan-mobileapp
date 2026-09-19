@@ -1034,6 +1034,33 @@ void main() {
         );
       }
     });
+
+    test('32. Tool execution notifies user when no file is selected', () async {
+      // Test single-file tool (PDF Unlock) with no file selected
+      final unlockTool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-unlock');
+      final unlockController = Get.put(ToolExecutorController(tool: unlockTool));
+      unlockController.selectedFile = null;
+      unlockController.passwordController.text = '1234';
+
+      await unlockController.executeJobFlow();
+      expect(unlockController.currentStep, 'error');
+      expect(unlockController.errorMessage, 'Please upload a PDF file first.');
+      expect(unlockController.isPasswordError, isFalse);
+
+      Get.delete<ToolExecutorController>();
+
+      // Test multi-file tool (PDF Merge) with no files selected
+      final mergeTool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-merge');
+      final mergeController = Get.put(ToolExecutorController(tool: mergeTool));
+      mergeController.selectedFiles.clear();
+
+      await mergeController.executeJobFlow();
+      expect(mergeController.currentStep, 'error');
+      expect(mergeController.errorMessage, 'Please select at least one file from your device to begin.');
+      expect(mergeController.isPasswordError, isFalse);
+
+      Get.delete<ToolExecutorController>();
+    });
   });
 }
 
