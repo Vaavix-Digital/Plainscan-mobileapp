@@ -517,9 +517,10 @@ class ToolExecutorController extends GetxController {
     switch (slug) {
       case 'pdf-to-word':
         return {'output_format': 'docx'};
-      case 'word-to-pdf':
       case 'pdf-to-ppt':
       case 'pdf-to-powerpoint':
+        return {'output_format': 'pptx'};
+      case 'word-to-pdf':
       case 'ppt-to-pdf':
       case 'powerpoint-to-pdf':
       case 'pdf-to-excel':
@@ -1016,6 +1017,9 @@ class ToolExecutorController extends GetxController {
       case 'ai-cover-letter':
       case 'ai-proofread':
         return 'docx';
+      case 'pdf-to-ppt':
+      case 'pdf-to-powerpoint':
+        return 'pptx';
       case 'word-to-pdf':
       case 'ppt-to-pdf':
       case 'excel-to-pdf':
@@ -1110,6 +1114,13 @@ class ToolExecutorController extends GetxController {
       case 'read-metadata':
         return 'json';
       default:
+        if (tool.outputFormat != null) {
+          final fmt = tool.outputFormat!.toLowerCase().trim();
+          if (fmt.startsWith('.')) {
+            final ext = fmt.substring(1).split(RegExp(r'[\s/()]')).first;
+            if (ext.isNotEmpty) return ext;
+          }
+        }
         return 'pdf';
     }
   }

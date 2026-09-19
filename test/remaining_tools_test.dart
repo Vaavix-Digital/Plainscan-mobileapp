@@ -887,6 +887,16 @@ void main() {
 
       Get.delete<ToolExecutorController>();
     });
+
+    test('27. PDF to PowerPoint (PPTX) expected extension & options', () {
+      final tool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-to-ppt');
+      final controller = Get.put(ToolExecutorController(tool: tool));
+
+      expect(controller.getExpectedExtension(), 'pptx');
+      expect(controller.getOptionsJson(), {'output_format': 'pptx'});
+
+      Get.delete<ToolExecutorController>();
+    });
   });
 }
 
