@@ -7,7 +7,6 @@ import 'package:plainscan/features/home/widgets/dashboard_carousel_slider.dart';
 import 'package:plainscan/features/home/widgets/dashboard_header.dart';
 import 'package:plainscan/features/home/widgets/dashboard_quick_tools.dart';
 import 'package:plainscan/features/home/widgets/dashboard_recent_tools.dart';
-import 'package:plainscan/features/home/widgets/dashboard_referral_card.dart';
 import 'package:plainscan/features/home/widgets/dashboard_search_bar.dart';
 import 'package:plainscan/features/home/widgets/dashboard_update_banner.dart';
 
@@ -37,7 +36,7 @@ class DashboardPage extends StatelessWidget {
                     buildDashboardCarouselSlider(),
                     buildAdBanner(),
                     const SizedBox(height: 20),
-                    buildDashboardReferralCard(controller),
+                    // buildDashboardReferralCard(controller),
                     const SizedBox(height: 28),
                     buildDashboardQuickTools(),
                     const SizedBox(height: 28),

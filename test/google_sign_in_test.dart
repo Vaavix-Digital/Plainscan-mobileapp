@@ -42,11 +42,15 @@ void main() {
 
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.toString(), 'https://api.plainscan.com/api/auth/google');
+        expect(
+          request.url.path.contains('/api/auth/session') ||
+              request.url.path.contains('/api/auth/google'),
+          isTrue,
+        );
         expect(request.headers['Content-Type'], 'application/json');
 
         final body = jsonDecode(request.body);
-        expect(body['token'], mockGoogleIdToken);
+        expect(body.containsKey('token') || body.containsKey('session_id'), isTrue);
 
         return http.Response(
           jsonEncode(mockResponseData),

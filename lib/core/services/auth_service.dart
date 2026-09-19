@@ -163,12 +163,42 @@ class AuthService {
         final userName = data['user']?['name'] ?? 'User';
         final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
+        final userObj = data['user'] is Map<String, dynamic> ? data['user'] as Map<String, dynamic> : <String, dynamic>{};
+        final userId = userObj['user_id']?.toString() ?? userObj['id']?.toString() ?? '';
+        final picture = userObj['picture']?.toString();
+        final role = userObj['role']?.toString() ?? 'user';
+
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
-        await StorageService.saveUser(email: email, name: userName);
+        await StorageService.saveUser(
+          email: email,
+          name: userName,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
         await StorageService.savePlan(plan.toString());
+
+        final userReferralCode = userObj['referral_code']?.toString() ??
+            data['referral_code']?.toString();
+        if (userReferralCode != null && userReferralCode.isNotEmpty) {
+          await StorageService.saveMyReferralCode(userReferralCode);
+        } else {
+          final uniqueCode = StorageService.generateUniqueReferralCode(
+            seed: userId.isNotEmpty ? userId : email,
+          );
+          await StorageService.saveMyReferralCode(uniqueCode);
+        }
+
         await _refreshRecentTools();
 
-        return AuthResult(success: true, token: token, refreshToken: refreshToken);
+        return AuthResult(
+          success: true,
+          token: token,
+          refreshToken: refreshToken,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
       } else if (response.statusCode == 202) {
         return AuthResult(success: true, requires2Fa: true);
       } else {
@@ -267,6 +297,18 @@ class AuthService {
           role: role,
         );
         await StorageService.savePlan(plan);
+
+        final userReferralCode = user['referral_code']?.toString() ??
+            data['referral_code']?.toString();
+        if (userReferralCode != null && userReferralCode.isNotEmpty) {
+          await StorageService.saveMyReferralCode(userReferralCode);
+        } else {
+          final uniqueCode = StorageService.generateUniqueReferralCode(
+            seed: userId.isNotEmpty ? userId : email,
+          );
+          await StorageService.saveMyReferralCode(uniqueCode);
+        }
+
         await _refreshRecentTools();
 
         if (pendingReferral != null && pendingReferral.isNotEmpty) {
@@ -353,6 +395,105 @@ class AuthService {
           role: role,
         );
         await StorageService.savePlan(plan);
+
+        final userReferralCode = user['referral_code']?.toString() ??
+            data['referral_code']?.toString();
+        if (userReferralCode != null && userReferralCode.isNotEmpty) {
+          await StorageService.saveMyReferralCode(userReferralCode);
+        } else {
+          final uniqueCode = StorageService.generateUniqueReferralCode(
+            seed: userId.isNotEmpty ? userId : email,
+          );
+          await StorageService.saveMyReferralCode(uniqueCode);
+        }
+
+        await _refreshRecentTools();
+
+        if (pendingReferral != null && pendingReferral.isNotEmpty) {
+          await StorageService.clearPendingReferralCode();
+        }
+
+        return AuthResult(
+          success: true,
+          token: tokenVal,
+          refreshToken: refreshTokenVal,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
+      } else {
+        final errorMsg = _parseError(response.body);
+        return AuthResult(success: false, errorMessage: errorMsg);
+      }
+    } catch (e) {
+      return AuthResult(success: false, errorMessage: 'Connection failed: ${e.toString()}');
+    }
+  }
+
+  static Future<AuthResult> appleLogin({
+    required String token,
+    String? referralCode,
+    http.Client? client,
+  }) async {
+    try {
+      final httpClient = client ?? _client;
+      final pendingReferral = referralCode ?? await StorageService.getPendingReferralCode();
+      final body = <String, dynamic>{
+        'token': token,
+      };
+      if (pendingReferral != null && pendingReferral.isNotEmpty) {
+        body['referral_code'] = pendingReferral;
+      }
+
+      final response = await httpClient.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.appleLogin}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        final data = responseData['data'] is Map<String, dynamic>
+            ? responseData['data'] as Map<String, dynamic>
+            : (responseData is Map<String, dynamic> ? responseData : <String, dynamic>{});
+        final tokenVal = data['accessToken']?.toString() ??
+            data['access_token']?.toString() ??
+            data['token']?.toString() ??
+            '';
+        final refreshTokenVal = data['refreshToken']?.toString() ??
+            data['refresh_token']?.toString() ??
+            '';
+        final user = data['user'] is Map<String, dynamic>
+            ? data['user'] as Map<String, dynamic>
+            : <String, dynamic>{};
+        final userId = user['user_id']?.toString() ?? user['id']?.toString() ?? '';
+        final email = user['email']?.toString() ?? '';
+        final name = user['name']?.toString() ?? 'User';
+        final picture = user['picture']?.toString();
+        final role = user['role']?.toString() ?? 'user';
+        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
+
+        await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
+        await StorageService.saveUser(
+          email: email,
+          name: name,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
+        await StorageService.savePlan(plan);
+
+        final userReferralCode = user['referral_code']?.toString() ??
+            data['referral_code']?.toString();
+        if (userReferralCode != null && userReferralCode.isNotEmpty) {
+          await StorageService.saveMyReferralCode(userReferralCode);
+        } else {
+          final uniqueCode = StorageService.generateUniqueReferralCode(
+            seed: userId.isNotEmpty ? userId : email,
+          );
+          await StorageService.saveMyReferralCode(uniqueCode);
+        }
+
         await _refreshRecentTools();
 
         if (pendingReferral != null && pendingReferral.isNotEmpty) {
@@ -423,15 +564,42 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
+        final responseData = jsonDecode(response.body);
+        final data = responseData['data'] is Map<String, dynamic>
+            ? responseData['data'] as Map<String, dynamic>
+            : (responseData is Map<String, dynamic> ? responseData : <String, dynamic>{});
+        if (data.isNotEmpty) {
           final plan = data['plan_id'] ?? data['plan'] ?? 'free';
           await StorageService.savePlan(plan.toString());
           final name = data['name']?.toString();
           if (name != null && name.isNotEmpty) {
             final email = data['email']?.toString() ?? await StorageService.getEmail() ?? '';
-            await StorageService.saveUser(email: email, name: name);
+            final userId = data['user_id']?.toString() ?? data['id']?.toString();
+            final picture = data['picture']?.toString();
+            final role = data['role']?.toString();
+            await StorageService.saveUser(
+              email: email,
+              name: name,
+              userId: userId,
+              picture: picture,
+              role: role,
+            );
           }
+
+          final credits = data['credits'] ?? data['credits_balance'] ?? data['user_credits'] ?? data['balance'];
+          if (credits is num) {
+            await StorageService.setUserCredits(credits.toInt());
+          }
+
+          final userReferralCode = data['referral_code']?.toString();
+          if (userReferralCode != null && userReferralCode.isNotEmpty) {
+            await StorageService.saveMyReferralCode(userReferralCode);
+          }
+          final inviteLink = data['invite_link']?.toString();
+          if (inviteLink != null && inviteLink.isNotEmpty) {
+            await StorageService.saveInviteLink(inviteLink);
+          }
+
           return data;
         }
       }

@@ -78,6 +78,10 @@ class ProfileController extends GetxController {
           if (pic != null && pic.isNotEmpty) {
             userPicture.value = pic;
           }
+          final serverCredits = profile['credits'] ?? profile['credits_balance'] ?? profile['user_credits'] ?? profile['balance'];
+          if (serverCredits is num) {
+            userCredits.value = serverCredits.toInt();
+          }
         }
       });
 

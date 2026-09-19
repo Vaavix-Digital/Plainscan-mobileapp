@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plainscan/core/services/payment_service.dart';
 import 'package:plainscan/core/services/referral_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -72,20 +73,30 @@ void main() {
   });
 
   group('Referral APIs tests', () {
-    test('parses referral info payload accurately', () {
+    test('parses referral info payload accurately from GET /api/auth/me/referral', () {
       final json = {
-        'referral_code': 'PLAIN2026',
-        'share_link': 'https://plainscan.com/invite/PLAIN2026',
-        'total_referred': 5,
-        'credits_earned': 250,
+        'referral_code': 'XYZ987',
+        'invite_link': 'https://plainscan.com/login?ref=XYZ987',
+        'referral_count': 0,
+        'message': 'Share this link! If a friend signs up, you get 1 month of Pro automatically.',
       };
 
       final info = ReferralInfo.fromJson(json);
 
-      expect(info.referralCode, 'PLAIN2026');
-      expect(info.shareLink, 'https://plainscan.com/invite/PLAIN2026');
-      expect(info.totalReferred, 5);
-      expect(info.creditsEarned, 250);
+      expect(info.referralCode, 'XYZ987');
+      expect(info.inviteLink, 'https://plainscan.com/login?ref=XYZ987');
+      expect(info.shareLink, 'https://plainscan.com/login?ref=XYZ987');
+      expect(info.referralCount, 0);
+      expect(info.totalReferred, 0);
+      expect(info.message, 'Share this link! If a friend signs up, you get 1 month of Pro automatically.');
+    });
+
+    test('captures referral code from invite URL (e.g. https://plainscan.com/login?ref=XYZ987)', () async {
+      final uri = Uri.parse('https://plainscan.com/login?ref=XYZ987');
+      final captured = await StorageService.captureReferralFromUri(uri);
+
+      expect(captured, equals('XYZ987'));
+      expect(await StorageService.getPendingReferralCode(), equals('XYZ987'));
     });
 
     test('parses referral apply payload accurately', () {
@@ -105,7 +116,7 @@ void main() {
     test('ReferralService.getMyReferralCode falls back gracefully to local code', () async {
       final info = await ReferralService.getMyReferralCode();
       expect(info.referralCode, isNotEmpty);
-      expect(info.shareLink, contains('plainscan.com/invite/'));
+      expect(info.inviteLink, contains('plainscan.com/login?ref='));
     });
   });
 }

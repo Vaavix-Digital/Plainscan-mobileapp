@@ -26,7 +26,9 @@ class ReferralInfo {
   });
 
   factory ReferralInfo.fromJson(Map<String, dynamic> json) {
-    final code = json['referral_code']?.toString() ?? 'XYZ987';
+    final code = json['referral_code']?.toString() ??
+        json['code']?.toString() ??
+        StorageService.generateUniqueReferralCode();
     final link = json['invite_link']?.toString() ??
         json['share_link']?.toString() ??
         'https://plainscan.com/login?ref=$code';
@@ -58,15 +60,18 @@ class ReferralInfo {
     'message': message,
   };
 
-  static ReferralInfo get mockDefault => ReferralInfo(
-    referralCode: 'XYZ987',
-    inviteLink: 'https://plainscan.com/login?ref=XYZ987',
-    shareLink: 'https://plainscan.com/login?ref=XYZ987',
-    referralCount: 0,
-    totalReferred: 0,
-    creditsEarned: 250,
-    message: 'Share this link! If a friend signs up, you get 1 month of Pro automatically.',
-  );
+  static ReferralInfo get mockDefault {
+    final code = StorageService.generateUniqueReferralCode();
+    return ReferralInfo(
+      referralCode: code,
+      inviteLink: 'https://plainscan.com/login?ref=$code',
+      shareLink: 'https://plainscan.com/login?ref=$code',
+      referralCount: 0,
+      totalReferred: 0,
+      creditsEarned: 250,
+      message: 'Share this link! If a friend signs up, you get 1 month of Pro automatically.',
+    );
+  }
 }
 
 class ReferralApplyResult {

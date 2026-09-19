@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -18,6 +19,22 @@ class StorageService {
   static const String _keyUserId = 'user_id';
   static const String _keyPicture = 'user_picture';
   static const String _keyRole = 'user_role';
+
+  /// Generates a unique 6-character referral code per user/device
+  static String generateUniqueReferralCode({String? seed}) {
+    if (seed != null && seed.trim().isNotEmpty) {
+      final clean = seed.trim().replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+      if (clean.length >= 6) {
+        final prefix = clean.length > 2 ? clean.substring(0, 2) : 'PS';
+        final suffix = clean.substring(clean.length - 4);
+        return '$prefix$suffix';
+      }
+    }
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random();
+    final randomPart = List.generate(6, (index) => chars[rand.nextInt(chars.length)]).join();
+    return randomPart;
+  }
 
   static Future<void> saveTokens({
     required String token,
@@ -62,9 +79,13 @@ class StorageService {
   static Future<String> getMyReferralCode() async {
     final prefs = await SharedPreferences.getInstance();
     var code = prefs.getString(_keyReferralCode);
-    if (code == null || code.isEmpty) {
-      code = 'PLAIN2026';
+    if (code == null || code.isEmpty || code == 'PLAIN2026') {
+      final userId = prefs.getString(_keyUserId);
+      final email = prefs.getString(_keyEmail);
+      code = generateUniqueReferralCode(seed: userId ?? email);
       await prefs.setString(_keyReferralCode, code);
+      final inviteLink = 'https://plainscan.com/login?ref=$code';
+      await prefs.setString(_keyInviteLink, inviteLink);
     }
     return code;
   }
@@ -72,11 +93,17 @@ class StorageService {
   static Future<void> saveMyReferralCode(String code) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyReferralCode, code);
+    await prefs.setString(_keyInviteLink, 'https://plainscan.com/login?ref=$code');
   }
 
   static Future<int> getUserCredits() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_keyUserCredits) ?? 250;
+  }
+
+  static Future<void> setUserCredits(int credits) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyUserCredits, credits);
   }
 
   static Future<void> addCredits(int amount) async {

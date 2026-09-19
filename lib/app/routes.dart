@@ -14,6 +14,7 @@ import 'package:plainscan/features/profile/pages/payment_page.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/profile/pages/subscription_success_page.dart';
+import 'package:plainscan/features/search/screens/search_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -26,6 +27,7 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
+  static const String search = '/search';
   static const String tools = '/tools';
   static const String files = '/files';
   static const String referral = '/referral-share';
@@ -94,6 +96,10 @@ class AppRoutes {
     GetPage(
       name: home,
       page: () => const HomeScreen(),
+    ),
+    GetPage(
+      name: search,
+      page: () => const SearchScreen(),
     ),
     GetPage(
       name: tools,
