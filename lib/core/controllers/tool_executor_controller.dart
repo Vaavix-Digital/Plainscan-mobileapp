@@ -16,6 +16,9 @@ import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/jobflow_services.dart';
 import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/features/files/pages/files_page.dart';
+import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainscan/models/file_model.dart';
@@ -95,6 +98,12 @@ class ToolExecutorController extends GetxController {
   FileModel? convertedFile;
   FileModel? existingOriginalFile;
   bool isOriginalFileReplaced = false;
+  bool isFileDownloaded = false;
+
+  void markFileDownloaded() {
+    isFileDownloaded = true;
+    update();
+  }
 
   // Job execution states
   bool isRunning = false;
@@ -127,11 +136,140 @@ class ToolExecutorController extends GetxController {
   double watermarkRotation = -45;
 
   // Lock & Unlock
-  final passwordController = TextEditingController(text: 'mysecretpassword');
-  final ownerPasswordController = TextEditingController(text: 'adminpassword');
+  final passwordController = TextEditingController();
+  final ownerPasswordController = TextEditingController();
   bool allowPrinting = true;
   bool allowCopying = false;
   String encryption = '128';
+  bool isPdfLocked = false;
+  bool isCheckingLock = false;
+  bool isUnlockPasswordVisible = false;
+  bool isLockPasswordVisible = false;
+  bool isOwnerPasswordVisible = false;
+
+  bool get isPasswordError {
+    final slug = getSlug();
+    if (slug == 'pdf-unlock') {
+      return true;
+    }
+    final lower = errorMessage.toLowerCase();
+    return (slug == 'pdf-lock') &&
+        (lower.contains('password') || lower.contains('decrypt') || lower.contains('unlock') || lower.contains('encrypted'));
+  }
+
+  void clearError() {
+    errorMessage = '';
+    currentStep = 'idle';
+    update();
+  }
+
+  void toggleUnlockPasswordVisibility() {
+    isUnlockPasswordVisible = !isUnlockPasswordVisible;
+    update();
+  }
+
+  void toggleLockPasswordVisibility() {
+    isLockPasswordVisible = !isLockPasswordVisible;
+    update();
+  }
+
+  void toggleOwnerPasswordVisibility() {
+    isOwnerPasswordVisible = !isOwnerPasswordVisible;
+    update();
+  }
+
+  Future<void> checkPdfLockStatus({bool notifyUser = false}) async {
+    if (selectedFile == null) {
+      isPdfLocked = false;
+      update();
+      return;
+    }
+
+    isCheckingLock = true;
+    update();
+
+    try {
+      isPdfLocked = await isFileEncrypted(selectedFile!);
+    } catch (_) {
+      isPdfLocked = false;
+    } finally {
+      isCheckingLock = false;
+      update();
+
+      if (notifyUser && getSlug() == 'pdf-unlock') {
+        if (!Get.testMode && Get.overlayContext != null) {
+          if (!isPdfLocked) {
+            Get.rawSnackbar(
+              titleText: const Text(
+                'File is Not Locked',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              messageText: const Text(
+                'This PDF document is already unlocked and does not require password removal.',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              backgroundColor: Colors.blueGrey.shade800,
+              icon: const Icon(Icons.info_outline, color: Colors.amber, size: 24),
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 4),
+            );
+          } else {
+            Get.rawSnackbar(
+              titleText: const Text(
+                'Password-Protected PDF Recognized',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              messageText: const Text(
+                'This PDF document is encrypted. Please enter the password below to unlock it.',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              backgroundColor: Colors.blueGrey.shade800,
+              icon: const Icon(Icons.lock, color: Colors.amber, size: 24),
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 4),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  static Future<bool> isFileEncrypted(FileModel fileModel) async {
+    // 1. Check physical file content if path exists
+    if (fileModel.path != null && fileModel.path!.isNotEmpty) {
+      try {
+        final file = File(fileModel.path!);
+        if (await file.exists()) {
+          final length = await file.length();
+          if (length > 0) {
+            final bytes = await file.readAsBytes();
+            final content = String.fromCharCodes(bytes);
+            if (content.contains('/Encrypt') ||
+                content.contains('/Standard') ||
+                content.contains('/Filter/Standard') ||
+                content.contains('/V 4') ||
+                content.contains('/V 5') ||
+                content.contains('/R 4') ||
+                content.contains('/R 5')) {
+              return true;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Name-based check / mock file attributes
+    final nameLower = fileModel.name.toLowerCase();
+    if (nameLower.contains('locked') ||
+        nameLower.contains('protect') ||
+        nameLower.contains('encrypt') ||
+        nameLower.contains('secured') ||
+        nameLower.contains('password')) {
+      return true;
+    }
+
+    return false;
+  }
 
   // Redact
   final redactPatternsController = TextEditingController(text: 'email, phone, ssn, credit_card');
@@ -406,6 +544,7 @@ class ToolExecutorController extends GetxController {
       } else {
         selectedFile = initialFiles!.first;
       }
+      checkPdfLockStatus();
       update();
 
       if (autoExecute) {
@@ -1159,6 +1298,7 @@ class ToolExecutorController extends GetxController {
     }
 
     convertedFile = null;
+    isFileDownloaded = false;
     isRunning = true;
     currentStep = 'uploading';
     errorMessage = '';
@@ -1344,6 +1484,18 @@ class ToolExecutorController extends GetxController {
             throw Exception('Please select an input file.');
           }
           if (selectedFile != null) {
+            if (slug == 'pdf-unlock') {
+              if (!isPdfLocked && passwordController.text.trim().isEmpty) {
+                throw Exception('This PDF document is not password-protected and does not require unlocking.');
+              }
+              if (passwordController.text.trim().isEmpty) {
+                throw Exception('Please enter the password to decrypt and unlock this PDF document.');
+              }
+            } else if (slug == 'pdf-lock') {
+              if (passwordController.text.trim().isEmpty) {
+                throw Exception('Please enter a password to protect and encrypt this PDF document.');
+              }
+            }
             if (slug == 'chat-with-pdf' && chatPdfQuestionController.text.trim().isEmpty) {
               chatPdfQuestionController.text = 'What is the main topic?';
             }
@@ -2099,17 +2251,7 @@ class ToolExecutorController extends GetxController {
         }
       }
 
-      String errorMsg = e.toString().replaceAll('Exception:', '').trim();
-      if (e is DioException) {
-        final responseData = e.response?.data;
-        if (responseData != null) {
-          if (responseData is Map) {
-            errorMsg = (responseData['detail'] ?? responseData['message'] ?? responseData['error'] ?? errorMsg).toString();
-          } else if (responseData is String && responseData.isNotEmpty) {
-            errorMsg = responseData;
-          }
-        }
-      }
+      final errorMsg = formatUserFriendlyError(e);
       currentStep = 'error';
       errorMessage = errorMsg;
       isRunning = false;
@@ -2125,6 +2267,115 @@ class ToolExecutorController extends GetxController {
         );
       }
     }
+  }
+
+  String formatUserFriendlyError(dynamic error) {
+    if (error == null) return 'An unexpected error occurred. Please try again.';
+
+    String rawMsg = '';
+    if (error is DioException) {
+      final responseData = error.response?.data;
+      if (responseData != null) {
+        if (responseData is Map) {
+          rawMsg = (responseData['detail'] ??
+                  responseData['message'] ??
+                  responseData['error'] ??
+                  error.message ??
+                  error.toString())
+              .toString();
+        } else if (responseData is String && responseData.isNotEmpty) {
+          rawMsg = responseData;
+        }
+      } else if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.response?.statusCode == 401 || error.response?.statusCode == 403) {
+        return 'Authorization failed or session expired. Please log in again.';
+      } else if (error.response?.statusCode == 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+      } else if (error.response?.statusCode != null && error.response!.statusCode! >= 500) {
+        return 'The server is temporarily unavailable. Please try again later.';
+      } else {
+        rawMsg = error.message ?? error.toString();
+      }
+    } else {
+      rawMsg = error.toString().replaceAll('Exception:', '').trim();
+    }
+
+    final lower = rawMsg.toLowerCase();
+    final slug = getSlug();
+
+    // 1. Password / Decryption errors (specifically for PDF Unlock & PDF Lock)
+    if (slug == 'pdf-unlock') {
+      if (lower.contains('empty') || lower.contains('missing password') || lower.contains('please enter')) {
+        return 'Please enter the password to decrypt and unlock this PDF document.';
+      }
+      if (lower.contains('not encrypted') ||
+          lower.contains('not locked') ||
+          lower.contains('not password protected') ||
+          lower.contains('no password required') ||
+          lower.contains('not password-protected')) {
+        return 'This PDF document is not password-protected and does not require unlocking.';
+      }
+      if (lower.contains('corrupt') || lower.contains('damaged') || lower.contains('malformed')) {
+        return 'The selected document appears to be corrupted or invalid. Please try repairing it or upload a valid file.';
+      }
+      if (lower.contains('socketexception') ||
+          lower.contains('connection refused') ||
+          lower.contains('network is unreachable') ||
+          lower.contains('connection error') ||
+          lower.contains('timeout')) {
+        return 'Network connection error. Please check your internet connection and try again.';
+      }
+      // For any invalid password or processing error during PDF Unlock
+      return 'Invalid password. The password you entered is incorrect for this document. Please check the password and try again.';
+    }
+
+    if (slug == 'pdf-lock' || lower.contains('password') || lower.contains('decrypt')) {
+      if (lower.contains('empty') || lower.contains('missing password') || lower.contains('please enter')) {
+        return 'Please enter a password to protect and encrypt this PDF document.';
+      }
+      return 'Invalid password. The password you entered is incorrect for this document. Please verify and try again.';
+    }
+
+    // 2. Corrupted file error
+    if (lower.contains('corrupt') ||
+        lower.contains('damaged') ||
+        lower.contains('malformed') ||
+        lower.contains('eof marker') ||
+        lower.contains('invalid pdf') ||
+        lower.contains('cannot open')) {
+      return 'The selected document appears to be corrupted or invalid. Please try repairing it or upload a valid file.';
+    }
+
+    // 3. Network / Connection errors
+    if (lower.contains('socketexception') ||
+        lower.contains('connection refused') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('handshake failed') ||
+        lower.contains('connection reset') ||
+        lower.contains('failed host lookup')) {
+      return 'Network connection error. Please check your internet connection and try again.';
+    }
+
+    // 4. JSON-encoded error messages
+    if (rawMsg.startsWith('{') && rawMsg.endsWith('}')) {
+      try {
+        final decoded = jsonDecode(rawMsg);
+        if (decoded is Map) {
+          final detail = decoded['detail'] ?? decoded['message'] ?? decoded['error'];
+          if (detail != null) return formatUserFriendlyError(detail.toString());
+        }
+      } catch (_) {}
+    }
+
+    if (rawMsg.length > 200 || rawMsg.contains('Traceback') || rawMsg.contains('Stack trace:')) {
+      return 'Failed to process document with ${tool.name}. Please check your inputs and try again.';
+    }
+
+    return rawMsg.isNotEmpty ? rawMsg : 'An unexpected error occurred while processing the tool.';
   }
 
   Future<void> pickFileFromDevice(bool isMulti) async {
@@ -2172,29 +2423,34 @@ class ToolExecutorController extends GetxController {
           selectedFiles.addAll(newlyAddedFiles);
         } else {
           selectedFile = newlyAddedFiles.first;
+          checkPdfLockStatus(notifyUser: true);
         }
         update();
 
+        if (!Get.testMode && Get.overlayContext != null) {
+          Get.rawSnackbar(
+            messageText: Text(
+              isMulti 
+                  ? 'Successfully imported ${newlyAddedFiles.length} files from device.'
+                  : 'Successfully imported ${newlyAddedFiles.first.name} from device.',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.primary,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      if (!Get.testMode && Get.overlayContext != null) {
         Get.rawSnackbar(
           messageText: Text(
-            isMulti 
-                ? 'Successfully imported ${newlyAddedFiles.length} files from device.'
-                : 'Successfully imported ${newlyAddedFiles.first.name} from device.',
+            'Failed to pick file: $e',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.coral,
           snackPosition: SnackPosition.BOTTOM,
         );
       }
-    } catch (e) {
-      Get.rawSnackbar(
-        messageText: Text(
-          'Failed to pick file: $e',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: AppColors.coral,
-        snackPosition: SnackPosition.BOTTOM,
-      );
     }
   }
 
@@ -2210,7 +2466,10 @@ class ToolExecutorController extends GetxController {
   void selectSingleFileFromScans(FileModel file) {
     selectedFile = file;
     update();
-    Get.back();
+    if (!Get.testMode && Get.overlayContext != null) {
+      Get.back();
+    }
+    checkPdfLockStatus(notifyUser: true);
   }
 
   void removeSelectedFile(FileModel file) {
@@ -2220,6 +2479,7 @@ class ToolExecutorController extends GetxController {
 
   void clearSingleSelectedFile() {
     selectedFile = null;
+    isPdfLocked = false;
     update();
   }
 
@@ -4143,7 +4403,275 @@ class ToolExecutorController extends GetxController {
   }
 
   void showToolUpdateAlertDialog(String outPath, String outName, String fileType) {
-    // Dialog removed per user request: converted file actions are shown directly on the page.
+    final hasOriginal = existingOriginalFile != null;
+    final createdFileId = convertedFile?.id;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Icon & Title
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF10B981),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${tool.name} Completed',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'File generated successfully',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // File preview card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (hasOriginal) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.history, size: 14, color: AppColors.secondaryText),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Original: ',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.secondaryText,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              existingOriginalFile!.name,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      const SizedBox(height: 6),
+                    ],
+                    Row(
+                      children: [
+                        const Icon(Icons.insert_drive_file_outlined, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Processed: ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            outName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Actions
+              if (hasOriginal) ...[
+                const Text(
+                  'Would you like to update the original document?',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Get.back();
+                      replaceOriginalWithUpdated(outPath, outName, fileType);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.sync_rounded, size: 16),
+                    label: const Text(
+                      'Update Original File',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.text,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Dismiss',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Get.back();
+                          Get.to(() => PdfViewerPage(
+                            file: convertedFile,
+                            filePath: outPath,
+                            fileName: outName,
+                            fileType: fileType,
+                          ));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: const Text(
+                          'Open',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        child: const Text(
+                          'Dismiss',
+                          style: TextStyle(color: AppColors.secondaryText),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Get.back();
+                          Get.to(() => PdfViewerPage(
+                            file: convertedFile,
+                            filePath: outPath,
+                            fileName: outName,
+                            fileType: fileType,
+                          ));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: const Text(
+                          'Open',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 
   @override

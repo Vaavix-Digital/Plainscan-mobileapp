@@ -8,6 +8,8 @@ class StorageService {
   static const String _keyPlan = 'user_plan';
   static const String _keyProExpiry = 'pro_expiry_timestamp';
   static const String _keyReferralCode = 'user_referral_code';
+  static const String _keyInviteLink = 'user_invite_link';
+  static const String _keyReferralMessage = 'user_referral_message';
   static const String _keyReferralsCount = 'referrals_count';
   static const String _keyCreditsEarned = 'referral_credits_earned';
   static const String _keyUserCredits = 'user_credits';
@@ -112,6 +114,42 @@ class StorageService {
   static Future<void> clearPendingReferralCode() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyPendingReferralCode);
+  }
+
+  static Future<String?> captureReferralFromUri([Uri? uri]) async {
+    try {
+      final targetUri = uri ?? Uri.base;
+      final ref = targetUri.queryParameters['ref'] ??
+          targetUri.queryParameters['referral'] ??
+          targetUri.queryParameters['referral_code'] ??
+          targetUri.queryParameters['code'];
+      if (ref != null && ref.trim().isNotEmpty) {
+        final cleanRef = ref.trim().toUpperCase();
+        await setPendingReferralCode(cleanRef);
+        return cleanRef;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> saveInviteLink(String link) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyInviteLink, link);
+  }
+
+  static Future<String?> getInviteLink() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyInviteLink);
+  }
+
+  static Future<void> saveReferralMessage(String msg) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReferralMessage, msg);
+  }
+
+  static Future<String?> getReferralMessage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyReferralMessage);
   }
 
   static Future<void> grantUnlimitedAccess({int days = 30}) async {
@@ -251,6 +289,9 @@ class StorageService {
 
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final userKey = _getUserRecentToolsKey(prefs);
+    await prefs.remove(userKey);
+    await prefs.remove(_keyRecentTools);
     await prefs.remove(_keyToken);
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyEmail);
@@ -298,19 +339,40 @@ class StorageService {
 
   static const String _keyRecentTools = 'recent_tools';
 
+  static String _getUserRecentToolsKey(SharedPreferences prefs) {
+    final userId = prefs.getString(_keyUserId);
+    if (userId != null && userId.isNotEmpty) {
+      return 'recent_tools_$userId';
+    }
+    final email = prefs.getString(_keyEmail);
+    if (email != null && email.isNotEmpty) {
+      return 'recent_tools_${email.toLowerCase().trim()}';
+    }
+    return _keyRecentTools;
+  }
+
   static Future<List<String>> getRecentToolIds() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_keyRecentTools) ?? [];
+    final userKey = _getUserRecentToolsKey(prefs);
+    return prefs.getStringList(userKey) ?? [];
   }
 
   static Future<void> addRecentToolId(String toolId) async {
     final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList(_keyRecentTools) ?? [];
+    final userKey = _getUserRecentToolsKey(prefs);
+    final list = prefs.getStringList(userKey) ?? [];
     list.remove(toolId);
     list.insert(0, toolId);
     if (list.length > 10) {
       list.removeRange(10, list.length);
     }
-    await prefs.setStringList(_keyRecentTools, list);
+    await prefs.setStringList(userKey, list);
+  }
+
+  static Future<void> clearRecentTools() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userKey = _getUserRecentToolsKey(prefs);
+    await prefs.remove(userKey);
+    await prefs.remove(_keyRecentTools);
   }
 }

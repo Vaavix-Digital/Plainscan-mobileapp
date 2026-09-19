@@ -7,6 +7,7 @@ import 'package:plainscan/features/home/widgets/dashboard_carousel_slider.dart';
 import 'package:plainscan/features/home/widgets/dashboard_header.dart';
 import 'package:plainscan/features/home/widgets/dashboard_quick_tools.dart';
 import 'package:plainscan/features/home/widgets/dashboard_recent_tools.dart';
+import 'package:plainscan/features/home/widgets/dashboard_referral_card.dart';
 import 'package:plainscan/features/home/widgets/dashboard_search_bar.dart';
 import 'package:plainscan/features/home/widgets/dashboard_update_banner.dart';
 
@@ -15,7 +16,7 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(DashboardController());
+    final controller = Get.put(DashboardController());
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -35,6 +36,8 @@ class DashboardPage extends StatelessWidget {
                     const SizedBox(height: 24),
                     buildDashboardCarouselSlider(),
                     buildAdBanner(),
+                    const SizedBox(height: 20),
+                    buildDashboardReferralCard(controller),
                     const SizedBox(height: 28),
                     buildDashboardQuickTools(),
                     const SizedBox(height: 28),

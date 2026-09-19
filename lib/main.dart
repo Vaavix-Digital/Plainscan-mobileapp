@@ -16,6 +16,7 @@ void main() async {
   }
   Get.put(ScanController(), permanent: true);
   Get.put(NotificationService(), permanent: true);
+  await StorageService.captureReferralFromUri();
   final savedLanguage = await StorageService.getLanguage();
   runApp(PlainScanApp(initialLocale: Locale(savedLanguage)));
 }

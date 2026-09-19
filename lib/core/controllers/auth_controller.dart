@@ -72,16 +72,13 @@ class AuthController extends GetxController {
         );
       }
 
+      final pendingCode = await StorageService.getPendingReferralCode();
       final result = await AuthService.googleLogin(
         token: idToken,
+        referralCode: pendingCode,
       );
 
       if (result.success) {
-        final pendingCode = await StorageService.getPendingReferralCode();
-        if (pendingCode != null && pendingCode.isNotEmpty) {
-          await ReferralService.applyReferralCode(pendingCode);
-          await StorageService.clearPendingReferralCode();
-        }
         Get.offAllNamed(AppRoutes.home);
         Get.rawSnackbar(
           messageText: const Row(

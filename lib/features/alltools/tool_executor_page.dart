@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
+import 'package:plainscan/features/files/pages/files_page.dart';
+import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ToolExecutorPage extends StatelessWidget {
   final ToolModel tool;
@@ -8174,12 +8178,45 @@ class ToolExecutorPage extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${controller.selectedFile!.fileType} • ${(controller.selectedFile!.sizeKb / 1024).toStringAsFixed(1)} MB',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.secondaryText,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      '${controller.selectedFile!.fileType} • ${(controller.selectedFile!.sizeKb / 1024).toStringAsFixed(1)} MB',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    if (controller.isPdfLocked) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock, size: 10, color: Color(0xFFEF4444)),
+                            SizedBox(width: 3),
+                            Text(
+                              'Locked PDF',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFEF4444),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -8705,17 +8742,41 @@ class ToolExecutorPage extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: controller.passwordController,
-              decoration: const InputDecoration(
+              obscureText: !controller.isLockPasswordVisible,
+              decoration: InputDecoration(
                 labelText: 'User Password',
-                border: OutlineInputBorder(),
+                hintText: 'Enter password to encrypt PDF',
+                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isLockPasswordVisible
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                  ),
+                  onPressed: controller.toggleLockPasswordVisibility,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller.ownerPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Owner/Admin Password',
-                border: OutlineInputBorder(),
+              obscureText: !controller.isOwnerPasswordVisible,
+              decoration: InputDecoration(
+                labelText: 'Owner/Admin Password (Optional)',
+                hintText: 'Enter admin permissions password',
+                prefixIcon: const Icon(Icons.admin_panel_settings_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isOwnerPasswordVisible
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                  ),
+                  onPressed: controller.toggleOwnerPasswordVisibility,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -8740,19 +8801,137 @@ class ToolExecutorPage extends StatelessWidget {
         break;
 
       case 'pdf-unlock':
+        final hasFile = controller.selectedFile != null;
+        final isLocked = controller.isPdfLocked;
+
         child = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isLocked
+                    ? const Color(0xFFEF4444).withValues(alpha: 0.08)
+                    : hasFile
+                        ? const Color(0xFF10B981).withValues(alpha: 0.08)
+                        : const Color(0xFF6366F1).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isLocked
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                      : hasFile
+                          ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                          : const Color(0xFF6366F1).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isLocked
+                        ? Icons.lock
+                        : hasFile
+                            ? Icons.check_circle_outline
+                            : Icons.lock_open_outlined,
+                    color: isLocked
+                        ? const Color(0xFFEF4444)
+                        : hasFile
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF6366F1),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isLocked
+                              ? 'Password-Protected PDF Recognized'
+                              : hasFile
+                                  ? 'PDF is Not Locked (No Password Required)'
+                                  : 'PDF Unlock & Decryption',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isLocked
+                                ? const Color(0xFFB91C1C)
+                                : hasFile
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFF4338CA),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isLocked
+                              ? 'This document is encrypted. Enter the correct password below to unlock and remove security restrictions.'
+                              : hasFile
+                                  ? 'This file is already unlocked and does not require password removal. You can open and edit it freely without unlocking.'
+                                  : 'Enter the password to remove security and encryption from your protected PDF.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isLocked
+                                ? const Color(0xFF7F1D1D)
+                                : hasFile
+                                    ? const Color(0xFF065F46)
+                                    : const Color(0xFF3730A3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isLocked && hasFile) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.amber.shade800),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Note: This document has no password protection. Unlocking is not needed.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
             const Text(
-              'Decrypt Password',
+              'Enter Document Password',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: controller.passwordController,
-              decoration: const InputDecoration(
+              obscureText: !controller.isUnlockPasswordVisible,
+              decoration: InputDecoration(
                 labelText: 'Password',
-                border: OutlineInputBorder(),
+                hintText: hasFile && !isLocked ? 'No password required for this file' : 'Enter password to unlock',
+                prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isUnlockPasswordVisible
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 20,
+                  ),
+                  onPressed: controller.toggleUnlockPasswordVisibility,
+                ),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -10224,6 +10403,8 @@ class ToolExecutorPage extends StatelessWidget {
   }
 
   Widget _buildErrorCard(ToolExecutorController controller) {
+    final isPasswordErr = controller.isPasswordError;
+
     return Card(
       color: Colors.red.shade50,
       elevation: 0,
@@ -10237,14 +10418,18 @@ class ToolExecutorPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.error_outline, color: Colors.red, size: 24),
-                SizedBox(width: 10),
+              children: [
+                Icon(
+                  isPasswordErr ? Icons.lock_outline : Icons.error_outline,
+                  color: Colors.red.shade700,
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
                 Text(
-                  'Execution Failed',
+                  isPasswordErr ? 'Invalid Password' : 'Execution Failed',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.red,
+                    color: Colors.red.shade900,
                     fontSize: 14,
                   ),
                 ),
@@ -10253,8 +10438,50 @@ class ToolExecutorPage extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               controller.errorMessage,
-              style: TextStyle(color: Colors.red.shade900, fontSize: 12),
+              style: TextStyle(color: Colors.red.shade900, fontSize: 13, height: 1.4),
             ),
+            if (isPasswordErr) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade100),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.red.shade400),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tip: Passwords are case-sensitive. Please ensure Caps Lock is off and re-enter.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: controller.clearError,
+                icon: const Icon(Icons.refresh, size: 16, color: Colors.red),
+                label: const Text(
+                  'Try Another Password',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.red.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -10421,64 +10648,92 @@ class ToolExecutorPage extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      try {
-                        final path = controller.convertedFile!.path;
-                        if (path == null) {
-                          throw Exception('File path is missing.');
-                        }
-                        final fileBytes = await File(path).readAsBytes();
-                        final savePath = await FilePicker.saveFile(
-                          dialogTitle: 'Save converted file...',
-                          fileName: controller.convertedFile!.name,
-                          bytes: fileBytes,
-                        );
-
-                        if (savePath != null) {
-                          Get.rawSnackbar(
-                            messageText: const Text(
-                              'File saved successfully!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                  child: controller.isFileDownloaded
+                      ? ElevatedButton.icon(
+                          onPressed: () {
+                            Get.to(() => PdfViewerPage(
+                              file: controller.convertedFile,
+                              filePath: controller.convertedFile?.path,
+                              fileName: controller.convertedFile?.name ?? controller.outputFileName,
+                              fileType: controller.convertedFile?.fileType ?? 'PDF',
+                            ));
+                          },
+                          style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        }
-                      } catch (e) {
-                        Get.rawSnackbar(
-                          messageText: Text(
-                            'Failed to save file: $e',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          icon: const Icon(Icons.visibility_outlined, size: 16),
+                          label: const Text(
+                            'View',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          backgroundColor: AppColors.coral,
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    icon: const Icon(Icons.download, size: 16),
-                    label: const Text(
-                      'Download',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final path = controller.convertedFile!.path;
+                              if (path == null) {
+                                throw Exception('File path is missing.');
+                              }
+                              final fileBytes = await File(path).readAsBytes();
+                              final savePath = await FilePicker.saveFile(
+                                dialogTitle: 'Save converted file...',
+                                fileName: controller.convertedFile!.name,
+                                bytes: fileBytes,
+                              );
+
+                              if (savePath != null) {
+                                controller.markFileDownloaded();
+                                Get.rawSnackbar(
+                                  messageText: const Text(
+                                    'File saved successfully!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  backgroundColor: AppColors.primary,
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              }
+                            } catch (e) {
+                              Get.rawSnackbar(
+                                messageText: Text(
+                                  'Failed to save file: $e',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                backgroundColor: AppColors.coral,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          icon: const Icon(Icons.download, size: 16),
+                          label: const Text(
+                            'Download',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -10501,6 +10756,39 @@ class ToolExecutorPage extends StatelessWidget {
                     icon: const Icon(Icons.edit_outlined, size: 16),
                     label: const Text(
                       'Rename',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final path = controller.convertedFile?.path;
+                      final name = controller.convertedFile?.name ?? controller.outputFileName;
+                      if (path != null && File(path).existsSync()) {
+                        Share.shareXFiles(
+                          [XFile(path)],
+                          text: 'Sharing $name via PlainScan',
+                        );
+                      } else {
+                        Share.share('PlainScan Document: $name');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    icon: const Icon(Icons.share_outlined, size: 16),
+                    label: const Text(
+                      'Share',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,

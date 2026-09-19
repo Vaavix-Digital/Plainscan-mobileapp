@@ -20,6 +20,7 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String language = '/language-setup';
   static const String auth = '/auth';
+  static const String login = '/login';
   static const String verify2Fa = '/verify-2fa';
   static const String verifyEmail = '/verify-email';
   static const String forgotPassword = '/forgot-password';
@@ -47,6 +48,10 @@ class AppRoutes {
     ),
     GetPage(
       name: auth,
+      page: () => const AuthScreen(),
+    ),
+    GetPage(
+      name: login,
       page: () => const AuthScreen(),
     ),
     GetPage(

@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainscan/core/constants/api_constants.dart';
+import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class AuthResult {
@@ -36,16 +38,25 @@ class AuthService {
     required String email,
     required String password,
     required String name,
+    String? referralCode,
+    http.Client? client,
   }) async {
     try {
-      final response = await _client.post(
+      final httpClient = client ?? _client;
+      final pendingReferral = referralCode ?? await StorageService.getPendingReferralCode();
+      final body = <String, dynamic>{
+        'name': name,
+        'email': email,
+        'password': password,
+      };
+      if (pendingReferral != null && pendingReferral.isNotEmpty) {
+        body['referral_code'] = pendingReferral;
+      }
+
+      final response = await httpClient.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.signUp}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -94,6 +105,7 @@ class AuthService {
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
         await StorageService.savePlan(plan.toString());
+        await _refreshRecentTools();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else {
@@ -154,6 +166,7 @@ class AuthService {
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
         await StorageService.savePlan(plan.toString());
+        await _refreshRecentTools();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else if (response.statusCode == 202) {
@@ -190,6 +203,7 @@ class AuthService {
 
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
+        await _refreshRecentTools();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
       } else {
@@ -201,31 +215,43 @@ class AuthService {
     }
   }
 
-  static Future<AuthResult> googleLogin({
-    required String token,
+  static Future<AuthResult> createSession({
+    required String sessionId,
+    String? referralCode,
     http.Client? client,
   }) async {
     try {
       final httpClient = client ?? _client;
+      final pendingReferral = referralCode ?? await StorageService.getPendingReferralCode();
+      final body = <String, dynamic>{
+        'session_id': sessionId,
+      };
+      if (pendingReferral != null && pendingReferral.isNotEmpty) {
+        body['referral_code'] = pendingReferral;
+      }
+
       final response = await httpClient.post(
-        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.googleLogin}'),
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authSession}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'token': token,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         final data = responseData['data'] is Map<String, dynamic>
             ? responseData['data'] as Map<String, dynamic>
-            : <String, dynamic>{};
-        final tokenVal = data['accessToken']?.toString() ?? '';
-        final refreshTokenVal = data['refreshToken']?.toString() ?? '';
+            : (responseData is Map<String, dynamic> ? responseData : <String, dynamic>{});
+        final tokenVal = data['accessToken']?.toString() ??
+            data['access_token']?.toString() ??
+            data['token']?.toString() ??
+            '';
+        final refreshTokenVal = data['refreshToken']?.toString() ??
+            data['refresh_token']?.toString() ??
+            '';
         final user = data['user'] is Map<String, dynamic>
             ? data['user'] as Map<String, dynamic>
             : <String, dynamic>{};
-        final userId = user['user_id']?.toString() ?? '';
+        final userId = user['user_id']?.toString() ?? user['id']?.toString() ?? '';
         final email = user['email']?.toString() ?? '';
         final name = user['name']?.toString() ?? 'User';
         final picture = user['picture']?.toString();
@@ -241,6 +267,97 @@ class AuthService {
           role: role,
         );
         await StorageService.savePlan(plan);
+        await _refreshRecentTools();
+
+        if (pendingReferral != null && pendingReferral.isNotEmpty) {
+          await StorageService.clearPendingReferralCode();
+        }
+
+        return AuthResult(
+          success: true,
+          token: tokenVal,
+          refreshToken: refreshTokenVal,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
+      } else {
+        final errorMsg = _parseError(response.body);
+        return AuthResult(success: false, errorMessage: errorMsg);
+      }
+    } catch (e) {
+      return AuthResult(success: false, errorMessage: 'Connection failed: ${e.toString()}');
+    }
+  }
+
+  static Future<AuthResult> googleLogin({
+    required String token,
+    String? referralCode,
+    http.Client? client,
+  }) async {
+    try {
+      final httpClient = client ?? _client;
+      final pendingReferral = referralCode ?? await StorageService.getPendingReferralCode();
+      final body = <String, dynamic>{
+        'token': token,
+        'session_id': token,
+      };
+      if (pendingReferral != null && pendingReferral.isNotEmpty) {
+        body['referral_code'] = pendingReferral;
+      }
+
+      // 1. Try /api/auth/session endpoint
+      http.Response response = await httpClient.post(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authSession}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        // Fallback to /api/auth/google endpoint
+        response = await httpClient.post(
+          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.googleLogin}'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        );
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+        final data = responseData['data'] is Map<String, dynamic>
+            ? responseData['data'] as Map<String, dynamic>
+            : (responseData is Map<String, dynamic> ? responseData : <String, dynamic>{});
+        final tokenVal = data['accessToken']?.toString() ??
+            data['access_token']?.toString() ??
+            data['token']?.toString() ??
+            '';
+        final refreshTokenVal = data['refreshToken']?.toString() ??
+            data['refresh_token']?.toString() ??
+            '';
+        final user = data['user'] is Map<String, dynamic>
+            ? data['user'] as Map<String, dynamic>
+            : <String, dynamic>{};
+        final userId = user['user_id']?.toString() ?? user['id']?.toString() ?? '';
+        final email = user['email']?.toString() ?? '';
+        final name = user['name']?.toString() ?? 'User';
+        final picture = user['picture']?.toString();
+        final role = user['role']?.toString() ?? 'user';
+        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
+
+        await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
+        await StorageService.saveUser(
+          email: email,
+          name: name,
+          userId: userId,
+          picture: picture,
+          role: role,
+        );
+        await StorageService.savePlan(plan);
+        await _refreshRecentTools();
+
+        if (pendingReferral != null && pendingReferral.isNotEmpty) {
+          await StorageService.clearPendingReferralCode();
+        }
 
         return AuthResult(
           success: true,
@@ -332,6 +449,15 @@ class AuthService {
       );
     } catch (_) {}
     await StorageService.logout();
+    await _refreshRecentTools();
+  }
+
+  static Future<void> _refreshRecentTools() async {
+    try {
+      if (Get.isRegistered<AllToolsController>()) {
+        await Get.find<AllToolsController>().loadRecentTools();
+      }
+    } catch (_) {}
   }
 
   static Future<AuthResult> forgotPassword({

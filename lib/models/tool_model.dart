@@ -801,6 +801,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: '.pdf / .docx',
     outputFormat: '.docx',
+    isFree: false,
     description: 'Reformat and enhance resumes for maximum ATS compatibility.',
   ),
   ToolModel(
@@ -812,6 +813,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: '.pdf / .docx (resume)',
     outputFormat: '.docx',
+    isFree: false,
     description: 'Generate customized cover letters tailored directly to specific job descriptions.',
   ),
   ToolModel(
@@ -850,6 +852,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: 'Text & Subject',
     outputFormat: '.txt',
+    isFree: false,
     description: 'Generate tailored professional, casual, or friendly emails with AI.',
   ),
   ToolModel(
@@ -863,6 +866,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / .docx / text',
     outputFormat: '.docx',
     isTextAllowed: true,
+    isFree: false,
     description: 'Proofread and refine grammar, tone, clarity, and phrasing in your writing.',
   ),
   ToolModel(
@@ -875,6 +879,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: 'Source text',
     outputFormat: '.txt',
+    isFree: false,
     description: 'Format accurate citations in APA, MLA, Chicago, or Harvard styles.',
   ),
   ToolModel(
@@ -888,6 +893,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.json',
     isTextAllowed: true,
+    isFree: false,
     description: 'Generate study flashcard Q&A decks from uploaded documents or text.',
   ),
   ToolModel(
@@ -901,6 +907,7 @@ const List<ToolModel> allPlainscanTools = [
     inputFormat: '.pdf / text',
     outputFormat: '.json',
     isTextAllowed: true,
+    isFree: false,
     description: 'Generate multiple-choice or short-answer quiz questions by difficulty level.',
   ),
   ToolModel(
@@ -913,6 +920,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: '.pdf',
     outputFormat: '.txt',
+    isFree: false,
     description: 'Ask questions, query facts, and chat interactively with your PDF documents.',
   ),
   ToolModel(
@@ -925,6 +933,7 @@ const List<ToolModel> allPlainscanTools = [
     category: 'AI Tools',
     inputFormat: '.pdf / .docx',
     outputFormat: '.json',
+    isFree: false,
     description: 'Analyze resumes for ATS parsing compliance and match against job descriptions.',
   ),
 

@@ -35,11 +35,20 @@ void main() {
       'pdf-compare',
       'bank-statement-to-excel',
       'receipt-to-excel',
+      'ai-resume-formatter',
+      'ai-cover-letter',
+      'ai-email-writer',
+      'ai-proofread',
+      'ai-citation',
+      'ai-flashcards',
+      'ai-quiz',
+      'chat-with-pdf',
+      'ats-scanner',
     ];
 
-    test('exactly 23 specified tools are marked as Pro (isFree == false)', () {
+    test('all AI tools and specified tools are marked as Pro (isFree == false)', () {
       final proToolsInList = allPlainscanTools.where((t) => (t.isFree ?? true) == false).toList();
-      expect(proToolsInList.length, 23);
+      expect(proToolsInList.length, expectedProToolIds.length);
 
       for (final id in expectedProToolIds) {
         final tool = allPlainscanTools.firstWhere(

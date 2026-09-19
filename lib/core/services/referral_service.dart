@@ -8,39 +8,64 @@ import 'package:plainscan/core/services/storage_service.dart';
 
 class ReferralInfo {
   final String referralCode;
+  final String inviteLink;
   final String shareLink;
+  final int referralCount;
   final int totalReferred;
   final int creditsEarned;
+  final String message;
 
   ReferralInfo({
     required this.referralCode,
+    required this.inviteLink,
     required this.shareLink,
+    required this.referralCount,
     required this.totalReferred,
     required this.creditsEarned,
+    required this.message,
   });
 
   factory ReferralInfo.fromJson(Map<String, dynamic> json) {
-    final code = json['referral_code']?.toString() ?? 'PLAIN2026';
+    final code = json['referral_code']?.toString() ?? 'XYZ987';
+    final link = json['invite_link']?.toString() ??
+        json['share_link']?.toString() ??
+        'https://plainscan.com/login?ref=$code';
+    final count = (json['referral_count'] as num?)?.toInt() ??
+        (json['total_referred'] as num?)?.toInt() ??
+        0;
+    final credits = (json['credits_earned'] as num?)?.toInt() ?? (count * 50);
+    final msg = json['message']?.toString() ??
+        'Share this link! If a friend signs up, you get 1 month of Pro automatically.';
+
     return ReferralInfo(
       referralCode: code,
-      shareLink: json['share_link']?.toString() ?? 'https://plainscan.com/invite/$code',
-      totalReferred: (json['total_referred'] as num?)?.toInt() ?? 5,
-      creditsEarned: (json['credits_earned'] as num?)?.toInt() ?? 250,
+      inviteLink: link,
+      shareLink: link,
+      referralCount: count,
+      totalReferred: count,
+      creditsEarned: credits,
+      message: msg,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'referral_code': referralCode,
+    'invite_link': inviteLink,
     'share_link': shareLink,
+    'referral_count': referralCount,
     'total_referred': totalReferred,
     'credits_earned': creditsEarned,
+    'message': message,
   };
 
   static ReferralInfo get mockDefault => ReferralInfo(
-    referralCode: 'PLAIN2026',
-    shareLink: 'https://plainscan.com/invite/PLAIN2026',
-    totalReferred: 5,
+    referralCode: 'XYZ987',
+    inviteLink: 'https://plainscan.com/login?ref=XYZ987',
+    shareLink: 'https://plainscan.com/login?ref=XYZ987',
+    referralCount: 0,
+    totalReferred: 0,
     creditsEarned: 250,
+    message: 'Share this link! If a friend signs up, you get 1 month of Pro automatically.',
   );
 }
 
@@ -78,14 +103,16 @@ class ReferralApplyResult {
 class ReferralService {
   static final http.Client _client = http.Client();
 
-  /// Fetches the user's referral code and stats from GET /referral/my-code
+  /// Fetches the user's referral code and invite link from GET /api/auth/me/referral
   /// Seamlessly falls back to mock payload if backend endpoint is still being structured.
-  static Future<ReferralInfo> getMyReferralCode() async {
+  static Future<ReferralInfo> getMyReferralCode({http.Client? client}) async {
+    final httpClient = client ?? _client;
     try {
       final token = await StorageService.getToken();
       if (token != null && token.isNotEmpty) {
-        final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.myReferralCode}');
-        final response = await _client.get(
+        // 1. Primary endpoint: GET /api/auth/me/referral
+        Uri uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.meReferral}');
+        http.Response response = await httpClient.get(
           uri,
           headers: {
             'Content-Type': 'application/json',
@@ -93,37 +120,62 @@ class ReferralService {
           },
         );
 
+        if (response.statusCode == 404 || response.statusCode == 405) {
+          // Fallback endpoint: GET /api/referral/my-code
+          uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.myReferralCode}');
+          response = await httpClient.get(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          );
+        }
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           if (data is Map<String, dynamic>) {
             final info = ReferralInfo.fromJson(data);
             await StorageService.saveReferralData(
               code: info.referralCode,
-              totalReferred: info.totalReferred,
+              totalReferred: info.referralCount,
               creditsEarned: info.creditsEarned,
             );
+            await StorageService.saveInviteLink(info.inviteLink);
+            await StorageService.saveReferralMessage(info.message);
             return info;
           }
         }
       }
     } catch (e) {
-      debugPrint('Referral my-code API notice: $e');
+      debugPrint('Referral me/referral API notice: $e');
     }
 
     // Local / Mock fallback as documented
     final localCode = await StorageService.getMyReferralCode();
     final localCount = await StorageService.getReferralsCount();
     final localCredits = await StorageService.getCreditsEarned();
+    final localLink = await StorageService.getInviteLink();
+    final localMsg = await StorageService.getReferralMessage();
 
-    final code = localCode.isNotEmpty ? localCode : 'PLAIN2026';
-    final count = localCount > 0 ? localCount : 5;
+    final code = localCode.isNotEmpty ? localCode : 'XYZ987';
+    final count = localCount >= 0 ? localCount : 0;
     final credits = localCredits > 0 ? localCredits : 250;
+    final link = (localLink != null && localLink.isNotEmpty)
+        ? localLink
+        : 'https://plainscan.com/login?ref=$code';
+    final msg = (localMsg != null && localMsg.isNotEmpty)
+        ? localMsg
+        : 'Share this link! If a friend signs up, you get 1 month of Pro automatically.';
 
     return ReferralInfo(
       referralCode: code,
-      shareLink: 'https://plainscan.com/invite/$code',
+      inviteLink: link,
+      shareLink: link,
+      referralCount: count,
       totalReferred: count,
       creditsEarned: credits,
+      message: msg,
     );
   }
 

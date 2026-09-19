@@ -8,6 +8,8 @@ class ApiConstants {
   static const String login = '/auth/login';
   static const String verify2Fa = '/auth/verify-2fa';
   static const String googleLogin = '/auth/google';
+  static const String authSession = '/auth/session';
+  static const String meReferral = '/auth/me/referral';
   static const String refreshToken = '/auth/refresh-token';
   static const String profile = '/auth/me';
   static const String preferences = '/auth/me/preferences';

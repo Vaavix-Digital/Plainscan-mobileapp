@@ -5,14 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
+import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
     Get.reset();
+    Get.testMode = true;
+    SharedPreferences.setMockInitialValues({});
     Get.put(ScanController());
   });
 
@@ -897,6 +899,142 @@ void main() {
 
       Get.delete<ToolExecutorController>();
     });
+
+    test('28. PDF Unlock locked PDF recognition, options & password toggles', () async {
+      final tool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-unlock');
+      final controller = Get.put(ToolExecutorController(tool: tool));
+
+      expect(controller.getExpectedExtension(), 'pdf');
+
+      // Test lock detection on locked file
+      final lockedFile = FileModel(
+        id: 'locked-1',
+        name: 'Financial_Report_Locked.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 512,
+        fileType: 'PDF',
+      );
+
+      controller.selectSingleFileFromScans(lockedFile);
+      await controller.checkPdfLockStatus();
+      expect(controller.isPdfLocked, isTrue);
+
+      // Test password controller & toggles
+      controller.passwordController.text = 'SecretPass123';
+      expect(controller.getOptionsJson(), {'password': 'SecretPass123'});
+
+      expect(controller.isUnlockPasswordVisible, isFalse);
+      controller.toggleUnlockPasswordVisibility();
+      expect(controller.isUnlockPasswordVisible, isTrue);
+
+      // Test regular unlocked file
+      final regularFile = FileModel(
+        id: 'reg-1',
+        name: 'Public_Document.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 256,
+        fileType: 'PDF',
+      );
+
+      controller.selectSingleFileFromScans(regularFile);
+      await controller.checkPdfLockStatus();
+      expect(controller.isPdfLocked, isFalse);
+
+      controller.clearSingleSelectedFile();
+      expect(controller.isPdfLocked, isFalse);
+      expect(controller.selectedFile, isNull);
+
+      Get.delete<ToolExecutorController>();
+    });
+
+    test('29. PDF Unlock invalid password and technical error translation to user-friendly messages', () {
+      final tool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-unlock');
+      final controller = Get.put(ToolExecutorController(tool: tool));
+
+      // Test technical backend errors & job failure
+      final genericJobError = Exception('Plainscan API job failed during processing.');
+      final formattedJobError = controller.formatUserFriendlyError(genericJobError);
+      expect(formattedJobError, contains('Invalid password'));
+      expect(formattedJobError, contains('Please check the password and try again'));
+
+      final technicalQpdfError = Exception('qpdf: invalid password');
+      final formattedQpdf = controller.formatUserFriendlyError(technicalQpdfError);
+      expect(formattedQpdf, contains('Invalid password'));
+      expect(formattedQpdf, contains('Please check the password and try again'));
+
+      final pypdfError = Exception('pypdf.errors.PdfReadError: File has not been decrypted');
+      final formattedPypdf = controller.formatUserFriendlyError(pypdfError);
+      expect(formattedPypdf, contains('Invalid password'));
+
+      final badPasswordError = Exception('Bad user password provided');
+      final formattedBadPass = controller.formatUserFriendlyError(badPasswordError);
+      expect(formattedBadPass, contains('Invalid password'));
+
+      final missingPassError = Exception('Please enter the password to decrypt and unlock this PDF document.');
+      final formattedMissing = controller.formatUserFriendlyError(missingPassError);
+      expect(formattedMissing, contains('Please enter the password'));
+
+      final notEncryptedError = Exception('This PDF is not password protected');
+      final formattedNotEnc = controller.formatUserFriendlyError(notEncryptedError);
+      expect(formattedNotEnc, contains('not password-protected'));
+
+      // Test isPasswordError property
+      controller.errorMessage = formattedJobError;
+      controller.currentStep = 'error';
+      expect(controller.isPasswordError, isTrue);
+
+      // Test clearError
+      controller.clearError();
+      expect(controller.errorMessage, isEmpty);
+      expect(controller.currentStep, 'idle');
+
+      Get.delete<ToolExecutorController>();
+    });
+
+    test('30. PDF Unlock notifies user when uploaded file is already unlocked without protection', () async {
+      final tool = allPlainscanTools.firstWhere((t) => t.slug == 'pdf-unlock');
+      final controller = Get.put(ToolExecutorController(tool: tool));
+      controller.tokenController.text = 'test_auth_token';
+
+      final unencryptedFile = FileModel(
+        id: 'unlocked-doc-1',
+        name: 'Public_Statement.pdf',
+        createdDate: DateTime.now(),
+        sizeKb: 128,
+        fileType: 'PDF',
+      );
+
+      controller.selectSingleFileFromScans(unencryptedFile);
+      await controller.checkPdfLockStatus(notifyUser: true);
+
+      expect(controller.isPdfLocked, isFalse);
+      expect(controller.selectedFile, isNotNull);
+
+      // Verify execution notifies that document is already unlocked
+      await controller.executeJobFlow();
+      expect(controller.currentStep, 'error');
+      expect(
+        controller.errorMessage.toLowerCase().contains('not password-protected') ||
+            controller.errorMessage.toLowerCase().contains('already unlocked'),
+        isTrue,
+      );
+
+      Get.delete<ToolExecutorController>();
+    });
+
+    test('31. All AI tools are configured as PRO tools (isFree: false)', () {
+      final aiTools = allPlainscanTools.where((t) => t.categoryId == 'ai' || t.category == 'AI Tools').toList();
+      expect(aiTools.isNotEmpty, isTrue);
+
+      for (final tool in aiTools) {
+        expect(
+          tool.isFree,
+          isFalse,
+          reason: 'AI tool "${tool.name}" (slug: ${tool.slug}) must be marked as Pro with isFree: false',
+        );
+      }
+    });
   });
 }
+
 

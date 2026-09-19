@@ -123,6 +123,11 @@ class AllToolsController extends GetxController {
     await loadRecentTools();
   }
 
+  Future<void> clearRecentTools() async {
+    await StorageService.clearRecentTools();
+    await loadRecentTools();
+  }
+
   void updateSearch(String value) {
     searchText.value = value;
   }

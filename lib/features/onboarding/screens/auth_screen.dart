@@ -34,6 +34,32 @@ class _AuthScreenState extends State<AuthScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
+    _captureReferralCodeFromUrlOrStorage();
+  }
+
+  void _captureReferralCodeFromUrlOrStorage() async {
+    String? code = Get.parameters['ref'] ??
+        Get.parameters['referral'] ??
+        Get.parameters['referral_code'] ??
+        Get.parameters['code'];
+
+    if (code == null || code.trim().isEmpty) {
+      code = await StorageService.captureReferralFromUri();
+    }
+    if (code == null || code.trim().isEmpty) {
+      code = await StorageService.getPendingReferralCode();
+    }
+
+    if (code != null && code.trim().isNotEmpty) {
+      final cleanCode = code.trim().toUpperCase();
+      await StorageService.setPendingReferralCode(cleanCode);
+      if (mounted) {
+        setState(() {
+          _referralController.text = cleanCode;
+          _tabController.index = 1; // Focus Sign Up tab
+        });
+      }
+    }
   }
 
   void _handleTabSelection() {
@@ -41,7 +67,6 @@ class _AuthScreenState extends State<AuthScreen>
       _nameController.clear();
       _emailController.clear();
       _passwordController.clear();
-      _referralController.clear();
       _formKey.currentState?.reset();
     }
   }
@@ -67,14 +92,19 @@ class _AuthScreenState extends State<AuthScreen>
     final password = _passwordController.text;
     final name = _nameController.text.trim();
     final isSignUp = _tabController.index == 1;
+    final refCode = _referralController.text.trim();
 
     AuthResult result;
 
     if (isSignUp) {
+      if (refCode.isNotEmpty) {
+        await StorageService.setPendingReferralCode(refCode);
+      }
       result = await AuthService.signUp(
         email: email,
         password: password,
         name: name,
+        referralCode: refCode.isNotEmpty ? refCode : null,
       );
     } else {
       result = await AuthService.login(email: email, password: password);
