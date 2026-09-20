@@ -269,55 +269,6 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 28),
 
               // ─────────────────────────────
-              // Progress
-              // ─────────────────────────────
-
-              Text(
-                'My Progress'.tr,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Scans'.tr,
-                      '12',
-                      Icons.document_scanner,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _buildStatCard(
-                      'OCR Usage'.tr,
-                      '4/10',
-                      Icons.text_fields,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: _buildStatCard(
-                      'Shared'.tr,
-                      '8',
-                      Icons.share,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 28),
-
-              // ─────────────────────────────
               // Settings
               // ─────────────────────────────
 
@@ -500,56 +451,6 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 20,
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: AppColors.text,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.secondaryText,
-            ),
-          ),
-        ],
       ),
     );
   }
