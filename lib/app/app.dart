@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/app/theme.dart';
 import 'package:plainscan/core/localization/app_translations.dart';
+import 'package:upgrader/upgrader.dart';
+
 class PlainScanApp extends StatelessWidget {
   final Locale? initialLocale;
+
   const PlainScanApp({super.key, this.initialLocale});
 
   @override
@@ -18,7 +22,20 @@ class PlainScanApp extends StatelessWidget {
       locale: initialLocale ?? const Locale('en'),
       fallbackLocale: const Locale('en'),
       debugShowCheckedModeBanner: false,
+
+      builder: (context, child) {
+        return UpgradeAlert(
+          upgrader: Upgrader(
+            debugDisplayAlways: false,
+            debugLogging: false,
+            durationUntilAlertAgain: const Duration(days: 1),
+          ),
+          dialogStyle: UpgradeDialogStyle.material,
+          showIgnore: false,
+          showLater: true,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
-
