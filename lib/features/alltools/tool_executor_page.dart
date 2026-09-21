@@ -5,15 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
-import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
-import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
 import 'package:share_plus/share_plus.dart';
 
-class ToolExecutorPage extends StatelessWidget {
+class ToolExecutorPage extends StatefulWidget {
   final ToolModel tool;
   final List<FileModel>? initialFiles;
   final bool autoExecute;
@@ -26,15 +24,34 @@ class ToolExecutorPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  State<ToolExecutorPage> createState() => _ToolExecutorPageState();
+}
+
+class _ToolExecutorPageState extends State<ToolExecutorPage> {
+  @override
+  void initState() {
+    super.initState();
     if (Get.isRegistered<ToolExecutorController>()) {
       Get.delete<ToolExecutorController>();
     }
     Get.put(ToolExecutorController(
-      tool: tool,
-      initialFiles: initialFiles,
-      autoExecute: autoExecute,
+      tool: widget.tool,
+      initialFiles: widget.initialFiles,
+      autoExecute: widget.autoExecute,
     ));
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<ToolExecutorController>()) {
+      Get.delete<ToolExecutorController>();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tool = widget.tool;
 
     return GetBuilder<ToolExecutorController>(
       builder: (controller) {
@@ -155,11 +172,23 @@ class ToolExecutorPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // File / Input Selection
-                        _buildInputSelectionCard(context, controller, isMulti),
+                        AbsorbPointer(
+                          absorbing: controller.isRunning,
+                          child: Opacity(
+                            opacity: controller.isRunning ? 0.65 : 1.0,
+                            child: _buildInputSelectionCard(context, controller, isMulti),
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         
                         // Dynamic Options Card
-                        _buildOptionsCard(controller, slug),
+                        AbsorbPointer(
+                          absorbing: controller.isRunning,
+                          child: Opacity(
+                            opacity: controller.isRunning ? 0.65 : 1.0,
+                            child: _buildOptionsCard(controller, slug),
+                          ),
+                        ),
                         const SizedBox(height: 24),
 
                         // Execute Button / Running state
@@ -167,8 +196,17 @@ class ToolExecutorPage extends StatelessWidget {
                           _buildProgressCard(controller),
                         ] else ...[
                           if (controller.currentStep == 'success') ...[
-                            _buildSuccessCard(controller),
-                            const SizedBox(height: 16),
+                            if (controller.extractedMetadataMap != null &&
+                                (slug == 'read-metadata' ||
+                                    (slug == 'metadata-editor' &&
+                                        (controller.metadataAction == 'view' ||
+                                            controller.metadataAction == 'read')))) ...[
+                              _buildMetadataResultCard(context, controller),
+                              const SizedBox(height: 16),
+                            ] else ...[
+                              _buildSuccessCard(controller),
+                              const SizedBox(height: 16),
+                            ],
                           ] else if (controller.currentStep == 'error') ...[
                             _buildErrorCard(controller),
                             const SizedBox(height: 16),
@@ -7113,12 +7151,20 @@ class ToolExecutorPage extends StatelessWidget {
             'Base64 String',
             controller.imageBase64String,
           ),
+          onShare: () => controller.shareBase64Snippet(
+            'Base64 String',
+            controller.imageBase64String,
+          ),
         ),
         const SizedBox(height: 16),
         _Base64SnippetCardWidget(
           title: 'HTML Usage',
           content: controller.getHtmlUsageSnippet(),
           onCopy: () => controller.copyBase64Snippet(
+            'HTML Usage',
+            controller.getHtmlUsageSnippet(),
+          ),
+          onShare: () => controller.shareBase64Snippet(
             'HTML Usage',
             controller.getHtmlUsageSnippet(),
           ),
@@ -7131,12 +7177,20 @@ class ToolExecutorPage extends StatelessWidget {
             'CSS Usage',
             controller.getCssUsageSnippet(),
           ),
+          onShare: () => controller.shareBase64Snippet(
+            'CSS Usage',
+            controller.getCssUsageSnippet(),
+          ),
         ),
         const SizedBox(height: 16),
         _Base64SnippetCardWidget(
           title: 'Markdown Usage',
           content: controller.getMarkdownUsageSnippet(),
           onCopy: () => controller.copyBase64Snippet(
+            'Markdown Usage',
+            controller.getMarkdownUsageSnippet(),
+          ),
+          onShare: () => controller.shareBase64Snippet(
             'Markdown Usage',
             controller.getMarkdownUsageSnippet(),
           ),
@@ -7149,26 +7203,85 @@ class ToolExecutorPage extends StatelessWidget {
             'JSON Usage',
             controller.getJsonUsageSnippet(),
           ),
+          onShare: () => controller.shareBase64Snippet(
+            'JSON Usage',
+            controller.getJsonUsageSnippet(),
+          ),
         ),
         const SizedBox(height: 20),
-        OutlinedButton(
-          onPressed: () => controller.resetImageToBase64(),
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton(
+              onPressed: () => controller.resetImageToBase64(),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Process another item',
+                style: TextStyle(
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
-          ),
-          child: const Text(
-            'Process another item',
-            style: TextStyle(
-              color: Color(0xFF334155),
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => controller.downloadBase64Txt(),
+                  icon: const Icon(Icons.download_outlined, size: 16, color: Color(0xFF334155)),
+                  label: const Text(
+                    'Download TXT',
+                    style: TextStyle(
+                      color: Color(0xFF334155),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () => controller.shareBase64Snippet('Base64 String', controller.imageBase64String),
+                  icon: const Icon(Icons.share, size: 16, color: Colors.white),
+                  label: const Text(
+                    'Share Base64',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -8986,7 +9099,11 @@ class ToolExecutorPage extends StatelessWidget {
             const SizedBox(height: 8),
             TextField(
               controller: controller.signatureTextController,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
+              enabled: !controller.isRunning,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'John Doe — Signed via Plainscan',
+              ),
             ),
           ],
         );
@@ -10341,13 +10458,41 @@ class ToolExecutorPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Executing Job Flow',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: AppColors.text,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Executing Job Flow',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.text,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock_outline, size: 12, color: Colors.amber.shade900),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Options locked during processing',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             if (controller.jobId.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -10392,6 +10537,228 @@ class ToolExecutorPage extends StatelessWidget {
                 fontSize: 12,
                 color: AppColors.secondaryText,
                 fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetadataResultCard(BuildContext context, ToolExecutorController controller) {
+    final metaMap = controller.extractedMetadataMap ?? {};
+    final metaDict = (metaMap['metadata'] as Map<String, dynamic>?) ?? {};
+    final isPdf = metaMap['format'] == 'PDF Document';
+
+    Widget buildMetaRow(String label, dynamic value, {IconData? icon}) {
+      if (value == null || value.toString().trim().isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 15, color: const Color(0xFF64748B)),
+              const SizedBox(width: 8),
+            ],
+            SizedBox(
+              width: 110,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Color(0xFF475569),
+                ),
+              ),
+            ),
+            Expanded(
+              child: SelectableText(
+                value.toString(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Document Metadata Extracted',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${metaMap['file_name'] ?? 'Document'} • ${metaMap['format'] ?? 'PDF'}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF0284C7)),
+                  tooltip: 'Copy JSON Metadata',
+                  onPressed: controller.copyMetadataJson,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Size: ${metaMap['file_size_kb'] ?? 0} KB',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                  ),
+                ),
+                if (isPdf && metaMap['pdf_version'] != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Text(
+                      '${metaMap['pdf_version']}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                    ),
+                  ),
+                if (isPdf && metaMap['page_count'] != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Text(
+                      'Pages: ${metaMap['page_count']}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E40AF)),
+                    ),
+                  ),
+                if (isPdf && metaMap['is_encrypted'] == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: const Text(
+                      'Encrypted / Protected',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF991B1B)),
+                    ),
+                  ),
+              ],
+            ),
+            const Divider(height: 24, color: Color(0xFFE2E8F0)),
+            const Text(
+              'Document Attributes',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 8),
+            buildMetaRow('Title', metaDict['Title'], icon: Icons.title),
+            buildMetaRow('Author', metaDict['Author'], icon: Icons.person_outline),
+            buildMetaRow('Subject', metaDict['Subject'], icon: Icons.subject),
+            buildMetaRow('Keywords', metaDict['Keywords'], icon: Icons.tag),
+            buildMetaRow('Creator Tool', metaDict['Creator'], icon: Icons.precision_manufacturing_outlined),
+            buildMetaRow('PDF Producer', metaDict['Producer'], icon: Icons.settings_suggest_outlined),
+            buildMetaRow('Creation Date', metaDict['CreationDate'], icon: Icons.calendar_today_outlined),
+            buildMetaRow('Modified Date', metaDict['ModDate'], icon: Icons.edit_calendar_outlined),
+            if (!isPdf) ...[
+              buildMetaRow('Color Space', metaDict['ColorSpace'], icon: Icons.palette_outlined),
+              buildMetaRow('X Resolution', metaDict['XResolution'], icon: Icons.aspect_ratio),
+              buildMetaRow('Y Resolution', metaDict['YResolution'], icon: Icons.aspect_ratio),
+              buildMetaRow('Exif Version', metaDict['ExifVersion'], icon: Icons.camera_alt_outlined),
+              buildMetaRow('Software', metaDict['Software'], icon: Icons.computer_outlined),
+            ],
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'JSON Payload',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                      ),
+                      InkWell(
+                        onTap: controller.copyMetadataJson,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Text(
+                            'Copy JSON',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    controller.generatedMetadataJson,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11.5,
+                      color: Color(0xFF334155),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -11014,11 +11381,13 @@ class _Base64SnippetCardWidget extends StatefulWidget {
   final String title;
   final String content;
   final VoidCallback onCopy;
+  final VoidCallback? onShare;
 
   const _Base64SnippetCardWidget({
     required this.title,
     required this.content,
     required this.onCopy,
+    this.onShare,
   });
 
   @override
@@ -11027,6 +11396,7 @@ class _Base64SnippetCardWidget extends StatefulWidget {
 
 class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
   late final ScrollController _scrollController;
+  bool _copied = false;
 
   @override
   void initState() {
@@ -11038,6 +11408,23 @@ class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleCopy() {
+    widget.onCopy();
+    if (mounted) {
+      setState(() => _copied = true);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _copied = false);
+      });
+    }
+  }
+
+  String get _displayContent {
+    if (widget.content.length > 800) {
+      return '${widget.content.substring(0, 800)}...\n\n[+${widget.content.length - 800} more characters — tap Copy or Share for complete data]';
+    }
+    return widget.content;
   }
 
   @override
@@ -11071,31 +11458,69 @@ class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
                   color: Color(0xFF0F172A),
                 ),
               ),
-              InkWell(
-                onTap: widget.onCopy,
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        Icons.content_copy_outlined,
-                        size: 14,
-                        color: Color(0xFF64748B),
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Copy',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF64748B),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onShare != null) ...[
+                    InkWell(
+                      onTap: widget.onShare,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.share_outlined,
+                              size: 14,
+                              color: Color(0xFF64748B),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Share',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  InkWell(
+                    onTap: _handleCopy,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _copied ? const Color(0xFFECFDF5) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _copied ? Icons.check_circle : Icons.content_copy_outlined,
+                            size: 14,
+                            color: _copied ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _copied ? 'Copied!' : 'Copy',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _copied ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -11114,8 +11539,8 @@ class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
               thumbVisibility: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                child: SelectableText(
-                  widget.content,
+                child: Text(
+                  _displayContent,
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12.5,

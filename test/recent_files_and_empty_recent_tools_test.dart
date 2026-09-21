@@ -7,8 +7,6 @@ import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/features/home/widgets/dashboard_recent_tools.dart';
-import 'package:plainscan/models/file_model.dart';
-import 'package:plainscan/models/tool_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

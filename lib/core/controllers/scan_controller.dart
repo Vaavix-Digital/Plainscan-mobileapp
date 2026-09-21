@@ -200,7 +200,7 @@ class ScanController extends GetxController {
         () => ToolExecutorPage(
           tool: jpgToPdfTool,
           initialFiles: files,
-          autoExecute: true,
+          autoExecute: false,
         ),
       );
     } catch (e) {

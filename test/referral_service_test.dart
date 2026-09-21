@@ -7,7 +7,6 @@ import 'package:plainscan/core/controllers/dashboard_controller.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/auth_service.dart';
-import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/features/home/widgets/dashboard_referral_card.dart';
 import 'package:plainscan/features/profile/pages/referral_share_screen.dart';

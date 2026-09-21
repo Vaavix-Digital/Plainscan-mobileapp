@@ -29,7 +29,7 @@ class PdfViewerPage extends StatefulWidget {
 class _PdfViewerPageState extends State<PdfViewerPage> {
   String? _textContent;
   bool _isLoading = true;
-  int _currentPage = 1;
+  final int _currentPage = 1;
   int _totalPages = 1;
   final TransformationController _transformationController = TransformationController();
 

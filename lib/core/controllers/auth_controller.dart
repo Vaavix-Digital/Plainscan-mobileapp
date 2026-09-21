@@ -5,7 +5,6 @@ import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/auth_service.dart';
-import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 

@@ -162,11 +162,11 @@ void main() {
 
       final wordCounter = allPlainscanTools.firstWhere((t) => t.slug == 'word-counter');
       expect(wordCounter.name, 'Word Counter');
-      expect(wordCounter.outputFormat, '.json');
+      expect(wordCounter.outputFormat, '.txt');
 
       final charCounter = allPlainscanTools.firstWhere((t) => t.slug == 'character-counter');
       expect(charCounter.name, 'Character Counter');
-      expect(charCounter.outputFormat, '.json');
+      expect(charCounter.outputFormat, '.txt');
 
       final imgToBase64 = allPlainscanTools.firstWhere((t) => t.slug == 'image-to-base64');
       expect(imgToBase64.name, 'Image to Base64');
@@ -771,7 +771,7 @@ void main() {
       final wordController = Get.put(ToolExecutorController(tool: wordTool));
 
       expect(wordController.isNoUploadTool(), isTrue);
-      expect(wordController.getExpectedExtension(), 'json');
+      expect(wordController.getExpectedExtension(), 'txt');
 
       // Test statistics calculation matching reference screenshot
       const sampleText =
@@ -801,7 +801,7 @@ void main() {
       final charController = Get.put(ToolExecutorController(tool: charTool));
 
       expect(charController.isNoUploadTool(), isTrue);
-      expect(charController.getExpectedExtension(), 'json');
+      expect(charController.getExpectedExtension(), 'txt');
 
       charController.counterTextController.text = 'Hello World';
       expect(charController.getOptionsJson(), {

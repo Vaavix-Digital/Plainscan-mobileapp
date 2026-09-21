@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
@@ -24,16 +23,21 @@ class PlainScanApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       builder: (context, child) {
-        return UpgradeAlert(
-          upgrader: Upgrader(
-            debugDisplayAlways: false,
-            debugLogging: false,
-            durationUntilAlertAgain: const Duration(days: 1),
-          ),
-          dialogStyle: UpgradeDialogStyle.material,
-          showIgnore: false,
-          showLater: true,
-          child: child ?? const SizedBox.shrink(),
+        return Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            UpgradeAlert(
+              upgrader: Upgrader(
+                debugDisplayAlways: false,
+                debugLogging: false,
+                durationUntilAlertAgain: const Duration(days: 1),
+              ),
+              dialogStyle: UpgradeDialogStyle.material,
+              showIgnore: false,
+              showLater: true,
+              showReleaseNotes: false,
+            ),
+          ],
         );
       },
     );

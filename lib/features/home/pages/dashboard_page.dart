@@ -15,7 +15,7 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(DashboardController());
+    Get.put(DashboardController());
 
     return Scaffold(
       backgroundColor: AppColors.background,

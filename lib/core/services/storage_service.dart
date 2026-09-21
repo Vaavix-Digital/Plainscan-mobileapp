@@ -511,10 +511,60 @@ class StorageService {
     await prefs.setStringList(userKey, rawList);
   }
 
-  static Future<void> clearUserScannedFiles() async {
+  static const String _keyActiveJobs = 'active_background_jobs';
+
+  static Future<void> saveActiveJob(Map<String, dynamic> jobMap) async {
     final prefs = await SharedPreferences.getInstance();
-    final userKey = _getUserScannedFilesKey(prefs);
-    await prefs.remove(userKey);
-    await prefs.remove(_keyScannedFiles);
+    final rawList = prefs.getStringList(_keyActiveJobs) ?? [];
+    final id = jobMap['jobId'] ?? jobMap['toolSlug'] ?? '';
+    final filtered = rawList.where((item) {
+      try {
+        final m = jsonDecode(item) as Map;
+        return m['jobId'] != id && m['toolSlug'] != id;
+      } catch (_) {
+        return true;
+      }
+    }).toList();
+    filtered.add(jsonEncode(jobMap));
+    await prefs.setStringList(_keyActiveJobs, filtered);
+  }
+
+  static Future<List<Map<String, dynamic>>> getActiveJobs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList(_keyActiveJobs);
+    if (rawList == null || rawList.isEmpty) return [];
+    final result = <Map<String, dynamic>>[];
+    for (final item in rawList) {
+      try {
+        final m = jsonDecode(item);
+        if (m is Map<String, dynamic>) {
+          result.add(m);
+        } else if (m is Map) {
+          result.add(Map<String, dynamic>.from(m));
+        }
+      } catch (_) {}
+    }
+    return result;
+  }
+
+  static Future<void> removeActiveJob(String identifier) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList(_keyActiveJobs);
+    if (rawList == null || rawList.isEmpty) return;
+    final normalized = identifier.replaceAll('_', '-');
+    final filtered = rawList.where((item) {
+      try {
+        final m = jsonDecode(item) as Map;
+        final jId = m['jobId']?.toString() ?? '';
+        final slug = m['toolSlug']?.toString() ?? '';
+        return jId != identifier &&
+            jId != normalized &&
+            slug != identifier &&
+            slug != normalized;
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+    await prefs.setStringList(_keyActiveJobs, filtered);
   }
 }

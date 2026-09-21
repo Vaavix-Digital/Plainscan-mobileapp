@@ -1011,7 +1011,7 @@ const List<ToolModel> allPlainscanTools = [
     categoryId: 'utility',
     category: 'Utility Tools',
     inputFormat: 'Text',
-    outputFormat: '.json',
+    outputFormat: '.txt',
     description: 'Accurately count words, reading time, and paragraph density in your text.',
   ),
   ToolModel(
@@ -1023,7 +1023,7 @@ const List<ToolModel> allPlainscanTools = [
     categoryId: 'utility',
     category: 'Utility Tools',
     inputFormat: 'Text',
-    outputFormat: '.json',
+    outputFormat: '.txt',
     description: 'Count characters with and without spaces for essays, tweets, and metadata.',
   ),
   ToolModel(
@@ -1070,7 +1070,7 @@ const List<ToolModel> allPlainscanTools = [
     color: Color(0xFF7C3AED),
     categoryId: 'utility',
     category: 'Utility Tools',
-    inputFormat: 'Image',
+    inputFormat: '.pdf / Image',
     outputFormat: '.jpg',
     description: 'View or strip EXIF and sensitive location metadata from image files.',
   ),
