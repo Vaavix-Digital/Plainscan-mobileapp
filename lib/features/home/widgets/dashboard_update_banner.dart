@@ -26,7 +26,7 @@ class DashboardUpdateBanner extends UpgradeCard {
   }) : super(
           upgrader: upgrader ??
               Upgrader(
-                debugDisplayAlways: forceDisplay || kDebugMode,
+                debugDisplayAlways: forceDisplay,
                 durationUntilAlertAgain: Duration.zero,
                 countryCode: 'US',
                 languageCode: 'en',
@@ -75,6 +75,7 @@ class DashboardUpdateBannerState extends UpgradeCardState {
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
