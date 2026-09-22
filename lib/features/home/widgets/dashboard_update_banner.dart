@@ -26,7 +26,7 @@ class DashboardUpdateBanner extends UpgradeCard {
   }) : super(
           upgrader: upgrader ??
               Upgrader(
-                debugDisplayAlways: forceDisplay,
+                debugDisplayAlways: forceDisplay || kDebugMode,
                 durationUntilAlertAgain: Duration.zero,
                 countryCode: 'US',
                 languageCode: 'en',
@@ -53,9 +53,12 @@ class DashboardUpdateBannerState extends UpgradeCardState {
         appMessages.message(UpgraderMessage.buttonTitleLater) ?? 'Later';
 
     return Container(
-      key: key,
-      margin: widget.margin ?? const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.5),
+      alignment: Alignment.center,
+      child: Container(
+        key: key,
+        margin: widget.margin ?? const EdgeInsets.all(20),
+        decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -196,7 +199,7 @@ class DashboardUpdateBannerState extends UpgradeCardState {
           ),
         ],
       ),
-    );
+    ));
   }
 
   @override

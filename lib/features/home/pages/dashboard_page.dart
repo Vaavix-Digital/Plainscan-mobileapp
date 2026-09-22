@@ -20,10 +20,11 @@ class DashboardPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            buildDashboardUpdateBanner(),
-            Expanded(
+            Column(
+              children: [
+                Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -45,6 +46,11 @@ class DashboardPage extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+              ],
+            ),
+            Positioned.fill(
+              child: buildDashboardUpdateBanner(),
             ),
           ],
         ),
