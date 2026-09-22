@@ -10,6 +10,7 @@ import 'package:plainscan/models/plan_model.dart';
 import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/notification_service.dart';
 
 class ProfileController extends GetxController {
   final RxString userName = 'User'.obs;
@@ -503,6 +504,9 @@ class ProfileController extends GetxController {
     }
     if (Get.isRegistered<AllToolsController>()) {
       await Get.find<AllToolsController>().loadRecentTools();
+    }
+    if (Get.isRegistered<NotificationService>()) {
+      await Get.find<NotificationService>().onLogout();
     }
     try {
       Get.offAllNamed(AppRoutes.auth);

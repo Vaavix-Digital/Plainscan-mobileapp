@@ -32,6 +32,10 @@ class ScanController extends GetxController {
     } catch (_) {}
   }
 
+  /// Public wrapper for use by external controllers that directly mutate [scannedFiles].
+  Future<void> persistFiles() => _persistFiles();
+
+
   void clearFiles() {
     scannedFiles.clear();
   }

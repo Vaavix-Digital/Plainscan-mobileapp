@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class AuthResult {
@@ -632,6 +633,13 @@ class AuthService {
       }
       if (Get.isRegistered<AllToolsController>()) {
         await Get.find<AllToolsController>().loadRecentTools();
+      }
+      if (Get.isRegistered<NotificationService>()) {
+        if (isLogout) {
+          await Get.find<NotificationService>().onLogout();
+        } else {
+          await Get.find<NotificationService>().reloadForCurrentUser();
+        }
       }
     } catch (_) {}
   }

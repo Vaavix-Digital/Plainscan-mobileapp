@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum ToolExecutionStep {
@@ -110,7 +111,6 @@ class AppNotification {
 
 class NotificationService extends GetxController {
   static NotificationService get to => Get.find<NotificationService>();
-  static const String _storageKey = 'plainscan_notifications';
   static const String toolProgressChannelId = 'plainscan_tool_progress';
 
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -174,24 +174,29 @@ class NotificationService extends GetxController {
   Future<void> loadNotifications() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
+      final key = StorageService.getUserNotificationsKey(prefs);
+      final raw = prefs.getString(key);
       if (raw != null && raw.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(raw);
-        notifications.value = decoded
+        final loaded = decoded
             .map((item) => AppNotification.fromJson(item as Map<String, dynamic>))
             .toList();
+
+        // Strip the legacy "PlainScan Tools Ready" welcome notification
+        // that was previously seeded automatically — no longer needed.
+        final cleaned = loaded.where((n) =>
+            !n.id.startsWith('welcome_') &&
+            n.title != 'PlainScan Tools Ready').toList();
+
+        notifications.value = cleaned;
+
+        // Persist the cleaned list so it doesn't reappear
+        if (cleaned.length != loaded.length) {
+          await _save();
+        }
       } else {
-        // Initial welcome notification
-        notifications.value = [
-          AppNotification(
-            id: 'welcome_1',
-            title: 'PlainScan Tools Ready',
-            message: 'All 52 PDF, OCR, and AI conversion tools are active and ready to use.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-            type: NotificationType.system,
-            isRead: true,
-          ),
-        ];
+        // No saved notifications — start with an empty list
+        notifications.value = [];
         await _save();
       }
     } catch (e) {
@@ -202,11 +207,32 @@ class NotificationService extends GetxController {
   Future<void> _save() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final key = StorageService.getUserNotificationsKey(prefs);
       final encoded = jsonEncode(notifications.map((n) => n.toJson()).toList());
-      await prefs.setString(_storageKey, encoded);
+      await prefs.setString(key, encoded);
     } catch (e) {
       debugPrint('Error saving notifications: $e');
     }
+  }
+
+  /// Reloads notifications for the active user on login or session switch
+  Future<void> reloadForCurrentUser({bool isLogout = false}) async {
+    if (isLogout) {
+      await onLogout();
+    } else {
+      await loadNotifications();
+    }
+  }
+
+  /// Clears in-memory notifications on logout and loads guest/default notifications
+  Future<void> onLogout() async {
+    notifications.clear();
+    await loadNotifications();
+  }
+
+  /// Clears in-memory notification list
+  void clearUserNotifications() {
+    notifications.clear();
   }
 
   Future<void> addNotification({

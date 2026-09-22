@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
-import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
@@ -1400,6 +1399,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -2091,6 +2091,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -2755,6 +2756,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -3633,6 +3635,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -4526,6 +4529,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -5225,6 +5229,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -6025,6 +6030,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                 ),
               ),
+              _buildProcessingWarningBanner(),
             ],
           ),
         ),
@@ -6572,6 +6578,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               minHeight: 6,
             ),
           ),
+          _buildProcessingWarningBanner(),
         ],
       ),
     );
@@ -7029,8 +7036,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             ),
             IconButton(
               onPressed: () {
-                controller.selectedFile = null;
-                controller.update();
+                controller.clearSingleSelectedFile();
               },
               icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
             ),
@@ -7132,6 +7138,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               minHeight: 6,
             ),
           ),
+          _buildProcessingWarningBanner(),
         ],
       ),
     );
@@ -7673,6 +7680,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               minHeight: 6,
             ),
           ),
+          _buildProcessingWarningBanner(),
         ],
       ),
     );
@@ -9255,38 +9263,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         );
         break;
 
-      case 'pdf-redact':
-        child = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PII Patterns to Auto-Redact',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller.redactPatternsController,
-              decoration: const InputDecoration(
-                hintText: 'email, phone, ssn, credit_card',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Redaction Bar Color',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller.redactColorController,
-              decoration: const InputDecoration(
-                hintText: '#000000',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        );
-        break;
+
 
       case 'pdf-header-footer':
         child = Column(
@@ -10251,20 +10228,204 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         child = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Metadata Operation',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Strip All Metadata (Privacy Mode)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Remove all EXIF tags including GPS and camera info.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: controller.metadataStripAll,
+                    activeColor: AppColors.primary,
+                    onChanged: (v) => controller.setMetadataStripAll(v),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            DropdownButton<String>(
-              value: controller.metadataAction,
-              items: const [
-                DropdownMenuItem(value: 'strip', child: Text('Strip / Remove Metadata')),
-                DropdownMenuItem(value: 'view', child: Text('View / Inspect Metadata')),
-              ],
-              onChanged: (v) {
-                if (v != null) controller.setMetadataAction(v);
-              },
+            const SizedBox(height: 16),
+            const Text(
+              'Or Edit Specific Fields:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 12),
+            AbsorbPointer(
+              absorbing: controller.metadataStripAll,
+              child: Opacity(
+                opacity: controller.metadataStripAll ? 0.45 : 1.0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Title',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              ),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: controller.metadataTitleController,
+                                enabled: !controller.metadataStripAll,
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. Vacation Photo',
+                                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  isDense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Author',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              ),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: controller.metadataAuthorController,
+                                enabled: !controller.metadataStripAll,
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. John Doe',
+                                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  isDense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Description',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: controller.metadataDescriptionController,
+                      enabled: !controller.metadataStripAll,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'A detailed description...',
+                        hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.all(10),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Copyright',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              ),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: controller.metadataCopyrightController,
+                                enabled: !controller.metadataStripAll,
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. © 2025 John Doe',
+                                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  isDense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Software',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              ),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: controller.metadataSoftwareController,
+                                enabled: !controller.metadataStripAll,
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. Plainscan',
+                                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  isDense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Comment',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: controller.metadataCommentController,
+                      enabled: !controller.metadataStripAll,
+                      decoration: InputDecoration(
+                        hintText: 'Any custom comments...',
+                        hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -10391,6 +10552,50 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             child,
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProcessingWarningBanner() {
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFCD34D)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFD97706),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF92400E),
+                  height: 1.45,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Warning: ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(
+                    text:
+                        'Please do not close the app or switch to another app until processing is complete, as doing so may cause the process to fail.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -10530,15 +10735,18 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               controller.currentStep == 'success',
               controller.currentStep == 'downloading',
             ),
-            const SizedBox(height: 12),
-            Text(
-              controller.errorMessage,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.secondaryText,
-                fontStyle: FontStyle.italic,
+            if (controller.errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                controller.errorMessage,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.secondaryText,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
-            ),
+            ],
+            _buildProcessingWarningBanner(),
           ],
         ),
       ),
@@ -10634,8 +10842,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF0284C7)),
-                  tooltip: 'Copy JSON Metadata',
-                  onPressed: controller.copyMetadataJson,
+                  tooltip: 'Copy Text Metadata',
+                  onPressed: controller.copyMetadataText,
                 ),
               ],
             ),
@@ -10733,15 +10941,15 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'JSON Payload',
+                        'Metadata Report (TXT)',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
                       ),
                       InkWell(
-                        onTap: controller.copyMetadataJson,
+                        onTap: controller.copyMetadataText,
                         child: const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           child: Text(
-                            'Copy JSON',
+                            'Copy Text',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
                           ),
                         ),
@@ -10750,7 +10958,9 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   ),
                   const SizedBox(height: 6),
                   SelectableText(
-                    controller.generatedMetadataJson,
+                    controller.generatedMetadataText.isNotEmpty
+                        ? controller.generatedMetadataText
+                        : controller.generatedMetadataJson,
                     style: const TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 11.5,
@@ -11087,92 +11297,65 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             Row(
               children: [
                 Expanded(
-                  child: controller.isFileDownloaded
-                      ? ElevatedButton.icon(
-                          onPressed: () {
-                            Get.to(() => PdfViewerPage(
-                              file: controller.convertedFile,
-                              filePath: controller.convertedFile?.path,
-                              fileName: controller.convertedFile?.name ?? controller.outputFileName,
-                              fileType: controller.convertedFile?.fileType ?? 'PDF',
-                            ));
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          icon: const Icon(Icons.visibility_outlined, size: 16),
-                          label: const Text(
-                            'View',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        )
-                      : OutlinedButton.icon(
-                          onPressed: () async {
-                            try {
-                              final path = controller.convertedFile!.path;
-                              if (path == null) {
-                                throw Exception('File path is missing.');
-                              }
-                              final fileBytes = await File(path).readAsBytes();
-                              final savePath = await FilePicker.saveFile(
-                                dialogTitle: 'Save converted file...',
-                                fileName: controller.convertedFile!.name,
-                                bytes: fileBytes,
-                              );
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final path = controller.convertedFile!.path;
+                        if (path == null) {
+                          throw Exception('File path is missing.');
+                        }
+                        final fileBytes = await File(path).readAsBytes();
+                        final savePath = await FilePicker.saveFile(
+                          dialogTitle: 'Save converted file...',
+                          fileName: controller.convertedFile!.name,
+                          bytes: fileBytes,
+                        );
 
-                              if (savePath != null) {
-                                controller.markFileDownloaded();
-                                Get.rawSnackbar(
-                                  messageText: const Text(
-                                    'File saved successfully!',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  backgroundColor: AppColors.primary,
-                                  snackPosition: SnackPosition.BOTTOM,
-                                );
-                              }
-                            } catch (e) {
-                              Get.rawSnackbar(
-                                messageText: Text(
-                                  'Failed to save file: $e',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                backgroundColor: AppColors.coral,
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        if (savePath != null) {
+                          controller.markFileDownloaded();
+                          Get.rawSnackbar(
+                            messageText: const Text(
+                              'File saved successfully!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          icon: const Icon(Icons.download, size: 16),
-                          label: const Text(
-                            'Download',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                            backgroundColor: AppColors.primary,
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        }
+                      } catch (e) {
+                        Get.rawSnackbar(
+                          messageText: Text(
+                            'Failed to save file: $e',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
+                          backgroundColor: AppColors.coral,
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text(
+                      'Download',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -11204,7 +11387,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: () {
                       final path = controller.convertedFile?.path;
                       final name = controller.convertedFile?.name ?? controller.outputFileName;
@@ -11217,9 +11400,9 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                         Share.share('PlainScan Document: $name');
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -11556,3 +11739,4 @@ class _Base64SnippetCardWidgetState extends State<_Base64SnippetCardWidget> {
     );
   }
 }
+

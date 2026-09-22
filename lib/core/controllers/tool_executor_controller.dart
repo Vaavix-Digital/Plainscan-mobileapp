@@ -178,9 +178,10 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
           lower.contains('wrong');
     }
 
-    final isLock = slug == 'pdf-lock';
-    return isLock &&
-        (lower.contains('password') || lower.contains('decrypt') || lower.contains('unlock') || lower.contains('encrypted'));
+    if (slug == 'pdf-lock') {
+      return lower.contains('enter a password') || lower.contains('missing password') || lower.contains('empty');
+    }
+    return false;
   }
 
   bool get isExecutionDisabled {
@@ -305,9 +306,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     return false;
   }
 
-  // Redact
-  final redactPatternsController = TextEditingController(text: 'email, phone, ssn, credit_card');
-  final redactColorController = TextEditingController(text: '#000000');
+
 
   // Header & Footer
   final headerController = TextEditingController(text: 'Company Name — Confidential');
@@ -556,21 +555,40 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   String imageBase64String = '';
 
   // Metadata Editor & Read Metadata
-  String metadataAction = 'strip'; // strip, view
+  String metadataAction = 'edit'; // edit, strip, view
+  bool metadataStripAll = false;
+  final metadataTitleController = TextEditingController();
+  final metadataAuthorController = TextEditingController();
+  final metadataDescriptionController = TextEditingController();
+  final metadataCopyrightController = TextEditingController();
+  final metadataSoftwareController = TextEditingController(text: 'Plainscan');
+  final metadataCommentController = TextEditingController();
   Map<String, dynamic>? extractedMetadataMap;
   String generatedMetadataJson = '';
+  String generatedMetadataText = '';
 
-  void copyMetadataJson() {
-    if (generatedMetadataJson.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: generatedMetadataJson));
+  void setMetadataStripAll(bool val) {
+    metadataStripAll = val;
+    metadataAction = val ? 'strip' : 'edit';
+    update();
+  }
+
+  void copyMetadataText() {
+    final textToCopy = generatedMetadataText.isNotEmpty ? generatedMetadataText : generatedMetadataJson;
+    if (textToCopy.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: textToCopy));
       if (!Get.testMode && Get.overlayContext != null) {
         Get.rawSnackbar(
-          messageText: const Text('Metadata JSON copied to clipboard!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          messageText: const Text('Metadata copied to clipboard!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           backgroundColor: AppColors.primary,
           snackPosition: SnackPosition.BOTTOM,
         );
       }
     }
+  }
+
+  void copyMetadataJson() {
+    copyMetadataText();
   }
 
   @override
@@ -591,54 +609,39 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     }
   }
 
+  void clearPreviousResult({bool clearSelected = false, bool removeBackgroundJob = true}) {
+    convertedFile = null;
+    currentStep = 'idle';
+    errorMessage = '';
+    jobId = '';
+    pollingCount = 0;
+    outputFileName = '';
+    isFileDownloaded = false;
+    isOriginalFileReplaced = false;
+    existingOriginalFile = null;
+    if (clearSelected) {
+      selectedFile = null;
+      selectedFiles.clear();
+      isPdfLocked = false;
+    }
+    if (removeBackgroundJob && Get.isRegistered<BackgroundJobService>()) {
+      BackgroundJobService.to.removeJob(getSlug());
+    }
+    update();
+  }
+
   void _checkAndRestoreBackgroundJob() {
     try {
       if (Get.isRegistered<BackgroundJobService>()) {
         final existingJob = BackgroundJobService.to.getActiveJobForTool(getSlug());
-        if (existingJob != null) {
-          if (existingJob.isRunning) {
-            isRunning = true;
-            currentStep = existingJob.step;
-            jobId = existingJob.jobId;
-            pollingCount = existingJob.pollingCount;
-            errorMessage = existingJob.stepMessage;
-            outputFileName = existingJob.outputFileName ?? '';
-            update();
-          } else if (existingJob.isCompleted) {
-            isRunning = false;
-            currentStep = 'success';
-            errorMessage = existingJob.stepMessage.isNotEmpty
-                ? existingJob.stepMessage
-                : 'Success! File processed with ${tool.name}.';
-            outputFileName = existingJob.outputFileName ?? '';
-            if (existingJob.outputFilePath != null) {
-              FileModel? matched;
-              if (scanController.scannedFiles.isNotEmpty) {
-                matched = scanController.scannedFiles.firstWhereOrNull(
-                  (f) => f.path == existingJob.outputFilePath || f.name == existingJob.outputFileName,
-                );
-              }
-              if (matched == null) {
-                final file = File(existingJob.outputFilePath!);
-                final double sizeKb = file.existsSync() ? (file.lengthSync() / 1024.0) : 100.0;
-                matched = FileModel(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: existingJob.outputFileName ?? 'processed_document.pdf',
-                  createdDate: DateTime.now(),
-                  sizeKb: sizeKb,
-                  fileType: (existingJob.outputFileName ?? 'pdf').split('.').last.toUpperCase(),
-                  path: existingJob.outputFilePath,
-                );
-              }
-              convertedFile = matched;
-            }
-            update();
-          } else if (existingJob.isFailed) {
-            isRunning = false;
-            currentStep = 'error';
-            errorMessage = existingJob.errorMessage ?? 'Execution failed.';
-            update();
-          }
+        if (existingJob != null && existingJob.isRunning) {
+          isRunning = true;
+          currentStep = existingJob.step;
+          jobId = existingJob.jobId;
+          pollingCount = existingJob.pollingCount;
+          errorMessage = existingJob.stepMessage;
+          outputFileName = existingJob.outputFileName ?? '';
+          update();
         }
       }
     } catch (_) {}
@@ -657,6 +660,11 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       }
       checkPdfLockStatus();
       update();
+
+      // Pre-fill metadata editor when a file is applied
+      if (getSlug() == 'metadata-editor' && selectedFile != null) {
+        _prefillMetadataFields(selectedFile!);
+      }
 
       if (autoExecute) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -858,18 +866,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         };
       case 'pdf-unlock':
         return {'password': passwordController.text};
-      case 'pdf-redact':
-        final patterns = redactPatternsController.text
-            .split(',')
-            .map((e) => e.trim())
-            .toList();
-        return {
-          'patterns': patterns,
-          'areas': [
-            {'page': 1, 'x': 100, 'y': 200, 'width': 150, 'height': 30}
-          ],
-          'color': redactColorController.text,
-        };
+
       case 'pdf-header-footer':
         return {
           'header': headerController.text,
@@ -1263,9 +1260,21 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'favicon-generator':
         return {};
       case 'metadata-editor':
-        return {
-          'action': metadataAction,
-        };
+        if (metadataStripAll || metadataAction == 'strip') {
+          return {'action': 'strip', 'strip_all': true};
+        } else if (metadataAction == 'view' || metadataAction == 'read') {
+          return {'action': 'view'};
+        } else {
+          return {
+            'action': 'edit',
+            'title': metadataTitleController.text.trim(),
+            'author': metadataAuthorController.text.trim(),
+            'description': metadataDescriptionController.text.trim(),
+            'copyright': metadataCopyrightController.text.trim(),
+            'software': metadataSoftwareController.text.trim(),
+            'comment': metadataCommentController.text.trim(),
+          };
+        }
       case 'remove-metadata':
       case 'read-metadata':
         return {};
@@ -1321,7 +1330,6 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'pdf-watermark':
       case 'pdf-lock':
       case 'pdf-unlock':
-      case 'pdf-redact':
       case 'pdf-header-footer':
       case 'pdf-page-numbers':
       case 'pdf-sign':
@@ -1350,7 +1358,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         return 'ico';
       case 'metadata-editor':
         if (metadataAction == 'view' || metadataAction == 'read') {
-          return 'json';
+          return 'txt';
         }
         if (selectedFile != null) {
           final ext = selectedFile!.name.split('.').last.toLowerCase();
@@ -1384,6 +1392,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'image-to-base64':
       case 'word-counter':
       case 'character-counter':
+      case 'read-metadata':
         return 'txt';
       case 'pdf-to-markdown':
         return 'md';
@@ -1393,7 +1402,6 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'ai-flashcards':
       case 'ai-quiz':
       case 'ats-scanner':
-      case 'read-metadata':
         return 'json';
       default:
         if (tool.outputFormat != null) {
@@ -1578,6 +1586,268 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         return;
       }
 
+      if (slug == 'csv-to-excel') {
+        if (selectedFile == null) {
+          throw Exception('Please select a CSV file to convert to Excel.');
+        }
+        currentStep = 'processing';
+        errorMessage = 'Converting CSV to Excel workbook...';
+        update();
+
+        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+        final rawBytes = await inputFile.readAsBytes();
+        final excelBytes = LocalDocumentPdfGenerator.convertCsvToExcel(
+          rawBytes,
+          delimiter: csvDelimiter,
+        );
+
+        final inputName = selectedFile!.name;
+        final baseName = inputName.contains('.')
+            ? inputName.substring(0, inputName.lastIndexOf('.'))
+            : inputName;
+        final tempDir = Directory.systemTemp;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final outName = '${baseName}_$timestamp.xlsx';
+        final outPath = '${tempDir.path}/$outName';
+        await File(outPath).writeAsBytes(excelBytes);
+
+        final outFile = File(outPath);
+        final fileSizeKb = (await outFile.length()) / 1024.0;
+
+        scanController.addScan(
+          outPath,
+          customName: outName,
+          fileType: 'XLSX',
+        );
+
+        final newFile = FileModel(
+          id: timestamp.toString(),
+          name: outName,
+          createdDate: DateTime.now(),
+          sizeKb: fileSizeKb > 0 ? fileSizeKb : 10.0,
+          fileType: 'XLSX',
+          path: outPath,
+        );
+
+        convertedFile = newFile;
+        currentStep = 'success';
+        errorMessage = 'Success! CSV converted to Excel (.xlsx).';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (slug == 'excel-to-csv') {
+        if (selectedFile == null) {
+          throw Exception('Please select an Excel file to convert to CSV.');
+        }
+        currentStep = 'processing';
+        errorMessage = 'Converting Excel to CSV...';
+        update();
+
+        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+        final rawBytes = await inputFile.readAsBytes();
+        final csvString = LocalDocumentPdfGenerator.convertExcelToCsv(
+          rawBytes,
+          sheetIndex: excelSheetIndex,
+        );
+
+        final inputName = selectedFile!.name;
+        final baseName = inputName.contains('.')
+            ? inputName.substring(0, inputName.lastIndexOf('.'))
+            : inputName;
+        final tempDir = Directory.systemTemp;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final outName = '${baseName}_$timestamp.csv';
+        final outPath = '${tempDir.path}/$outName';
+        await File(outPath).writeAsString(csvString);
+
+        final outFile = File(outPath);
+        final fileSizeKb = (await outFile.length()) / 1024.0;
+
+        scanController.addScan(
+          outPath,
+          customName: outName,
+          fileType: 'CSV',
+        );
+
+        final newFile = FileModel(
+          id: timestamp.toString(),
+          name: outName,
+          createdDate: DateTime.now(),
+          sizeKb: fileSizeKb > 0 ? fileSizeKb : 5.0,
+          fileType: 'CSV',
+          path: outPath,
+        );
+
+        convertedFile = newFile;
+        currentStep = 'success';
+        errorMessage = 'Success! Excel converted to CSV.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (slug == 'pdf-lock') {
+        if (selectedFile == null) {
+          throw Exception('Please upload a PDF file first.');
+        }
+        final userPwd = passwordController.text.trim();
+        if (userPwd.isEmpty) {
+          throw Exception('Please enter a password to protect and encrypt this PDF document.');
+        }
+
+        currentStep = 'processing';
+        errorMessage = 'Encrypting and locking PDF document...';
+        update();
+
+        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+        final rawBytes = await inputFile.readAsBytes();
+        final lockedBytes = LocalDocumentPdfGenerator.lockPdf(
+          rawBytes,
+          userPassword: userPwd,
+          ownerPassword: ownerPasswordController.text.trim(),
+          allowPrinting: allowPrinting,
+          allowCopying: allowCopying,
+          encryption: encryption,
+        );
+
+        final inputName = selectedFile!.name;
+        final baseName = inputName.contains('.')
+            ? inputName.substring(0, inputName.lastIndexOf('.'))
+            : inputName;
+        final tempDir = Directory.systemTemp;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final outName = '${baseName}_locked_$timestamp.pdf';
+        final outPath = '${tempDir.path}/$outName';
+        await File(outPath).writeAsBytes(lockedBytes);
+
+        final pdfFile = File(outPath);
+        final fileSizeKb = (await pdfFile.length()) / 1024.0;
+
+        scanController.addScan(
+          outPath,
+          customName: outName,
+          fileType: 'PDF',
+        );
+
+        final newFile = FileModel(
+          id: timestamp.toString(),
+          name: outName,
+          createdDate: DateTime.now(),
+          sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+          fileType: 'PDF',
+          path: outPath,
+        );
+
+        convertedFile = newFile;
+        isPdfLocked = true;
+        currentStep = 'success';
+        errorMessage = 'Success! PDF document has been password-protected and encrypted.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+      if (slug == 'pdf-unlock') {
+        if (selectedFile == null) {
+          throw Exception('Please upload a PDF file first.');
+        }
+        final userPwd = passwordController.text.trim();
+        if (userPwd.isEmpty && isPdfLocked) {
+          throw Exception('Please enter the password to decrypt and unlock this PDF document.');
+        }
+
+        currentStep = 'processing';
+        errorMessage = 'Decrypting and unlocking PDF document...';
+        update();
+
+        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+        final rawBytes = await inputFile.readAsBytes();
+        final unlockedBytes = LocalDocumentPdfGenerator.unlockPdf(
+          rawBytes,
+          password: userPwd,
+        );
+
+        final inputName = selectedFile!.name;
+        final baseName = inputName.contains('.')
+            ? inputName.substring(0, inputName.lastIndexOf('.'))
+            : inputName;
+        final tempDir = Directory.systemTemp;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final outName = '${baseName}_unlocked_$timestamp.pdf';
+        final outPath = '${tempDir.path}/$outName';
+        await File(outPath).writeAsBytes(unlockedBytes);
+
+        final pdfFile = File(outPath);
+        final fileSizeKb = (await pdfFile.length()) / 1024.0;
+
+        scanController.addScan(
+          outPath,
+          customName: outName,
+          fileType: 'PDF',
+        );
+
+        final newFile = FileModel(
+          id: timestamp.toString(),
+          name: outName,
+          createdDate: DateTime.now(),
+          sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+          fileType: 'PDF',
+          path: outPath,
+        );
+
+        convertedFile = newFile;
+        isPdfLocked = false;
+        currentStep = 'success';
+        errorMessage = 'Success! PDF document has been unlocked and decrypted.';
+        outputFileName = outName;
+        isRunning = false;
+        update();
+
+        if (Get.isRegistered<NotificationService>()) {
+          NotificationService.to.updateToolProgressNotification(
+            id: notificationId,
+            toolName: tool.name,
+            step: ToolExecutionStep.completed,
+            detail: outName,
+          );
+        }
+        return;
+      }
+
+
+
       if (slug == 'metadata-editor' ||
           slug == 'remove-metadata' ||
           slug == 'read-metadata') {
@@ -1590,6 +1860,9 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
         final isView = slug == 'read-metadata' ||
             (slug == 'metadata-editor' && (metadataAction == 'view' || metadataAction == 'read'));
+
+        final isStrip = slug == 'remove-metadata' ||
+            (slug == 'metadata-editor' && (metadataStripAll || metadataAction == 'strip'));
 
         final tempDir = Directory.systemTemp;
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -1605,18 +1878,20 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             inputName,
             sizeKb: selectedFile?.sizeKb,
           );
+          final metadataText = LocalDocumentPdfGenerator.formatMetadataAsText(metadataMap);
           final metadataJson = const JsonEncoder.withIndent('  ').convert(metadataMap);
           extractedMetadataMap = metadataMap;
           generatedMetadataJson = metadataJson;
+          generatedMetadataText = metadataText;
 
-          final outName = '${baseName}_metadata_$timestamp.json';
+          final outName = '${baseName}_metadata_$timestamp.txt';
           final outPath = '${tempDir.path}/$outName';
-          await File(outPath).writeAsString(metadataJson);
+          await File(outPath).writeAsString(metadataText);
 
           scanController.addScan(
             outPath,
             customName: outName,
-            fileType: 'JSON',
+            fileType: 'TXT',
           );
 
           final newFile = FileModel(
@@ -1624,13 +1899,13 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             name: outName,
             createdDate: DateTime.now(),
             sizeKb: (await File(outPath).length()) / 1024.0,
-            fileType: 'JSON',
+            fileType: 'TXT',
             path: outPath,
           );
 
           convertedFile = newFile;
           currentStep = 'success';
-          errorMessage = 'Success! Metadata extracted to JSON.';
+          errorMessage = 'Success! Metadata extracted to TXT.';
           outputFileName = outName;
           isRunning = false;
           update();
@@ -1644,7 +1919,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             );
           }
           return;
-        } else {
+        } else if (isStrip) {
           final ext = isPdf ? 'pdf' : (inputName.toLowerCase().endsWith('.png') ? 'png' : 'jpg');
           final outName = '${baseName}_clean_$timestamp.$ext';
           final outPath = '${tempDir.path}/$outName';
@@ -1682,6 +1957,67 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
           convertedFile = newFile;
           currentStep = 'success';
           errorMessage = 'Success! Metadata stripped and sanitized.';
+          outputFileName = outName;
+          isRunning = false;
+          update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.completed,
+              detail: outName,
+            );
+          }
+          return;
+        } else {
+          // Edit specific metadata fields
+          final ext = isPdf ? 'pdf' : (inputName.toLowerCase().endsWith('.png') ? 'png' : 'jpg');
+          final outName = '${baseName}_edited_$timestamp.$ext';
+          final outPath = '${tempDir.path}/$outName';
+
+          if (await inputFile.exists()) {
+            final rawBytes = await inputFile.readAsBytes();
+            final updatedBytes = LocalDocumentPdfGenerator.updateMetadata(
+              rawBytes,
+              ext,
+              title: metadataTitleController.text.trim(),
+              author: metadataAuthorController.text.trim(),
+              description: metadataDescriptionController.text.trim(),
+              copyright: metadataCopyrightController.text.trim(),
+              software: metadataSoftwareController.text.trim(),
+              comment: metadataCommentController.text.trim(),
+            );
+            await File(outPath).writeAsBytes(updatedBytes);
+          } else {
+            if (isPdf) {
+              await File(outPath).writeAsBytes(LocalDocumentPdfGenerator.minimalPdfBytes);
+            } else {
+              await File(outPath).writeAsBytes(LocalDocumentPdfGenerator.minimalJpegBytes);
+            }
+          }
+
+          final outFile = File(outPath);
+          final fileSizeKb = (await outFile.length()) / 1024.0;
+
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: ext.toUpperCase(),
+          );
+
+          final newFile = FileModel(
+            id: timestamp.toString(),
+            name: outName,
+            createdDate: DateTime.now(),
+            sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+            fileType: ext.toUpperCase(),
+            path: outPath,
+          );
+
+          convertedFile = newFile;
+          currentStep = 'success';
+          errorMessage = 'Success! Document metadata updated.';
           outputFileName = outName;
           isRunning = false;
           update();
@@ -1953,12 +2289,69 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       currentStep = 'polling';
       update();
 
+      final extension = getExpectedExtension();
+      final String baseNameWithoutExtension;
+      if (isNoUpload) {
+        if (slug == 'html-to-pdf') {
+          baseNameWithoutExtension = htmlToPdfMode == 'url'
+              ? 'webpage_${Uri.tryParse(htmlToPdfUrlController.text.trim())?.host.replaceAll('.', '_') ?? 'download'}'
+              : 'html_document';
+        } else if (slug == 'invoice-generator') {
+          baseNameWithoutExtension = 'invoice_${invoiceNumberController.text.trim()}';
+        } else if (slug.contains('id-')) {
+          baseNameWithoutExtension = 'id_${idEmployeeIdController.text.trim().replaceAll(' ', '_')}';
+        } else {
+          baseNameWithoutExtension = '${slug}_result';
+        }
+      } else if (useRawText) {
+        baseNameWithoutExtension = '${slug}_result';
+      } else if (isMulti) {
+        baseNameWithoutExtension = '${slug}_merged';
+      } else {
+        baseNameWithoutExtension = selectedFile != null ? selectedFile!.name.split('.').first : slug;
+      }
+      final outName = '${baseNameWithoutExtension}_processed.$extension';
+
+      if (Get.isRegistered<BackgroundJobService>()) {
+        BackgroundJobService.to.registerJob(
+          BackgroundJobState(
+            jobId: jobIdLocal,
+            toolSlug: getSlug(),
+            toolName: tool.name,
+            step: 'polling',
+            stepMessage: 'Waiting for job completion...',
+            pollingCount: 0,
+            outputFileName: outName,
+            startTime: DateTime.now(),
+            options: options,
+            notificationId: notificationId,
+          ),
+        );
+      }
+
       // STEP 3: Poll job status
       Map<String, dynamic> jobResult = {};
       while (true) {
         pollingCount++;
         errorMessage = 'Waiting for job completion (Attempt $pollingCount)...';
         update();
+
+        if (Get.isRegistered<BackgroundJobService>()) {
+          BackgroundJobService.to.updateJobState(
+            BackgroundJobState(
+              jobId: jobIdLocal,
+              toolSlug: getSlug(),
+              toolName: tool.name,
+              step: 'polling',
+              stepMessage: 'Waiting for job completion (Attempt $pollingCount)...',
+              pollingCount: pollingCount,
+              outputFileName: outName,
+              startTime: DateTime.now(),
+              options: options,
+              notificationId: notificationId,
+            ),
+          );
+        }
 
         if (Get.isRegistered<NotificationService>()) {
           NotificationService.to.updateToolProgressNotification(
@@ -1987,35 +2380,29 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       errorMessage = 'Downloading completed output...';
       update();
 
+      if (Get.isRegistered<BackgroundJobService>()) {
+        BackgroundJobService.to.updateJobState(
+          BackgroundJobState(
+            jobId: jobIdLocal,
+            toolSlug: getSlug(),
+            toolName: tool.name,
+            step: 'downloading',
+            stepMessage: 'Downloading completed output...',
+            pollingCount: pollingCount,
+            outputFileName: outName,
+            startTime: DateTime.now(),
+            options: options,
+            notificationId: notificationId,
+          ),
+        );
+      }
+
       final outputList = jobResult['output_file_ids'] as List?;
       if (outputList == null || outputList.isEmpty) {
         throw Exception('Completed job did not return any output file IDs.');
       }
       final outputFileId = outputList.first.toString();
 
-      final extension = getExpectedExtension();
-      final String baseNameWithoutExtension;
-      if (isNoUpload) {
-        if (slug == 'html-to-pdf') {
-          baseNameWithoutExtension = htmlToPdfMode == 'url'
-              ? 'webpage_${Uri.tryParse(htmlToPdfUrlController.text.trim())?.host.replaceAll('.', '_') ?? 'download'}'
-              : 'html_document';
-        } else if (slug == 'invoice-generator') {
-          baseNameWithoutExtension = 'invoice_${invoiceNumberController.text.trim()}';
-        } else if (slug.contains('id-')) {
-          baseNameWithoutExtension = 'id_${idEmployeeIdController.text.trim().replaceAll(' ', '_')}';
-        } else {
-          baseNameWithoutExtension = '${slug}_result';
-        }
-      } else if (useRawText) {
-        baseNameWithoutExtension = '${slug}_result';
-      } else if (isMulti) {
-        baseNameWithoutExtension = '${slug}_merged';
-      } else {
-        baseNameWithoutExtension = selectedFile!.name.split('.').first;
-      }
-      final outName = '${baseNameWithoutExtension}_processed.$extension';
-      
       final tempDir = Directory.systemTemp;
       final outPath = '${tempDir.path}/$outName';
 
@@ -2170,6 +2557,24 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       isRunning = false;
       update();
 
+      if (Get.isRegistered<BackgroundJobService>() && jobIdLocal.isNotEmpty) {
+        BackgroundJobService.to.updateJobState(
+          BackgroundJobState(
+            jobId: jobIdLocal,
+            toolSlug: getSlug(),
+            toolName: tool.name,
+            step: 'completed',
+            stepMessage: 'Success! File processed with ${tool.name}.',
+            pollingCount: pollingCount,
+            outputFilePath: outPath,
+            outputFileName: outName,
+            startTime: DateTime.now(),
+            options: options,
+            notificationId: notificationId,
+          ),
+        );
+      }
+
       // STEP 4: Completed Notification (Update persistent notification)
       if (Get.isRegistered<NotificationService>()) {
         NotificationService.to.updateToolProgressNotification(
@@ -2194,6 +2599,21 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       }
 
     } catch (e) {
+      if (Get.isRegistered<BackgroundJobService>() && jobId.isNotEmpty) {
+        BackgroundJobService.to.updateJobState(
+          BackgroundJobState(
+            jobId: jobId,
+            toolSlug: getSlug(),
+            toolName: tool.name,
+            step: 'failed',
+            stepMessage: e.toString(),
+            errorMessage: e.toString(),
+            startTime: DateTime.now(),
+            options: getOptionsJson(),
+            notificationId: notificationId,
+          ),
+        );
+      }
       final slug = getSlug();
       if (slug == 'jpg-to-pdf' ||
           slug == 'images-to-pdf' ||
@@ -2877,6 +3297,9 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         final isView = getSlug() == 'read-metadata' ||
             (getSlug() == 'metadata-editor' && (metadataAction == 'view' || metadataAction == 'read'));
 
+        final isStrip = getSlug() == 'remove-metadata' ||
+            (getSlug() == 'metadata-editor' && (metadataStripAll || metadataAction == 'strip'));
+
         final tempDir = Directory.systemTemp;
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final inputFile = selectedFile != null ? await getOrCreatePhysicalFile(selectedFile!) : null;
@@ -2893,18 +3316,20 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             inputName,
             sizeKb: selectedFile?.sizeKb,
           );
+          final metadataText = LocalDocumentPdfGenerator.formatMetadataAsText(metadataMap);
           final metadataJson = const JsonEncoder.withIndent('  ').convert(metadataMap);
           extractedMetadataMap = metadataMap;
           generatedMetadataJson = metadataJson;
+          generatedMetadataText = metadataText;
 
-          final outName = '${baseName}_metadata_$timestamp.json';
+          final outName = '${baseName}_metadata_$timestamp.txt';
           final outPath = '${tempDir.path}/$outName';
-          await File(outPath).writeAsString(metadataJson);
+          await File(outPath).writeAsString(metadataText);
 
           scanController.addScan(
             outPath,
             customName: outName,
-            fileType: 'JSON',
+            fileType: 'TXT',
           );
 
           final newFile = FileModel(
@@ -2912,13 +3337,13 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             name: outName,
             createdDate: DateTime.now(),
             sizeKb: (await File(outPath).length()) / 1024.0,
-            fileType: 'JSON',
+            fileType: 'TXT',
             path: outPath,
           );
 
           convertedFile = newFile;
           currentStep = 'success';
-          errorMessage = 'Success! Metadata extracted to JSON.';
+          errorMessage = 'Success! Metadata extracted to TXT.';
           outputFileName = outName;
           isRunning = false;
           update();
@@ -2932,7 +3357,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             );
           }
           return;
-        } else {
+        } else if (isStrip) {
           final ext = isPdf ? 'pdf' : (inputName.toLowerCase().endsWith('.png') ? 'png' : 'jpg');
           final outName = '${baseName}_clean_$timestamp.$ext';
           final outPath = '${tempDir.path}/$outName';
@@ -2970,6 +3395,67 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
           convertedFile = newFile;
           currentStep = 'success';
           errorMessage = 'Success! Metadata stripped and sanitized.';
+          outputFileName = outName;
+          isRunning = false;
+          update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.completed,
+              detail: outName,
+            );
+          }
+          return;
+        } else {
+          // Edit specific metadata fields
+          final ext = isPdf ? 'pdf' : (inputName.toLowerCase().endsWith('.png') ? 'png' : 'jpg');
+          final outName = '${baseName}_edited_$timestamp.$ext';
+          final outPath = '${tempDir.path}/$outName';
+
+          if (inputFile != null && await inputFile.exists()) {
+            final rawBytes = await inputFile.readAsBytes();
+            final updatedBytes = LocalDocumentPdfGenerator.updateMetadata(
+              rawBytes,
+              ext,
+              title: metadataTitleController.text.trim(),
+              author: metadataAuthorController.text.trim(),
+              description: metadataDescriptionController.text.trim(),
+              copyright: metadataCopyrightController.text.trim(),
+              software: metadataSoftwareController.text.trim(),
+              comment: metadataCommentController.text.trim(),
+            );
+            await File(outPath).writeAsBytes(updatedBytes);
+          } else {
+            if (isPdf) {
+              await File(outPath).writeAsBytes(LocalDocumentPdfGenerator.minimalPdfBytes);
+            } else {
+              await File(outPath).writeAsBytes(LocalDocumentPdfGenerator.minimalJpegBytes);
+            }
+          }
+
+          final outFile = File(outPath);
+          final fileSizeKb = (await outFile.length()) / 1024.0;
+
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: ext.toUpperCase(),
+          );
+
+          final newFile = FileModel(
+            id: timestamp.toString(),
+            name: outName,
+            createdDate: DateTime.now(),
+            sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+            fileType: ext.toUpperCase(),
+            path: outPath,
+          );
+
+          convertedFile = newFile;
+          currentStep = 'success';
+          errorMessage = 'Success! Document metadata updated.';
           outputFileName = outName;
           isRunning = false;
           update();
@@ -3080,11 +3566,15 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       return 'Invalid password. The password you entered is incorrect for this document. Please check the password and try again.';
     }
 
-    if (slug == 'pdf-lock' || lower.contains('password') || lower.contains('decrypt')) {
+    if (slug == 'pdf-lock') {
       if (lower.contains('empty') || lower.contains('missing password') || lower.contains('please enter')) {
         return 'Please enter a password to protect and encrypt this PDF document.';
       }
-      return 'Invalid password. The password you entered is incorrect for this document. Please verify and try again.';
+      return 'Failed to lock PDF document. Please try again.';
+    }
+
+    if (lower.contains('decrypt')) {
+      return 'Failed to decrypt PDF document. Please verify the password and try again.';
     }
 
     // 2. Corrupted file error
@@ -3167,15 +3657,12 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       }
 
       if (newlyAddedFiles.isNotEmpty) {
+        clearPreviousResult(clearSelected: !isMulti);
         if (isMulti) {
           selectedFiles.addAll(newlyAddedFiles);
         } else {
           selectedFile = newlyAddedFiles.first;
           checkPdfLockStatus(notifyUser: true);
-        }
-        if (currentStep == 'error') {
-          errorMessage = '';
-          currentStep = 'idle';
         }
         update();
 
@@ -3302,11 +3789,8 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   void toggleSelectedFileFromScans(FileModel file, bool? isSelected) {
     if (isRunning) return;
     if (isSelected == true) {
+      clearPreviousResult();
       selectedFiles.add(file);
-      if (currentStep == 'error') {
-        errorMessage = '';
-        currentStep = 'idle';
-      }
     } else {
       selectedFiles.removeWhere((f) => f.id == file.id);
     }
@@ -3315,33 +3799,75 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
   void selectSingleFileFromScans(FileModel file) {
     if (isRunning) return;
+    clearPreviousResult();
     selectedFile = file;
-    if (currentStep == 'error') {
-      errorMessage = '';
-      currentStep = 'idle';
-    }
     update();
     if (!Get.testMode && Get.overlayContext != null) {
       Get.back();
     }
     checkPdfLockStatus(notifyUser: true);
+    // Pre-fill metadata fields when the metadata-editor tool is active
+    if (getSlug() == 'metadata-editor') {
+      _prefillMetadataFields(file);
+    }
+  }
+
+  /// Reads existing metadata from [file] and pre-fills the metadata editor fields.
+  Future<void> _prefillMetadataFields(FileModel file) async {
+    try {
+      final physicalFile = await getOrCreatePhysicalFile(file);
+      if (!await physicalFile.exists()) return;
+      final bytes = await physicalFile.readAsBytes();
+      final meta = LocalDocumentPdfGenerator.extractMetadata(
+        bytes,
+        file.name,
+        sizeKb: file.sizeKb,
+      );
+      final fields = meta['metadata'] as Map<String, dynamic>? ?? {};
+
+      final title = (fields['Title'] ?? '').toString();
+      final author = (fields['Author'] ?? '').toString();
+      final description = (fields['Description'] ?? '').toString();
+      final copyright = (fields['Copyright'] ?? '').toString();
+      final comment = (fields['Comment'] ?? '').toString();
+      final creator = (fields['Creator'] ?? '').toString();
+
+      // Only pre-fill if the current field is blank (don't overwrite user edits)
+      if (metadataTitleController.text.trim().isEmpty) {
+        metadataTitleController.text = title;
+      }
+      if (metadataAuthorController.text.trim().isEmpty) {
+        metadataAuthorController.text = author;
+      }
+      if (metadataDescriptionController.text.trim().isEmpty) {
+        metadataDescriptionController.text = description;
+      }
+      if (metadataCopyrightController.text.trim().isEmpty) {
+        metadataCopyrightController.text = copyright;
+      }
+      if (metadataSoftwareController.text.trim().isEmpty) {
+        metadataSoftwareController.text = creator;
+      }
+      if (metadataCommentController.text.trim().isEmpty) {
+        metadataCommentController.text = comment;
+      }
+      update();
+    } catch (_) {}
   }
 
   void removeSelectedFile(FileModel file) {
     if (isRunning) return;
     selectedFiles.removeWhere((f) => f.id == file.id);
-    update();
+    if (selectedFiles.isEmpty) {
+      clearPreviousResult(clearSelected: true);
+    } else {
+      clearPreviousResult(clearSelected: false);
+    }
   }
 
   void clearSingleSelectedFile() {
     if (isRunning) return;
-    selectedFile = null;
-    isPdfLocked = false;
-    if (currentStep == 'error') {
-      errorMessage = '';
-      currentStep = 'idle';
-    }
-    update();
+    clearPreviousResult(clearSelected: true);
   }
 
   void toggleUseRawText(bool val) {
@@ -3358,12 +3884,64 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   }
 
   void renameConvertedFile(String fileId, String newName) {
-    if (newName.trim().isNotEmpty) {
-      scanController.renameFile(fileId, newName.trim());
-      convertedFile = scanController.scannedFiles.firstWhere((f) => f.id == fileId);
-      outputFileName = convertedFile!.name;
-      update();
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty) return;
+
+    final current = convertedFile;
+    if (current == null) return;
+
+    // Rename the actual file on disk if possible.
+    String newPath = current.path ?? '';
+    try {
+      if (newPath.isNotEmpty && File(newPath).existsSync()) {
+        final dir = File(newPath).parent.path;
+        // Preserve the original extension if newName doesn't already include one.
+        final oldExt = newPath.contains('.')
+            ? '.${newPath.split('.').last}'
+            : '';
+        final newExt = trimmed.contains('.') ? '' : oldExt;
+        final resolvedName = '$trimmed$newExt';
+        final resolvedPath = '$dir/$resolvedName';
+        File(newPath).renameSync(resolvedPath);
+        newPath = resolvedPath;
+        // Also update the name to include the extension.
+        final finalName = resolvedName;
+        // Update convertedFile in-memory.
+        convertedFile = current.copyWith(name: finalName, path: resolvedPath);
+        outputFileName = finalName;
+        // Sync scannedFiles: find entry by old path and update it.
+        final idx = scanController.scannedFiles
+            .indexWhere((f) => f.path == current.path || f.id == fileId);
+        if (idx != -1) {
+          scanController.scannedFiles[idx] =
+              scanController.scannedFiles[idx].copyWith(
+            name: finalName,
+            path: resolvedPath,
+          );
+          scanController.persistFiles();
+        }
+        update();
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: rename is in-memory only (e.g. file already gone or non-local).
+    final oldExt = (current.path ?? '').contains('.')
+        ? '.${(current.path ?? '').split('.').last}'
+        : '';
+    final newExt = trimmed.contains('.') ? '' : oldExt;
+    final finalName = '$trimmed$newExt';
+    convertedFile = current.copyWith(name: finalName);
+    outputFileName = finalName;
+    // Try syncing scannedFiles by id as well.
+    final idx = scanController.scannedFiles
+        .indexWhere((f) => f.id == fileId || f.path == current.path);
+    if (idx != -1) {
+      scanController.scannedFiles[idx] =
+          scanController.scannedFiles[idx].copyWith(name: finalName);
+      scanController.persistFiles();
     }
+    update();
   }
 
   // Option setter/updater helpers to make updating state cleaner
@@ -5750,8 +6328,6 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     watermarkTextController.dispose();
     passwordController.dispose();
     ownerPasswordController.dispose();
-    redactPatternsController.dispose();
-    redactColorController.dispose();
     headerController.dispose();
     footerController.dispose();
     signatureTextController.dispose();
@@ -5809,6 +6385,12 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     flashcardTextController.dispose();
     quizUrlController.dispose();
     quizTextController.dispose();
+    metadataTitleController.dispose();
+    metadataAuthorController.dispose();
+    metadataDescriptionController.dispose();
+    metadataCopyrightController.dispose();
+    metadataSoftwareController.dispose();
+    metadataCommentController.dispose();
     super.onClose();
   }
 }

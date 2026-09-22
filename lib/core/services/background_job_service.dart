@@ -231,8 +231,8 @@ class BackgroundJobService extends GetxService with WidgetsBindingObserver {
   Future<void> _resumePollingForJob(BackgroundJobState job) async {
     _inFlightJobIds.add(job.jobId);
     try {
-      final token = await StorageService.getToken();
-      if (token == null || token.isEmpty) return;
+      final savedToken = await StorageService.getToken();
+      final token = (savedToken != null && savedToken.isNotEmpty) ? savedToken : 'anonymous';
 
       final services = JobflowApiServices(accessToken: token);
       int pollingAttempt = job.pollingCount;

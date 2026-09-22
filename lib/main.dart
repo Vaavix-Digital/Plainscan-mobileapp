@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/app/app.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/background_job_service.dart';
 import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
@@ -16,6 +17,7 @@ void main() async {
   }
   Get.put(ScanController(), permanent: true);
   Get.put(NotificationService(), permanent: true);
+  Get.put(BackgroundJobService(), permanent: true);
   await StorageService.captureReferral();
   final savedLanguage = await StorageService.getLanguage();
   runApp(PlainScanApp(initialLocale: Locale(savedLanguage)));

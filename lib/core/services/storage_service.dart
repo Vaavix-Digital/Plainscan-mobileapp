@@ -474,6 +474,19 @@ class StorageService {
   }
 
   static const String _keyScannedFiles = 'user_scanned_files';
+  static const String _keyNotifications = 'plainscan_notifications';
+
+  static String getUserNotificationsKey(SharedPreferences prefs) {
+    final userId = prefs.getString(_keyUserId);
+    if (userId != null && userId.isNotEmpty) {
+      return 'user_notifications_$userId';
+    }
+    final email = prefs.getString(_keyEmail);
+    if (email != null && email.isNotEmpty) {
+      return 'user_notifications_${email.toLowerCase().trim()}';
+    }
+    return _keyNotifications;
+  }
 
   static String _getUserScannedFilesKey(SharedPreferences prefs) {
     final userId = prefs.getString(_keyUserId);

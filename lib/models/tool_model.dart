@@ -374,17 +374,7 @@ const List<ToolModel> allPlainscanTools = [
     outputFormat: '.pdf',
     description: 'Remove password and encryption from password-protected PDF files.',
   ),
-  ToolModel(
-    id: 'pdf-redact',
-    name: 'PDF Redact',
-    icon: Icons.blur_on_outlined,
-    color: Color(0xFF1E293B),
-    categoryId: 'manipulation',
-    category: 'PDF Manipulation',
-    inputFormat: '.pdf',
-    outputFormat: '.pdf',
-    description: 'Black out and permanently redact sensitive PII (emails, SSNs, credit cards).',
-  ),
+
   ToolModel(
     id: 'pdf-header-footer',
     name: 'PDF Header & Footer',
@@ -1095,7 +1085,7 @@ const List<ToolModel> allPlainscanTools = [
     categoryId: 'utility',
     category: 'Utility Tools',
     inputFormat: '.pdf / Image',
-    outputFormat: '.json',
+    outputFormat: '.txt',
     description: 'Inspect embedded document attributes, creation dates, camera specifications, and tags.',
   ),
 ];

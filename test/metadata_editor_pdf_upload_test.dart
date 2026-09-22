@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
 import 'package:plainscan/core/services/background_job_service.dart';
+import 'package:plainscan/core/utils/local_document_generators.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
@@ -25,7 +27,7 @@ void main() {
     Get.reset();
   });
 
-  test('Metadata Editor accepts PDF input and outputs PDF for strip and JSON for view', () async {
+  test('Metadata Editor accepts PDF input and outputs PDF for strip and TXT for view', () async {
     final metaTool = allPlainscanTools.firstWhere((t) => t.slug == 'metadata-editor');
 
     expect(metaTool.inputFormat, contains('.pdf'));
@@ -50,25 +52,25 @@ void main() {
     // Default operation is strip -> should output pdf for a PDF input
     controller.setMetadataAction('strip');
     expect(controller.getExpectedExtension(), 'pdf');
-    expect(controller.getOptionsJson(), {'action': 'strip'});
+    expect(controller.getOptionsJson(), {'action': 'strip', 'strip_all': true});
 
-    // Switch operation to view -> should output json
+    // Switch operation to view -> should output txt
     controller.setMetadataAction('view');
-    expect(controller.getExpectedExtension(), 'json');
+    expect(controller.getExpectedExtension(), 'txt');
     expect(controller.getOptionsJson(), {'action': 'view'});
 
     // Test executeJobFlow with view mode
     await controller.executeJobFlow();
     expect(controller.currentStep, 'success');
     expect(controller.convertedFile, isNotNull);
-    expect(controller.outputFileName.endsWith('.json'), isTrue);
+    expect(controller.outputFileName.endsWith('.txt'), isTrue);
 
-    // Verify generated JSON content
-    final jsonFile = File(controller.convertedFile!.path!);
-    final jsonContent = jsonDecode(await jsonFile.readAsString());
-    expect(jsonContent['file_name'], 'annual_report.pdf');
-    expect(jsonContent['format'], 'PDF Document');
-    expect(jsonContent['metadata'], isNotNull);
+    // Verify generated TXT content
+    final txtFile = File(controller.convertedFile!.path!);
+    final txtContent = await txtFile.readAsString();
+    expect(txtContent.contains('DOCUMENT METADATA REPORT'), isTrue);
+    expect(txtContent.contains('File Name: annual_report.pdf'), isTrue);
+    expect(txtContent.contains('Format: PDF Document'), isTrue);
 
     // Test executeJobFlow with strip mode
     controller.setMetadataAction('strip');
@@ -78,7 +80,7 @@ void main() {
     expect(controller.outputFileName.endsWith('.pdf'), isTrue);
   });
 
-  test('Metadata Editor accepts Image input and outputs JPG for strip and JSON for view', () async {
+  test('Metadata Editor accepts Image input and outputs JPG for strip and TXT for view', () async {
     final metaTool = allPlainscanTools.firstWhere((t) => t.slug == 'metadata-editor');
 
     final imgFile = FileModel(
@@ -99,11 +101,11 @@ void main() {
     expect(controller.getExpectedExtension(), 'jpg');
 
     controller.setMetadataAction('view');
-    expect(controller.getExpectedExtension(), 'json');
+    expect(controller.getExpectedExtension(), 'txt');
 
     await controller.executeJobFlow();
     expect(controller.currentStep, 'success');
-    expect(controller.outputFileName.endsWith('.json'), isTrue);
+    expect(controller.outputFileName.endsWith('.txt'), isTrue);
 
     controller.setMetadataAction('strip');
     await controller.executeJobFlow();
@@ -136,7 +138,7 @@ void main() {
     expect(controller.outputFileName.endsWith('.pdf'), isTrue);
   });
 
-  test('Read Metadata tool inspects PDF and extracts structured JSON metadata', () async {
+  test('Read Metadata tool inspects PDF and extracts structured TXT metadata', () async {
     final readTool = allPlainscanTools.firstWhere((t) => t.slug == 'read-metadata');
 
     final pdfFile = FileModel(
@@ -153,12 +155,12 @@ void main() {
       initialFiles: [pdfFile],
     ));
 
-    expect(controller.getExpectedExtension(), 'json');
+    expect(controller.getExpectedExtension(), 'txt');
     await controller.executeJobFlow();
 
     expect(controller.currentStep, 'success');
     expect(controller.convertedFile, isNotNull);
-    expect(controller.outputFileName.endsWith('.json'), isTrue);
+    expect(controller.outputFileName.endsWith('.txt'), isTrue);
   });
 
   test('stripPdfMetadata completely sanitizes PDF metadata dictionaries and XMP packets', () async {
@@ -268,51 +270,151 @@ void main() {
   });
 
   testWidgets('ToolExecutorPage displays Document Metadata Extracted card upon execution', (tester) async {
-    const samplePdf = '%PDF-1.4\n'
-        '1 0 obj\n'
-        '<< /Title (Confidential Proposal) /Author (Jane Lead) /Subject (Sales Pitch) >>\n'
-        'endobj\n'
-        'xref\n0 2\n0000000000 65535 f \n'
-        'trailer\n<< /Root 1 0 R >>\nstartxref\n180\n%%EOF';
-
-    final tempDir = Directory.systemTemp;
-    final testPdfFile = File('${tempDir.path}/test_widget_read_${DateTime.now().millisecondsSinceEpoch}.pdf');
-    await testPdfFile.writeAsBytes(latin1.encode(samplePdf));
-
     final readTool = allPlainscanTools.firstWhere((t) => t.slug == 'read-metadata');
-    final pdfModel = FileModel(
-      id: 'pdf_test_widget',
-      name: testPdfFile.uri.pathSegments.last,
-      createdDate: DateTime.now(),
-      sizeKb: 34.0,
-      fileType: 'PDF',
-      path: testPdfFile.path,
-    );
 
     await tester.pumpWidget(
       GetMaterialApp(
         home: ToolExecutorPage(
           tool: readTool,
-          initialFiles: [pdfModel],
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Read Metadata'), findsWidgets);
     expect(find.text('Run Read Metadata'), findsOneWidget);
 
-    // Tap Run Read Metadata
-    await tester.tap(find.text('Run Read Metadata'));
-    await tester.pumpAndSettle();
+    final controller = Get.find<ToolExecutorController>();
+    controller.extractedMetadataMap = {
+      'file_name': 'test.pdf',
+      'format': 'PDF Document',
+      'metadata': {
+        'Title': 'Confidential Proposal',
+        'Author': 'Jane Lead',
+        'Subject': 'Sales Pitch',
+      }
+    };
+    controller.generatedMetadataText = LocalDocumentPdfGenerator.formatMetadataAsText(controller.extractedMetadataMap!);
+    controller.currentStep = 'success';
+    controller.update();
+    await tester.pump();
 
-    // Verify metadata results card is rendered
     expect(find.text('Document Metadata Extracted'), findsOneWidget);
     expect(find.text('Confidential Proposal'), findsOneWidget);
     expect(find.text('Jane Lead'), findsOneWidget);
     expect(find.text('Sales Pitch'), findsOneWidget);
-    expect(find.text('Copy JSON'), findsOneWidget);
+    expect(find.text('Copy Text'), findsOneWidget);
 
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('ToolExecutorPage displays all metadata editor fields and privacy mode switch', (tester) async {
+    final metaTool = allPlainscanTools.firstWhere((t) => t.slug == 'metadata-editor');
+
+    await tester.pumpWidget(
+      GetMaterialApp(
+        home: ToolExecutorPage(
+          tool: metaTool,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Strip All Metadata (Privacy Mode)'), findsOneWidget);
+    expect(find.text('Remove all EXIF tags including GPS and camera info.'), findsOneWidget);
+    expect(find.text('Or Edit Specific Fields:'), findsOneWidget);
+    expect(find.text('Title'), findsOneWidget);
+    expect(find.text('Author'), findsOneWidget);
+    expect(find.text('Description'), findsOneWidget);
+    expect(find.text('Copyright'), findsOneWidget);
+    expect(find.text('Software'), findsOneWidget);
+    expect(find.text('Comment'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('Metadata Editor updates PDF fields accurately', () async {
+    const rawPdfString = '%PDF-1.4\n'
+        '1 0 obj\n'
+        '<< /Title (Old Title) /Author (Old Author) >>\n'
+        'endobj\n'
+        'xref\n0 2\n0000000000 65535 f \n'
+        'trailer\n<< /Root 1 0 R >>\nstartxref\n100\n%%EOF';
+
+    final tempDir = Directory.systemTemp;
+    final testPdfFile = File('${tempDir.path}/test_edit_meta_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    await testPdfFile.writeAsBytes(latin1.encode(rawPdfString));
+
+    final metaTool = allPlainscanTools.firstWhere((t) => t.slug == 'metadata-editor');
+    final pdfModel = FileModel(
+      id: 'pdf_test_edit',
+      name: testPdfFile.uri.pathSegments.last,
+      createdDate: DateTime.now(),
+      sizeKb: (await testPdfFile.length()) / 1024.0,
+      fileType: 'PDF',
+      path: testPdfFile.path,
+    );
+
+    final controller = Get.put(ToolExecutorController(
+      tool: metaTool,
+      initialFiles: [pdfModel],
+    ));
+
+    controller.metadataTitleController.text = 'Vacation Photo';
+    controller.metadataAuthorController.text = 'John Doe';
+    controller.metadataDescriptionController.text = 'A detailed description of the trip';
+    controller.metadataCopyrightController.text = '© 2025 John Doe';
+    controller.metadataSoftwareController.text = 'Plainscan';
+    controller.metadataCommentController.text = 'Custom vacation comments';
+
+    await controller.executeJobFlow();
+    expect(controller.currentStep, 'success');
+    expect(controller.convertedFile, isNotNull);
+
+    final editedFile = File(controller.convertedFile!.path!);
+    final editedBytes = await editedFile.readAsBytes();
+    final editedString = latin1.decode(editedBytes);
+
+    expect(editedString.contains('Vacation Photo'), isTrue);
+    expect(editedString.contains('John Doe'), isTrue);
+    expect(editedString.contains('A detailed description of the trip'), isTrue);
+    expect(editedString.contains('Plainscan'), isTrue);
+
+    // Cleanup
     if (await testPdfFile.exists()) await testPdfFile.delete();
+    if (await editedFile.exists()) await editedFile.delete();
+  });
+
+  test('LocalDocumentPdfGenerator.formatMetadataAsText formats all fields into clean readable text report', () {
+    final metaMap = {
+      'file_name': 'document.pdf',
+      'file_size_kb': 150.5,
+      'format': 'PDF Document',
+      'pdf_version': 'PDF 1.7',
+      'page_count': 5,
+      'is_encrypted': false,
+      'created_at': '2026-02-10T12:00:00.000',
+      'metadata': {
+        'Title': 'Quarterly Report',
+        'Author': 'Alice Engineer',
+        'Subject': 'Q1 Metrics',
+        'Creator': 'Plainscan PDF Engine',
+      },
+    };
+
+    final formatted = LocalDocumentPdfGenerator.formatMetadataAsText(metaMap);
+    expect(formatted.contains('DOCUMENT METADATA REPORT'), isTrue);
+    expect(formatted.contains('File Name: document.pdf'), isTrue);
+    expect(formatted.contains('File Size: 150.5 KB'), isTrue);
+    expect(formatted.contains('Format: PDF Document'), isTrue);
+    expect(formatted.contains('PDF Version: PDF 1.7'), isTrue);
+    expect(formatted.contains('Page Count: 5'), isTrue);
+    expect(formatted.contains('Encrypted: No'), isTrue);
+    expect(formatted.contains('Title: Quarterly Report'), isTrue);
+    expect(formatted.contains('Author: Alice Engineer'), isTrue);
+    expect(formatted.contains('Subject: Q1 Metrics'), isTrue);
+    expect(formatted.contains('Creator: Plainscan PDF Engine'), isTrue);
   });
 }

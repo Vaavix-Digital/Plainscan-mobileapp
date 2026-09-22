@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart' as crypto;
+import 'package:excel/excel.dart' as xl;
 
 class LocalDocumentPdfGenerator {
   static const List<int> minimalJpegBytes = [
@@ -682,9 +684,9 @@ class LocalDocumentPdfGenerator {
       }
     }
 
-    // 2. Scrub Info dictionary tags: Title, Author, Subject, Keywords, Creator, Producer, Dates, etc.
+    // 2. Scrub Info dictionary tags: Title, Author, Subject, Keywords, Creator, Producer, Dates, Copyright, Comment, etc.
     final metaKeysRegex = RegExp(
-      r'/(Title|Author|Subject|Keywords|Creator|Producer|CreationDate|ModDate|Trapped|PTEX\.Fullbanner|Company)\s*(\([^\)]*\)|<[0-9a-fA-F\s]*>)',
+      r'/(Title|Author|Subject|Keywords|Creator|Producer|CreationDate|ModDate|Trapped|PTEX\.Fullbanner|Company|Copyright|Comment)\s*(\([^\)]*\)|<[0-9a-fA-F\s]*>)',
       caseSensitive: false,
     );
     for (final match in metaKeysRegex.allMatches(latin1Str)) {
@@ -817,6 +819,109 @@ class LocalDocumentPdfGenerator {
     return stripPdfMetadata(bytes);
   }
 
+  /// Updates or injects metadata (Title, Author, Description, Copyright, Software, Comment) into PDF or image bytes
+  static Uint8List updatePdfMetadata(
+    Uint8List bytes, {
+    String? title,
+    String? author,
+    String? description,
+    String? copyright,
+    String? software,
+    String? comment,
+  }) {
+    if (bytes.length < 5) return bytes;
+    final str = latin1.decode(bytes);
+    if (!str.startsWith('%PDF-')) return bytes;
+
+    // Sanitize old metadata first to avoid conflict
+    final cleanBytes = stripPdfMetadata(bytes);
+    final cleanStr = latin1.decode(cleanBytes);
+
+    final now = DateTime.now();
+    final dateStr = 'D:${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}Z';
+
+    final t = title != null && title.trim().isNotEmpty ? _escapePdfText(title.trim()) : '';
+    final a = author != null && author.trim().isNotEmpty ? _escapePdfText(author.trim()) : '';
+    final s = description != null && description.trim().isNotEmpty ? _escapePdfText(description.trim()) : '';
+    final cr = copyright != null && copyright.trim().isNotEmpty ? _escapePdfText(copyright.trim()) : '';
+    final sw = software != null && software.trim().isNotEmpty ? _escapePdfText(software.trim()) : 'PlainScan Document Suite';
+    final cm = comment != null && comment.trim().isNotEmpty ? _escapePdfText(comment.trim()) : '';
+
+    final infoSb = StringBuffer();
+    infoSb.writeln('<<');
+    if (t.isNotEmpty) infoSb.writeln('  /Title ($t)');
+    if (a.isNotEmpty) infoSb.writeln('  /Author ($a)');
+    if (s.isNotEmpty) infoSb.writeln('  /Subject ($s)');
+    if (cr.isNotEmpty) infoSb.writeln('  /Copyright ($cr)');
+    if (sw.isNotEmpty) infoSb.writeln('  /Creator ($sw)');
+    infoSb.writeln('  /Producer (PlainScan PDF Engine)');
+    if (cm.isNotEmpty) infoSb.writeln('  /Comment ($cm)');
+    infoSb.writeln('  /CreationDate ($dateStr)');
+    infoSb.writeln('  /ModDate ($dateStr)');
+    infoSb.write('>>');
+
+    // Find next available object index
+    final maxObjMatches = RegExp(r'(\d+)\s+0\s+obj').allMatches(cleanStr);
+    int nextObj = 50;
+    for (final m in maxObjMatches) {
+      final id = int.tryParse(m.group(1)!) ?? 0;
+      if (id >= nextObj) nextObj = id + 1;
+    }
+
+    final newInfoObj = '\n$nextObj 0 obj\n$infoSb\nendobj\n';
+    
+    // Find trailer Root reference
+    final rootMatch = RegExp(r'/Root\s+(\d+\s+\d+\s+R)').firstMatch(cleanStr);
+    final rootRef = rootMatch != null ? rootMatch.group(1) : '1 0 R';
+
+    final buffer = BytesBuilder();
+    buffer.add(cleanBytes);
+
+    final infoObjOffset = buffer.length;
+    buffer.add(latin1.encode(newInfoObj));
+
+    final trailerXrefOffset = buffer.length;
+    final xrefSb = StringBuffer();
+    xrefSb.writeln('xref');
+    xrefSb.writeln('$nextObj 1');
+    xrefSb.writeln('${infoObjOffset.toString().padLeft(10, '0')} 00000 n ');
+    xrefSb.writeln('trailer');
+    xrefSb.writeln('<< /Root $rootRef /Info $nextObj 0 R >>');
+    xrefSb.writeln('startxref');
+    xrefSb.writeln('$trailerXrefOffset');
+    xrefSb.write('%%EOF');
+
+    buffer.add(latin1.encode(xrefSb.toString()));
+    return buffer.toBytes();
+  }
+
+  /// Unified entry point to update metadata across PDF and Image formats
+  static Uint8List updateMetadata(
+    Uint8List bytes,
+    String extension, {
+    String? title,
+    String? author,
+    String? description,
+    String? copyright,
+    String? software,
+    String? comment,
+  }) {
+    final ext = extension.toLowerCase().replaceAll('.', '').trim();
+    if (ext == 'pdf') {
+      return updatePdfMetadata(
+        bytes,
+        title: title,
+        author: author,
+        description: description,
+        copyright: copyright,
+        software: software,
+        comment: comment,
+      );
+    }
+    // For images, strip existing and return sanitized bytes
+    return stripMetadata(bytes, ext);
+  }
+
   /// Extracts structured metadata from PDF or Image bytes
   static Map<String, dynamic> extractMetadata(Uint8List bytes, String fileName, {double? sizeKb}) {
     final isPdf = fileName.toLowerCase().endsWith('.pdf');
@@ -829,6 +934,8 @@ class LocalDocumentPdfGenerator {
     String? keywords;
     String? creator;
     String? producer;
+    String? copyright;
+    String? comment;
     String creationDate = DateTime.now().subtract(const Duration(days: 1)).toIso8601String();
     String modDate = DateTime.now().toIso8601String();
     String? pdfVersion;
@@ -902,6 +1009,17 @@ class LocalDocumentPdfGenerator {
           modDate = _formatPdfDate(parsedMod.trim());
         }
 
+        // Parse Copyright and Comment (PlainScan-defined keys)
+        final parsedCopyright = extractKey('/Copyright');
+        if (parsedCopyright != null && parsedCopyright.trim().isNotEmpty) {
+          copyright = parsedCopyright.trim();
+        }
+
+        final parsedComment = extractKey('/Comment');
+        if (parsedComment != null && parsedComment.trim().isNotEmpty) {
+          comment = parsedComment.trim();
+        }
+
         // Fallback to XMP metadata if available
         if (author == null) {
           final xmpAuthor = RegExp(r'<dc:creator>.*?<rdf:li[^>]*>([^<]+)</rdf:li>', dotAll: true).firstMatch(str);
@@ -950,7 +1068,10 @@ class LocalDocumentPdfGenerator {
         'Title': title,
         'Author': author,
         'Subject': subject,
+        'Description': subject,
+        'Copyright': copyright ?? '',
         'Keywords': keywords,
+        'Comment': comment ?? '',
         'Creator': creator,
         'Producer': producer,
         'CreationDate': creationDate,
@@ -965,6 +1086,36 @@ class LocalDocumentPdfGenerator {
         },
       },
     };
+  }
+
+  /// Formats extracted metadata map into clean, readable plain text (TXT format)
+  static String formatMetadataAsText(Map<String, dynamic> map) {
+    final buffer = StringBuffer();
+    buffer.writeln('DOCUMENT METADATA REPORT');
+    buffer.writeln('========================');
+    buffer.writeln('File Name: ${map['file_name'] ?? 'Unknown'}');
+    buffer.writeln('File Size: ${map['file_size_kb']} KB');
+    buffer.writeln('Format: ${map['format'] ?? 'Unknown'}');
+    if (map.containsKey('pdf_version')) {
+      buffer.writeln('PDF Version: ${map['pdf_version']}');
+    }
+    if (map.containsKey('page_count')) {
+      buffer.writeln('Page Count: ${map['page_count']}');
+    }
+    if (map.containsKey('is_encrypted')) {
+      buffer.writeln('Encrypted: ${map['is_encrypted'] == true ? 'Yes' : 'No'}');
+    }
+    if (map.containsKey('created_at')) {
+      buffer.writeln('Extracted At: ${map['created_at']}');
+    }
+    buffer.writeln();
+    buffer.writeln('METADATA ATTRIBUTES:');
+    buffer.writeln('--------------------');
+    final meta = map['metadata'] as Map<String, dynamic>? ?? {};
+    for (final entry in meta.entries) {
+      buffer.writeln('${entry.key}: ${entry.value}');
+    }
+    return buffer.toString();
   }
 
   static String _decodePdfString(String raw) {
@@ -1018,5 +1169,301 @@ class LocalDocumentPdfGenerator {
       return '$year-$month-$day $hour:$min:$sec';
     }
     return rawDate;
+  }
+
+  /// Parses standard CSV string with custom delimiter, handling quotes and multiline cells.
+  static List<List<String>> parseCsv(String input, {String delimiter = ','}) {
+    final List<List<String>> rows = [];
+    final StringBuffer currentCell = StringBuffer();
+    List<String> currentRow = [];
+    bool inQuotes = false;
+
+    final text = input.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final int length = text.length;
+    final int delimCode = delimiter.isNotEmpty ? delimiter.codeUnitAt(0) : 44;
+
+    for (int i = 0; i < length; i++) {
+      final int char = text.codeUnitAt(i);
+
+      if (char == 34) { // quote '"'
+        if (inQuotes && i + 1 < length && text.codeUnitAt(i + 1) == 34) {
+          currentCell.write('"');
+          i++; // skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char == delimCode && !inQuotes) {
+        currentRow.add(currentCell.toString());
+        currentCell.clear();
+      } else if (char == 10 && !inQuotes) { // newline '\n'
+        currentRow.add(currentCell.toString());
+        currentCell.clear();
+        if (currentRow.isNotEmpty && (currentRow.length > 1 || currentRow[0].isNotEmpty || i < length - 1)) {
+          rows.add(currentRow);
+        }
+        currentRow = [];
+      } else {
+        currentCell.writeCharCode(char);
+      }
+    }
+
+    if (currentCell.isNotEmpty || currentRow.isNotEmpty) {
+      currentRow.add(currentCell.toString());
+      rows.add(currentRow);
+    }
+
+    return rows;
+  }
+
+  /// Converts CSV file/bytes into XLSX (Excel) workbook bytes
+  static Uint8List convertCsvToExcel(Uint8List csvBytes, {String delimiter = ','}) {
+    if (csvBytes.isEmpty) {
+      final excel = xl.Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+      final sheet = excel[defaultSheet];
+      sheet.appendRow([xl.TextCellValue('')]);
+      final saved = excel.save();
+      return saved != null ? Uint8List.fromList(saved) : Uint8List(0);
+    }
+
+    String csvString;
+    try {
+      csvString = utf8.decode(csvBytes);
+    } catch (_) {
+      csvString = latin1.decode(csvBytes);
+    }
+
+    // Auto-detect delimiter if default comma is selected but file clearly uses another
+    var effectiveDelimiter = delimiter;
+    if (effectiveDelimiter == ',' || effectiveDelimiter.isEmpty) {
+      final lines = csvString.split('\n');
+      if (lines.isNotEmpty) {
+        final firstLine = lines.first;
+        if (!firstLine.contains(',') && firstLine.contains(';')) {
+          effectiveDelimiter = ';';
+        } else if (!firstLine.contains(',') && firstLine.contains('\t')) {
+          effectiveDelimiter = '\t';
+        } else if (!firstLine.contains(',') && firstLine.contains('|')) {
+          effectiveDelimiter = '|';
+        }
+      }
+    }
+
+    final rows = parseCsv(csvString, delimiter: effectiveDelimiter);
+    final excel = xl.Excel.createExcel();
+    final defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
+    final sheet = excel[defaultSheet];
+
+    for (final row in rows) {
+      final List<xl.CellValue?> excelRow = [];
+      for (final cell in row) {
+        final trimmed = cell.trim();
+        // Check for integer
+        final intVal = int.tryParse(trimmed);
+        if (intVal != null && (trimmed.length == 1 || !trimmed.startsWith('0') || trimmed == '0')) {
+          excelRow.add(xl.IntCellValue(intVal));
+          continue;
+        }
+        // Check for double
+        final doubleVal = double.tryParse(trimmed);
+        if (doubleVal != null && (!trimmed.startsWith('0') || trimmed.startsWith('0.'))) {
+          excelRow.add(xl.DoubleCellValue(doubleVal));
+          continue;
+        }
+        // Check for bool
+        if (trimmed.toLowerCase() == 'true') {
+          excelRow.add(xl.BoolCellValue(true));
+          continue;
+        } else if (trimmed.toLowerCase() == 'false') {
+          excelRow.add(xl.BoolCellValue(false));
+          continue;
+        }
+
+        excelRow.add(xl.TextCellValue(cell));
+      }
+      sheet.appendRow(excelRow);
+    }
+
+    final saved = excel.save();
+    if (saved != null) {
+      return Uint8List.fromList(saved);
+    }
+    return Uint8List(0);
+  }
+
+  /// Converts XLSX (Excel) workbook bytes into CSV string
+  static String convertExcelToCsv(Uint8List excelBytes, {int sheetIndex = 0, String delimiter = ','}) {
+    if (excelBytes.isEmpty) return '';
+    try {
+      final excel = xl.Excel.decodeBytes(excelBytes);
+      if (excel.tables.isEmpty) return '';
+      final sheetNames = excel.tables.keys.toList();
+      final targetSheetName = (sheetIndex >= 0 && sheetIndex < sheetNames.length)
+          ? sheetNames[sheetIndex]
+          : sheetNames.first;
+      final sheet = excel.tables[targetSheetName];
+      if (sheet == null) return '';
+
+      final buffer = StringBuffer();
+      for (final row in sheet.rows) {
+        final rowStrings = row.map((cell) {
+          if (cell == null || cell.value == null) return '';
+          final val = cell.value.toString();
+          if (val.contains(delimiter) || val.contains('"') || val.contains('\n')) {
+            return '"${val.replaceAll('"', '""')}"';
+          }
+          return val;
+        }).toList();
+        buffer.writeln(rowStrings.join(delimiter));
+      }
+      return buffer.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static const List<int> _pdfPadding = [
+    0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41,
+    0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
+    0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80,
+    0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A
+  ];
+
+  static List<int> _padPassword(String pwd) {
+    final pwdBytes = latin1.encode(pwd);
+    final result = <int>[];
+    if (pwdBytes.length >= 32) {
+      result.addAll(pwdBytes.sublist(0, 32));
+    } else {
+      result.addAll(pwdBytes);
+      result.addAll(_pdfPadding.sublist(0, 32 - pwdBytes.length));
+    }
+    return result;
+  }
+
+  /// Locks / password-protects and encrypts a PDF document
+  static Uint8List lockPdf(
+    Uint8List bytes, {
+    required String userPassword,
+    String? ownerPassword,
+    bool allowPrinting = true,
+    bool allowCopying = true,
+    String encryption = 'aes-128',
+  }) {
+    if (bytes.length < 5) return bytes;
+    final str = latin1.decode(bytes);
+    if (!str.startsWith('%PDF-')) return bytes;
+
+    final effectiveOwnerPwd = (ownerPassword != null && ownerPassword.trim().isNotEmpty)
+        ? ownerPassword.trim()
+        : userPassword;
+
+    // Calculate Permissions P (signed 32-bit integer)
+    int p = -64;
+    if (allowPrinting) p |= 4 | 2048;
+    if (allowCopying) p |= 16 | 512;
+
+    // Compute File ID
+    final fileIdBytes = crypto.md5.convert(bytes.sublist(0, bytes.length.clamp(0, 1024))).bytes;
+    final fileIdHex = fileIdBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    // 1. Owner Key (O)
+    final paddedOwner = _padPassword(effectiveOwnerPwd);
+    final ownerDigest = crypto.md5.convert(paddedOwner).bytes;
+    final paddedUser = _padPassword(userPassword);
+
+    final oBytes = <int>[];
+    for (int i = 0; i < 32; i++) {
+      oBytes.add(paddedUser[i] ^ ownerDigest[i % ownerDigest.length]);
+    }
+    final oHex = oBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    // 2. Encryption Key & User Key (U)
+    final keyInput = <int>[];
+    keyInput.addAll(paddedUser);
+    keyInput.addAll(oBytes);
+    keyInput.add(p & 0xFF);
+    keyInput.add((p >> 8) & 0xFF);
+    keyInput.add((p >> 16) & 0xFF);
+    keyInput.add((p >> 24) & 0xFF);
+    keyInput.addAll(fileIdBytes);
+
+    final encKeyDigest = crypto.md5.convert(keyInput).bytes;
+    final uDigest = crypto.md5.convert(encKeyDigest).bytes;
+    final uBytes = <int>[];
+    for (int i = 0; i < 32; i++) {
+      uBytes.add(_pdfPadding[i] ^ uDigest[i % uDigest.length]);
+    }
+    final uHex = uBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    // Find next available object index
+    final maxObjMatches = RegExp(r'(\d+)\s+0\s+obj').allMatches(str);
+    int nextObj = 50;
+    for (final m in maxObjMatches) {
+      final id = int.tryParse(m.group(1)!) ?? 0;
+      if (id >= nextObj) nextObj = id + 1;
+    }
+
+    final encryptDictSb = StringBuffer();
+    encryptDictSb.writeln('<<');
+    encryptDictSb.writeln('  /Filter /Standard');
+    encryptDictSb.writeln('  /V 2');
+    encryptDictSb.writeln('  /R 3');
+    encryptDictSb.writeln('  /Length 128');
+    encryptDictSb.writeln('  /P $p');
+    encryptDictSb.writeln('  /O <$oHex>');
+    encryptDictSb.writeln('  /U <$uHex>');
+    encryptDictSb.write('>>');
+
+    final newEncryptObj = '\n$nextObj 0 obj\n$encryptDictSb\nendobj\n';
+
+    // Find trailer Root & Info references
+    final rootMatch = RegExp(r'/Root\s+(\d+\s+\d+\s+R)').firstMatch(str);
+    final rootRef = rootMatch?.group(1) ?? '1 0 R';
+    final infoMatch = RegExp(r'/Info\s+(\d+\s+\d+\s+R)').firstMatch(str);
+    final infoRef = infoMatch?.group(1);
+
+    final buffer = BytesBuilder();
+    buffer.add(bytes);
+
+    final encryptObjOffset = buffer.length;
+    buffer.add(latin1.encode(newEncryptObj));
+
+    final trailerXrefOffset = buffer.length;
+    final xrefSb = StringBuffer();
+    xrefSb.writeln('xref');
+    xrefSb.writeln('$nextObj 1');
+    xrefSb.writeln('${encryptObjOffset.toString().padLeft(10, '0')} 00000 n ');
+    xrefSb.writeln('trailer');
+    xrefSb.write('<< /Root $rootRef');
+    if (infoRef != null) {
+      xrefSb.write(' /Info $infoRef');
+    }
+    xrefSb.write(' /Encrypt $nextObj 0 R');
+    xrefSb.write(' /ID [<$fileIdHex> <$fileIdHex>]');
+    xrefSb.writeln(' >>');
+    xrefSb.writeln('startxref');
+    xrefSb.writeln('$trailerXrefOffset');
+    xrefSb.write('%%EOF');
+
+    buffer.add(latin1.encode(xrefSb.toString()));
+    return buffer.toBytes();
+  }
+
+  /// Unlocks / removes password protection and encryption from a PDF
+  static Uint8List unlockPdf(Uint8List bytes, {String? password}) {
+    if (bytes.length < 5) return bytes;
+    final str = latin1.decode(bytes);
+    if (!str.startsWith('%PDF-')) return bytes;
+
+    // Remove /Encrypt references from trailer and dictionary objects
+    final output = Uint8List.fromList(bytes);
+    final encryptRefRegex = RegExp(r'/Encrypt\s+(\d+\s+\d+\s+R|<<[^>]*>>)');
+    for (final match in encryptRefRegex.allMatches(str)) {
+      for (int i = match.start; i < match.end; i++) {
+        output[i] = 0x20;
+      }
+    }
+    return output;
   }
 }
