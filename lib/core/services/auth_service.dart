@@ -519,6 +519,8 @@ class AuthService {
     }
   }
 
+
+
   static Future<AuthResult> refreshToken() async {
     try {
       final localRefreshToken = await StorageService.getRefreshToken();
@@ -620,6 +622,30 @@ class AuthService {
     } catch (_) {}
     await StorageService.logout();
     await _refreshUserSessionState(isLogout: true);
+  }
+
+  static Future<AuthResult> deleteAccount() async {
+    try {
+      final token = await StorageService.getToken();
+      final response = await _client.delete(
+        Uri.parse('${ApiConstants.baseUrl}${ApiConstants.deleteAccount}'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await StorageService.logout();
+        await _refreshUserSessionState(isLogout: true);
+        return AuthResult(success: true);
+      } else {
+        final errorMsg = _parseError(response.body);
+        return AuthResult(success: false, errorMessage: errorMsg);
+      }
+    } catch (e) {
+      return AuthResult(success: false, errorMessage: 'Connection failed: ${e.toString()}');
+    }
   }
 
   static Future<void> _refreshUserSessionState({bool isLogout = false}) async {

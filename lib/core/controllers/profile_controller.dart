@@ -1,11 +1,15 @@
+import 'dart:io';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/plan_controller.dart';
 import 'package:plainscan/core/services/auth_service.dart';
 import 'package:plainscan/core/services/plan_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/services/iap_service.dart';
 import 'package:plainscan/models/plan_model.dart';
 import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
@@ -353,44 +357,102 @@ class ProfileController extends GetxController {
                 ),
               ),
 
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: AppColors.border)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'OR GET IT FREE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.secondaryText,
+              if (!Platform.isIOS) ...[
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: AppColors.border)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'OR GET IT FREE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.secondaryText,
+                        ),
                       ),
                     ),
+                    const Expanded(child: Divider(color: AppColors.border)),
+                  ],
+                ),
+  
+                const SizedBox(height: 12),
+  
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Get.back();
+                    Get.toNamed(AppRoutes.referral);
+                  },
+                  icon: const Icon(Icons.card_giftcard_rounded, color: AppColors.primary),
+                  label: const Text(
+                    'Share App & Get 1 Month Free Pro',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
-                  const Expanded(child: Divider(color: AppColors.border)),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              OutlinedButton.icon(
-                onPressed: () {
-                  Get.back();
-                  Get.toNamed(AppRoutes.referral);
-                },
-                icon: const Icon(Icons.card_giftcard_rounded, color: AppColors.primary),
-                label: const Text(
-                  'Share App & Get 1 Month Free Pro',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary, width: 1.5),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
+  
+                const SizedBox(height: 10),
+              ],
 
               const SizedBox(height: 10),
+
+              const SizedBox(height: 10),
+              
+              if (Platform.isIOS)
+                TextButton(
+                  onPressed: () => IAPService().restorePurchases(),
+                  child: const Text(
+                    'Restore Purchases', 
+                    style: TextStyle(
+                      color: AppColors.primary, 
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 10),
+              Center(
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Terms of Service',
+                    style: const TextStyle(
+                      color: AppColors.secondaryText,
+                      decoration: TextDecoration.underline,
+                      fontSize: 11,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        Get.back();
+                        Get.toNamed(AppRoutes.termsOfService);
+                      },
+                    children: [
+                      const TextSpan(
+                        text: '  |  ',
+                        style: TextStyle(decoration: TextDecoration.none),
+                      ),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: const TextStyle(
+                          color: AppColors.secondaryText,
+                          decoration: TextDecoration.underline,
+                          fontSize: 11,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Get.back();
+                            Get.toNamed(AppRoutes.privacyPolicy);
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -494,6 +556,42 @@ class ProfileController extends GetxController {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> deleteAccount() async {
+    final bool showAppleWarning = Platform.isIOS && isPro.value;
+    final String baseWarning = 'Are you sure you want to delete your account? This action cannot be undone and you will lose all your data, credits, and subscriptions.'.tr;
+    final String appleWarning = '\n\n⚠️ IMPORTANT: To avoid future charges, please cancel your subscription in your Apple ID Settings → Subscriptions before deleting your account.'.tr;
+
+    Get.defaultDialog(
+      title: 'Delete Account'.tr,
+      middleText: showAppleWarning ? baseWarning + appleWarning : baseWarning,
+      textConfirm: 'Delete'.tr,
+      textCancel: 'Cancel'.tr,
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.red,
+      cancelTextColor: AppColors.text,
+      onConfirm: () async {
+        Get.back(); // close dialog
+        Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+        final result = await AuthService.deleteAccount();
+        Get.back(); // close loading
+        if (result.success) {
+          Get.snackbar('Success'.tr, 'Your account has been deleted successfully.'.tr, backgroundColor: Colors.green, colorText: Colors.white);
+          if (Get.isRegistered<ScanController>()) {
+            Get.find<ScanController>().clearFiles();
+          }
+          if (Get.isRegistered<AllToolsController>()) {
+            await Get.find<AllToolsController>().loadRecentTools();
+          }
+          try {
+            Get.offAllNamed(AppRoutes.auth);
+          } catch (_) {}
+        } else {
+          Get.snackbar('Error'.tr, result.errorMessage ?? 'Failed to delete account.'.tr, backgroundColor: Colors.red, colorText: Colors.white);
+        }
+      },
     );
   }
 

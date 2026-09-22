@@ -401,6 +401,11 @@ class NotificationService extends GetxController {
 
       final NotificationDetails notificationDetails = NotificationDetails(
         android: androidDetails,
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
 
       await _localNotifications.show(

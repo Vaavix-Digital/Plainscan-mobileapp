@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/helper.dart';
 
 Widget buildAdBanner() {
+  if (Get.isRegistered<ProfileController>()) {
+    return Obx(() {
+      if (Get.find<ProfileController>().isPro.value) {
+        return const SizedBox.shrink();
+      }
+      return const AdBanner();
+    });
+  }
   return const AdBanner();
 }
 

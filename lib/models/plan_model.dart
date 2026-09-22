@@ -31,6 +31,40 @@ class PlanModel {
     this.ctaLabel,
   });
 
+  PlanModel copyWith({
+    String? planId,
+    String? name,
+    String? description,
+    double? priceMonthly,
+    double? priceYearly,
+    double? monthlyEquivalentYearly,
+    String? currency,
+    String? currencySymbol,
+    List<String>? features,
+    List<String>? limitations,
+    bool? isPopular,
+    bool? showAds,
+    int? order,
+    String? ctaLabel,
+  }) {
+    return PlanModel(
+      planId: planId ?? this.planId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      priceMonthly: priceMonthly ?? this.priceMonthly,
+      priceYearly: priceYearly ?? this.priceYearly,
+      monthlyEquivalentYearly: monthlyEquivalentYearly ?? this.monthlyEquivalentYearly,
+      currency: currency ?? this.currency,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
+      features: features ?? this.features,
+      limitations: limitations ?? this.limitations,
+      isPopular: isPopular ?? this.isPopular,
+      showAds: showAds ?? this.showAds,
+      order: order ?? this.order,
+      ctaLabel: ctaLabel ?? this.ctaLabel,
+    );
+  }
+
   bool get isFree => priceMonthly == 0 && priceYearly == 0;
 
   int get savingsPercentage {

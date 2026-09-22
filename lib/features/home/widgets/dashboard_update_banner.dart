@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,14 +20,14 @@ class DashboardUpdateBanner extends UpgradeCard {
     super.overflow = TextOverflow.ellipsis,
     super.showPrompt = false,
     super.showIgnore = false,
-    super.showLater = true,
+    super.showLater = false,
     super.showReleaseNotes = false,
     bool forceDisplay = false,
   }) : super(
           upgrader: upgrader ??
               Upgrader(
                 debugDisplayAlways: forceDisplay,
-                durationUntilAlertAgain: const Duration(days: 1),
+                durationUntilAlertAgain: Duration.zero,
                 countryCode: 'US',
                 languageCode: 'en',
               ),

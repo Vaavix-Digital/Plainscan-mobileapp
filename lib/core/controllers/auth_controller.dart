@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/auth_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/services/referral_service.dart';
 
 
 class AuthController extends GetxController {
@@ -155,6 +157,77 @@ class AuthController extends GetxController {
       _showError(
         'Google login failed: $e',
       );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> handleAppleLogin() async {
+    if (isLoading.value) return;
+
+    isLoading.value = true;
+
+    try {
+      final AuthorizationCredentialAppleID credential =
+          await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final String? identityToken = credential.identityToken;
+
+      if (identityToken == null || identityToken.isEmpty) {
+        throw Exception('Apple identity token was not received.');
+      }
+
+      final result = await AuthService.appleLogin(
+        token: identityToken,
+      );
+
+      if (result.success) {
+        final pendingCode = await StorageService.getPendingReferralCode();
+        if (pendingCode != null && pendingCode.isNotEmpty) {
+          await ReferralService.applyReferralCode(pendingCode);
+          await StorageService.clearPendingReferralCode();
+        }
+        Get.offAllNamed(AppRoutes.home);
+        Get.rawSnackbar(
+          messageText: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Signed in successfully!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.emerald,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(12),
+          borderRadius: 8,
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        _showError(
+          result.errorMessage ?? 'Apple authentication failed.',
+        );
+      }
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        debugPrint('Apple sign-in canceled by user.');
+        return;
+      }
+      _showError('Apple Sign-In failed: ${e.message}');
+    } catch (e) {
+      debugPrint('Apple Sign-In error: $e');
+      _showError('Apple login failed: $e');
     } finally {
       isLoading.value = false;
     }

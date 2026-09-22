@@ -377,4 +377,66 @@ class PaymentService {
       return PaymentVerifyResult.failure('Network connection failed: $e');
     }
   }
+
+  /// Verifies Apple In-App Purchase receipt
+  static Future<PaymentVerifyResult> verifyApplePayment({
+    required String receiptData,
+    required String planId,
+    required String billingPeriod,
+  }) async {
+    try {
+      String? token = await StorageService.getToken();
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.verifyApplePayment}');
+
+      final payload = jsonEncode({
+        'receipt_data': receiptData,
+        'receipt-data': receiptData,
+        'plan_id': planId,
+        'billing_period': billingPeriod,
+      });
+
+      debugPrint('POST $uri with payload (receipt length: ${receiptData.length})');
+
+      var response = await _client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: payload,
+      );
+
+      debugPrint('verifyApple response: ${response.statusCode} - ${response.body}');
+
+      if ((response.statusCode == 401 || response.statusCode == 403) &&
+          token != null &&
+          token.isNotEmpty) {
+        final refresh = await AuthService.refreshToken();
+        if (refresh.success && refresh.token != null) {
+          token = refresh.token!;
+          response = await _client.post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: payload,
+          );
+        }
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return PaymentVerifyResult.fromJson(data);
+        }
+      }
+
+      final errorMsg = AuthService.parseError(response.body);
+      return PaymentVerifyResult.failure(errorMsg);
+    } catch (e) {
+      debugPrint('Error verifying Apple payment: $e');
+      return PaymentVerifyResult.failure('Network connection failed: $e');
+    }
+  }
 }

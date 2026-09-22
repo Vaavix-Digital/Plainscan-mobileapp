@@ -6,6 +6,8 @@ import 'package:plainscan/features/ai/pages/ai_page.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/home/pages/dashboard_page.dart';
 import 'package:plainscan/features/profile/pages/profile_page.dart';
+import 'package:upgrader/upgrader.dart';
+import 'package:flutter/foundation.dart';
 
 class HomeScreenController extends GetxController {
   final RxInt currentIndex = 0.obs;
@@ -66,14 +68,23 @@ class HomeScreen extends StatelessWidget {
       ProfilePage(),
     ];
 
-    return Scaffold(
-      body: Obx(
-        () => IndexedStack(
-          index: controller.currentIndex.value,
-          children: pages,
-        ),
+    return UpgradeAlert(
+      upgrader: Upgrader(
+        durationUntilAlertAgain: const Duration(days: 1),
       ),
-      bottomNavigationBar: BottomAppBar(
+      dialogStyle: UpgradeDialogStyle.material,
+      showIgnore: false,
+      showLater: false,
+      barrierDismissible: false,
+      shouldPopScope: () => false,
+      child: Scaffold(
+        body: Obx(
+          () => IndexedStack(
+            index: controller.currentIndex.value,
+            children: pages,
+          ),
+        ),
+        bottomNavigationBar: BottomAppBar(
         color: AppColors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 12,
@@ -105,6 +116,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }

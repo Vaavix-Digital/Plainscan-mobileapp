@@ -229,42 +229,52 @@ Widget _buildToolGridCard(ToolModel tool) {
               ),
             ),
             // Top Right: FREE / PRO badge
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: isFree ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: isFree ? const Color(0xFFDBEAFE) : const Color(0xFFFDE68A),
-                    width: 0.6,
+            Obx(() {
+              final profileCtrl = Get.isRegistered<ProfileController>()
+                  ? Get.find<ProfileController>()
+                  : Get.put(ProfileController());
+                  
+              if (profileCtrl.isPro.value) {
+                return const SizedBox.shrink();
+              }
+              
+              return Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: isFree ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isFree ? const Color(0xFFDBEAFE) : const Color(0xFFFDE68A),
+                      width: 0.6,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isFree) ...[
+                        const Icon(
+                          Icons.workspace_premium_rounded,
+                          size: 8,
+                          color: Color(0xFFD97706),
+                        ),
+                        const SizedBox(width: 1.5),
+                      ],
+                      Text(
+                        isFree ? 'FREE'.tr : 'PRO'.tr,
+                        style: TextStyle(
+                          fontSize: 7.5,
+                          fontWeight: FontWeight.w800,
+                          color: isFree ? const Color(0xFF2563EB) : const Color(0xFFD97706),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isFree) ...[
-                      const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 8,
-                        color: Color(0xFFD97706),
-                      ),
-                      const SizedBox(width: 1.5),
-                    ],
-                    Text(
-                      isFree ? 'FREE'.tr : 'PRO'.tr,
-                      style: TextStyle(
-                        fontSize: 7.5,
-                        fontWeight: FontWeight.w800,
-                        color: isFree ? const Color(0xFF2563EB) : const Color(0xFFD97706),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            }),
           ],
         ),
       ),

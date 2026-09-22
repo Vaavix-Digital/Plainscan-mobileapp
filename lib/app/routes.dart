@@ -15,6 +15,8 @@ import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/profile/pages/subscription_success_page.dart';
 import 'package:plainscan/features/search/screens/search_screen.dart';
+import 'package:plainscan/features/profile/pages/privacy_policy_page.dart';
+import 'package:plainscan/features/profile/pages/terms_of_service_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -34,6 +36,8 @@ class AppRoutes {
   static const String plans = '/plans';
   static const String payment = '/payment';
   static const String paymentSuccess = '/payment-success';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String termsOfService = '/terms-of-service';
 
   static final List<GetPage> pages = [
     GetPage(
@@ -124,6 +128,14 @@ class AppRoutes {
     GetPage(
       name: paymentSuccess,
       page: () => const SubscriptionSuccessPage(),
+    ),
+    GetPage(
+      name: privacyPolicy,
+      page: () => const PrivacyPolicyPage(),
+    ),
+    GetPage(
+      name: termsOfService,
+      page: () => const TermsOfServicePage(),
     ),
   ];
 }

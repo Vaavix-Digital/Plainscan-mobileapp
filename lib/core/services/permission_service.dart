@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 /// Service responsible for managing app permissions on initial install/launch
@@ -41,18 +42,26 @@ class AppPermissionService {
     if (kIsWeb) return;
     try {
       if (!force) {
-        final alreadyRequested = await StorageService.hasRequestedInitialPermissions();
+        final alreadyRequested =
+            await StorageService.hasRequestedInitialPermissions();
         if (alreadyRequested) return;
         await StorageService.setRequestedInitialPermissions(true);
       }
 
-      // 1. Notification permission first
+      // 1. App Tracking Transparency (ATT) first (iOS only)
+      if (Platform.isIOS) {
+        final attStatus =
+            await AppTrackingTransparency.requestTrackingAuthorization();
+        await Future.delayed(const Duration(milliseconds: 350));
+      }
+
+      // 2. Notification permission
       await requestNotificationPermission();
 
       // Brief pause so the OS dialog closes cleanly
       await Future.delayed(const Duration(milliseconds: 350));
 
-      // 2. Camera and Gallery permissions AFTER notification permission
+      // 3. Camera and Gallery permissions
       await requestCameraAndGalleryPermissions();
     } catch (e) {
       debugPrint('Error requesting sequential app open permissions: $e');

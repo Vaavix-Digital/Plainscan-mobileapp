@@ -6,6 +6,7 @@ import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/services/app_update_service.dart';
 import 'package:plainscan/core/services/permission_service.dart';
 import 'package:plainscan/features/home/widgets/notifications_sheet.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 
 class ProfilePage extends StatelessWidget {
@@ -141,79 +142,82 @@ class ProfilePage extends StatelessWidget {
               // Upgrade Promo
               // ─────────────────────────────
 
-              GestureDetector(
-                onTap: controller.showUpgradeBottomSheet,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        AppColors.purple,
-                        AppColors.coral,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppColors.purple.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Upgrade to Premium'.tr,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            const SizedBox(height: 4),
-
-                            Text(
-                              'Access AI translation, batch editing, and auto-crop accuracy.'.tr,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
+              Obx(() => controller.isPro.value ? const SizedBox.shrink() : Column(
+                children: [
+                  GestureDetector(
+                    onTap: controller.showUpgradeBottomSheet,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppColors.purple,
+                            AppColors.coral,
                           ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                AppColors.purple.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.white,
+                            size: 32,
+                          ),
 
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
+                          const SizedBox(width: 16),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Upgrade to Premium'.tr,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 4),
+
+                                Text(
+                                  'Access AI translation, batch editing, and auto-crop accuracy.'.tr,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.white,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                ],
+              )),
 
               // Share & Earn 1 Month Free Promo Card
-              GestureDetector(
+              Obx(() => controller.isPro.value ? const SizedBox.shrink() : GestureDetector(
                 onTap: () => Get.toNamed(AppRoutes.referral),
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -264,7 +268,7 @@ class ProfilePage extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
+              )),
 
               const SizedBox(height: 28),
 
@@ -291,8 +295,10 @@ class ProfilePage extends StatelessWidget {
                     color: AppColors.border,
                   ),
                 ),
-                child: Column(
-                  children: [
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    children: [
                     ListTile(
                       leading: const Icon(
                         Icons.notifications_active_outlined,
@@ -309,74 +315,59 @@ class ProfilePage extends StatelessWidget {
                       color: AppColors.border,
                     ),
 
-                    ListTile(
-                      leading: const Icon(
-                        Icons.workspace_premium_outlined,
-                        color: AppColors.primary,
-                      ),
-                      title: Text('Plans & Pricing'.tr),
-                      subtitle: Obx(
-                        () => Text(
-                          controller.isPro.value
-                              ? 'Active Plan: @plan'.trParams({'plan': controller.userPlan.value.toUpperCase()})
-                              : 'Upgrade to Pro for unlimited AI & OCR'.tr,
+                    Obx(() => controller.isPro.value ? const SizedBox.shrink() : Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.workspace_premium_outlined,
+                            color: AppColors.primary,
+                          ),
+                          title: Text('Plans & Pricing'.tr),
+                          subtitle: Text('Upgrade to Pro for unlimited AI & OCR'.tr),
+                          trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                          onTap: () => Get.toNamed(AppRoutes.plans),
                         ),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
-                      onTap: () => Get.toNamed(AppRoutes.plans),
-                    ),
-
-                    const Divider(
-                      height: 1,
-                      color: AppColors.border,
-                    ),
-
-                    ListTile(
-                      leading: const Icon(
-                        Icons.card_giftcard_rounded,
-                        color: Color(0xFFD97706),
-                      ),
-                      title: Text('Share & Get 1 Month Free'.tr),
-                      subtitle: Text('Invite friends to get unlimited PRO access'.tr),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFF59E0B)),
+                        const Divider(
+                          height: 1,
+                          color: AppColors.border,
                         ),
-                        child: Text(
-                          'FREE PRO'.tr,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                      ],
+                    )),
+
+                    Obx(() => controller.isPro.value ? const SizedBox.shrink() : Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.card_giftcard_rounded,
                             color: Color(0xFFD97706),
                           ),
+                          title: Text('Share & Get 1 Month Free'.tr),
+                          subtitle: Text('Invite friends to get unlimited PRO access'.tr),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: Text(
+                              'FREE PRO'.tr,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD97706),
+                              ),
+                            ),
+                          ),
+                          onTap: () => Get.toNamed(AppRoutes.referral),
                         ),
-                      ),
-                      onTap: () => Get.toNamed(AppRoutes.referral),
-                    ),
+                        const Divider(
+                          height: 1,
+                          color: AppColors.border,
+                        ),
+                      ],
+                    )),
 
-                    const Divider(
-                      height: 1,
-                      color: AppColors.border,
-                    ),
-
-                    ListTile(
-                      leading: const Icon(
-                        Icons.system_update_rounded,
-                        color: Color(0xFF10B981),
-                      ),
-                      title: Text('Check for Tool Updates'.tr),
-                      subtitle: const Text('Version 1.0.0 (Build 3)'),
-                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
-                      onTap: () => AppUpdateService.showUpdateDialog(isManualCheck: true),
-                    ),
-
-                    const Divider(
-                      height: 1,
-                      color: AppColors.border,
-                    ),
 
                     ListTile(
                       leading: const Icon(
@@ -420,30 +411,80 @@ class ProfilePage extends StatelessWidget {
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => Get.toNamed(AppRoutes.onboarding, arguments: {'isReplay': true}),
                     ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.privacy_tip_outlined,
+                        color: AppColors.text,
+                      ),
+                      title: Text('Privacy Policy'.tr),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => Get.toNamed(AppRoutes.privacyPolicy),
+                    ),
+
+                    const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+
+                    ListTile(
+                      leading: const Icon(
+                        Icons.description_outlined,
+                        color: AppColors.text,
+                      ),
+                      title: Text('Terms of Service'.tr),
+                      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+                      onTap: () => Get.toNamed(AppRoutes.termsOfService),
+                    ),
                   ],
                 ),
+              ),
               ),
 
               const SizedBox(height: 24),
 
               // ─────────────────────────────
-              // Logout
+              // Logout & Delete Account
               // ─────────────────────────────
 
               Center(
-                child: TextButton.icon(
-                  onPressed: controller.logout,
-                  icon: const Icon(
-                    Icons.logout,
-                    color: AppColors.coral,
-                  ),
-                  label: Text(
-                    'Log Out'.tr,
-                    style: const TextStyle(
-                      color: AppColors.coral,
-                      fontWeight: FontWeight.bold,
+                child: Column(
+                  children: [
+                    TextButton.icon(
+                      onPressed: controller.logout,
+                      icon: const Icon(
+                        Icons.logout,
+                        color: AppColors.coral,
+                      ),
+                      label: Text(
+                        'Log Out'.tr,
+                        style: const TextStyle(
+                          color: AppColors.coral,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: controller.deleteAccount,
+                      icon: const Icon(
+                        Icons.delete_forever,
+                        color: Colors.red,
+                      ),
+                      label: Text(
+                        'Delete Account'.tr,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

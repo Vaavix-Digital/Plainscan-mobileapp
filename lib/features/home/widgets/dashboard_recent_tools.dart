@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/dashboard_controller.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 
 import 'package:plainscan/features/home/screens/home_screen.dart';
@@ -46,6 +47,11 @@ Widget buildDashboardRecentTools() {
       const SizedBox(height: 10),
       Obx(
         () {
+          final profileCtrl = Get.isRegistered<ProfileController>()
+              ? Get.find<ProfileController>()
+              : Get.put(ProfileController());
+          final isProUser = profileCtrl.isPro.value;
+
           final recentTools = controller.allToolsController.filteredRecentTools;
           if (recentTools.isEmpty) {
             return const _AnimatedEmptyRecentTools();
@@ -126,24 +132,25 @@ Widget buildDashboardRecentTools() {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE2E5F5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            (isFree ? 'FREE' : 'PRO').tr,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF39416D),
+                        if (!isProUser)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E5F5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              (isFree ? 'FREE' : 'PRO').tr,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF39416D),
+                              ),
                             ),
                           ),
-                        ),
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.chevron_right,

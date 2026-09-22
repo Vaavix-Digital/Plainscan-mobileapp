@@ -8,6 +8,7 @@ import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/services/payment_service.dart';
 import 'package:plainscan/core/services/plan_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/services/iap_service.dart';
 import 'package:plainscan/models/plan_model.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -193,7 +194,26 @@ class PlanController extends GetxController {
       // 1. Fetch all public plans
       final fetchedPlans = await PlanService.getAllPlans();
       if (fetchedPlans.isNotEmpty) {
-        plans.assignAll(fetchedPlans);
+        final filtered = fetchedPlans.where((plan) => plan.planId.toLowerCase() != 'teams').toList();
+        
+        if (!kIsWeb && Platform.isIOS) {
+          final iapProducts = IAPService().products;
+          for (var i = 0; i < filtered.length; i++) {
+             if (filtered[i].planId.toLowerCase() == 'pro') {
+                final monthlyProduct = iapProducts.firstWhereOrNull((p) => p.id == 'plainscan_premium_monthly');
+                final yearlyProduct = iapProducts.firstWhereOrNull((p) => p.id == 'plainscan_premium_anualy');
+                
+                filtered[i] = filtered[i].copyWith(
+                   priceMonthly: monthlyProduct?.rawPrice ?? filtered[i].priceMonthly,
+                   priceYearly: yearlyProduct?.rawPrice ?? filtered[i].priceYearly,
+                   currency: monthlyProduct?.currencyCode ?? filtered[i].currency,
+                   currencySymbol: monthlyProduct?.currencySymbol ?? filtered[i].currencySymbol,
+                );
+             }
+          }
+        }
+        
+        plans.assignAll(filtered);
       }
 
       // 2. Fetch user's current plan if authenticated
@@ -289,6 +309,13 @@ class PlanController extends GetxController {
 
     // Step 3: Navigate directly to the dedicated Payment Page
     final billingPeriod = isYearly.value ? 'yearly' : 'monthly';
+    
+    if (!kIsWeb && Platform.isIOS) {
+      final productId = billingPeriod == 'yearly' ? 'plainscan_premium_anualy' : 'plainscan_premium_monthly';
+      IAPService().buyProduct(productId);
+      return;
+    }
+
     Get.toNamed(AppRoutes.payment, arguments: {
       'plan': plan,
       'billingPeriod': billingPeriod,

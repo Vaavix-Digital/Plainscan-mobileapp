@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/plan_controller.dart';
+import 'package:plainscan/core/services/iap_service.dart';
 import 'package:plainscan/models/plan_model.dart';
 
 class PlansPage extends StatelessWidget {
@@ -112,7 +116,54 @@ class PlansPage extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Free Referral Option Card
-                _buildReferralCard(),
+                if (!Platform.isIOS) _buildReferralCard(),
+
+                if (Platform.isIOS)
+                  Column(
+                    children: [
+                      TextButton(
+                        onPressed: () => IAPService().restorePurchases(),
+                        child: const Text(
+                          'Restore Purchases', 
+                          style: TextStyle(
+                            color: AppColors.primary, 
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'Terms of Service',
+                        style: const TextStyle(
+                          color: AppColors.secondaryText,
+                          decoration: TextDecoration.underline,
+                          fontSize: 11,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () => Get.toNamed(AppRoutes.termsOfService),
+                        children: [
+                          const TextSpan(
+                            text: '  |  ',
+                            style: TextStyle(decoration: TextDecoration.none),
+                          ),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              decoration: TextDecoration.underline,
+                              fontSize: 11,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => Get.toNamed(AppRoutes.privacyPolicy),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
                 const SizedBox(height: 32),
               ],

@@ -277,12 +277,14 @@ class ReferralService {
         ? shareLink
         : 'https://plainscan.com/invite/$code';
     const playStoreUrl = ApiConstants.playStoreUrl;
+    const appStoreUrl = ApiConstants.appStoreUrl;
 
     final shareText =
         'Hey! I use PlainScan to scan HD documents, convert PDFs, and use AI tools.\n\n'
-        'Install PlainScan from the Google Play Store: $playStoreUrl\n\n'
-        'Use my referral code: $code or invite link: $link to get 50 bonus credits and 1 month of unlimited PRO access for free!\n\n'
-        'Download PlainScan now: $playStoreUrl';
+        'Use my referral code: $code (or link: $link) to get 50 bonus credits and 1 month of unlimited PRO access for free!\n\n'
+        'Download PlainScan now:\n'
+        '🍎 iOS: $appStoreUrl\n'
+        '🤖 Android: $playStoreUrl';
 
     try {
       await SharePlus.instance.share(

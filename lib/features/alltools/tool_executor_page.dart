@@ -233,16 +233,19 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                                       : Colors.white,
                                 ),
                                 const SizedBox(width: 10),
-                                Text(
-                                  controller.isExecutionDisabled
-                                      ? 'Document Already Unlocked'
-                                      : 'Run ${tool.name}',
-                                  style: TextStyle(
-                                    color: controller.isExecutionDisabled
-                                        ? Colors.grey.shade500
-                                        : Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                Flexible(
+                                  child: Text(
+                                    controller.isExecutionDisabled
+                                        ? 'Document Already Unlocked'
+                                        : 'Run ${tool.name}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: controller.isExecutionDisabled
+                                          ? Colors.grey.shade500
+                                          : Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -9819,6 +9822,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             ),
             const SizedBox(height: 8),
             DropdownButton<String>(
+              isExpanded: true,
               value: controller.printOptType,
               items: const [
                 DropdownMenuItem(value: 'standard', child: Text('Standard Print (Recommended)')),
@@ -10635,12 +10639,14 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           children: [
             leading,
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: c,
-                fontSize: 13,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  color: c,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],

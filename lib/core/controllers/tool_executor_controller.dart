@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1498,16 +1499,19 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     }
 
     final isFree = tool.isFree ?? true;
+    final isPro = await StorageService.isProUser();
+
     if (!isFree) {
-      final isPro = await StorageService.isProUser();
       if (!isPro) {
         ProfileController.showUpgradeSnackbar(tool.name);
         return;
       }
     }
 
-    // Display interstitial ad when the user submits/runs the job
-    showInterstitialAdIfAvailable();
+    // Display interstitial ad only for free users when they submit/run a job
+    if (!isPro) {
+      showInterstitialAdIfAvailable();
+    }
 
     var tokenToUse = tokenController.text.trim();
     if (tokenToUse.isEmpty) {
@@ -3618,14 +3622,53 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   Future<void> pickFileFromDevice(bool isMulti) async {
     if (isRunning) return;
     try {
+      FileType fileType = FileType.any;
+
+      if (!kIsWeb && Platform.isIOS) {
+        final FileType? selectedType = await Get.bottomSheet<FileType>(
+          Container(
+            color: Get.isDarkMode ? Colors.grey[900] : Colors.white,
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Wrap(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Select Source',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: AppColors.primary),
+                  title: const Text('Photo Gallery'),
+                  onTap: () => Get.back(result: FileType.image),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.folder, color: AppColors.primary),
+                  title: const Text('Files & Documents'),
+                  onTap: () => Get.back(result: FileType.any),
+                ),
+              ],
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+        );
+
+        if (selectedType == null) return; // User canceled
+        fileType = selectedType;
+      }
+
       List<PlatformFile> resultList = [];
       if (isMulti) {
-        final result = await FilePicker.pickFiles(type: FileType.any);
-        if (result.isNotEmpty) {
+        final result = await FilePicker.pickFiles(type: fileType);
+        if (result != null && result.isNotEmpty) {
           resultList = result;
         }
       } else {
-        final file = await FilePicker.pickFile(type: FileType.any);
+        final file = await FilePicker.pickFile(type: fileType);
         if (file != null) {
           resultList = [file];
         }

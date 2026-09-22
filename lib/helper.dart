@@ -20,10 +20,10 @@ class Adhelper {
   // Production Ad Unit IDs
   static const String _androidProdBannerId =
       'ca-app-pub-4377728206732134/5203998822';
-  static const String _iosProdBannerId = '';
+  static const String _iosProdBannerId = 'ca-app-pub-4377728206732134/5737752229';
   static const String _androidProdInterstitialId =
       'ca-app-pub-4377728206732134/6207913132';
-  static const String _iosProdInterstitialId = '';
+  static const String _iosProdInterstitialId = 'ca-app-pub-4377728206732134/4981047633';
 
   static String get bannerAdUnitId {
     if (kIsWeb) return '';

@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -46,6 +50,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await Future.delayed(const Duration(milliseconds: 2200));
 
     if (!mounted) return;
+
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      await MobileAds.instance.initialize();
+    }
 
     if (!isOnboarded) {
       Get.offNamed(AppRoutes.onboarding);

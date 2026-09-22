@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
@@ -582,6 +583,38 @@ class _AuthScreenState extends State<AuthScreen>
     ),
   ),
 ),
+              if (Platform.isIOS) ...[
+                const SizedBox(height: 16),
+                Obx(
+                  () => OutlinedButton.icon(
+                    onPressed: authController.isLoading.value
+                        ? null
+                        : authController.handleAppleLogin,
+                    icon: const FaIcon(
+                      FontAwesomeIcons.apple,
+                      size: 20,
+                      color: AppColors.text,
+                    ),
+                    label: Text(
+                      authController.isLoading.value
+                          ? 'Signing in...'.tr
+                          : 'Continue with Apple'.tr,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(
+                        color: AppColors.border,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
             ],
           ),

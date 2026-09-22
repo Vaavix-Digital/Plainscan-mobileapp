@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -18,6 +19,8 @@ class ReferralShareScreen extends StatefulWidget {
 class _ReferralShareScreenState extends State<ReferralShareScreen> {
   String _myCode = 'PLAIN2026';
   String _shareLink = 'https://plainscan.com/invite/PLAIN2026';
+  String _playStoreLink = ApiConstants.playStoreUrl;
+  String _appStoreLink = ApiConstants.appStoreUrl;
   int _totalReferred = 5;
   int _creditsEarned = 250;
   int _userCredits = 250;
@@ -44,6 +47,8 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
         setState(() {
           _myCode = referralInfo.referralCode;
           _shareLink = referralInfo.shareLink;
+          _playStoreLink = referralInfo.playStoreLink;
+          _appStoreLink = referralInfo.appStoreLink;
           _totalReferred = referralInfo.totalReferred;
           _creditsEarned = referralInfo.creditsEarned;
           _userCredits = credits;
@@ -69,19 +74,19 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
     );
   }
 
-  Future<void> _openPlayStore() async {
-    final uri = Uri.parse(ApiConstants.playStoreUrl);
+  Future<void> _openStore() async {
+    final uri = Uri.parse(Platform.isIOS ? ApiConstants.appStoreUrl : ApiConstants.playStoreUrl);
     try {
       final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched) {
         Get.snackbar(
           'Notice',
-          'Could not open Google Play Store.',
+          'Could not open the store.',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {
-      debugPrint('Error opening Play Store: $e');
+      debugPrint('Error opening store: $e');
     }
   }
 
@@ -98,12 +103,11 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
     );
   }
 
-  void _copyShareLink() {
-    final link = _shareLink.isNotEmpty ? _shareLink : 'https://plainscan.com/invite/$_myCode';
+  void _copySpecificLink(String link, String title) {
     Clipboard.setData(ClipboardData(text: link));
     Get.snackbar(
       'Link Copied! 🔗'.tr,
-      'Invite link copied to clipboard.',
+      '$title copied to clipboard.',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.white,
       colorText: AppColors.text,
@@ -340,9 +344,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         ),
                         const SizedBox(height: 14),
 
-                        // Share Link Box
+                        // iOS Link Box
                         Text(
-                          'Your Share Link'.tr,
+                          'Apple App Store Link'.tr,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -359,11 +363,11 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.link_rounded, size: 18, color: AppColors.secondaryText),
+                              const Icon(Icons.apple, size: 18, color: AppColors.secondaryText),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  _shareLink,
+                                  _appStoreLink,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.text,
@@ -372,14 +376,62 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: _copyShareLink,
+                                onPressed: () => _copySpecificLink(_appStoreLink, 'App Store link'),
                                 style: TextButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(horizontal: 8),
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: Text(
-                                  'Copy Code'.tr,
+                                  'Copy Link'.tr,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Android Link Box
+                        Text(
+                          'Google Play Store Link'.tr,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.shop_two_rounded, size: 18, color: AppColors.secondaryText),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _playStoreLink,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.text,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _copySpecificLink(_playStoreLink, 'Play Store link'),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Copy Link'.tr,
                                   style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
                                 ),
                               ),
@@ -406,13 +458,13 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Play Store Link Button
+                        // Store Link Button
                         OutlinedButton.icon(
-                          onPressed: _openPlayStore,
-                          icon: const Icon(Icons.shop_two_rounded, size: 18, color: AppColors.primary),
-                          label: const Text(
-                            'Google Play',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                          onPressed: _openStore,
+                          icon: Icon(Platform.isIOS ? Icons.apple : Icons.shop_two_rounded, size: 18, color: AppColors.primary),
+                          label: Text(
+                            Platform.isIOS ? 'App Store' : 'Google Play',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
                           ),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 46),
