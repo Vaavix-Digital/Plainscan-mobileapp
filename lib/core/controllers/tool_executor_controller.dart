@@ -935,7 +935,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'scan-ocr':
       case 'ocr-to-text':
         return {
-          'language': ocrLanguage,
+          'language': 'eng',
           'detect_handwriting': false,
           'detect_tables': false,
           'preserve_layout': false,
@@ -944,7 +944,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       case 'ocr-to-pdf':
       case 'ocr-to-word':
       case 'ocr-to-excel':
-        return {'language': ocrLanguage};
+        return {'language': 'eng'};
       case 'ai-summarize':
         final options = <String, dynamic>{
           'length': aiLength,

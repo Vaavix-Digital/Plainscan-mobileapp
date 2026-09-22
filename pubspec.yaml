@@ -55,9 +55,14 @@ dependencies:
   excel: ^4.0.6
   archive: ^3.6.1
   crypto: ^3.0.7
+<<<<<<< HEAD
   sign_in_with_apple: 8.1.0
   in_app_purchase: ^3.3.1
   app_tracking_transparency: ^2.0.7
+=======
+  pdfx: ^2.11.0
+  flutter_pdfview: ^1.4.5
+>>>>>>> 0eb9b2a (update the tools)
 
 dev_dependencies:
   flutter_test:

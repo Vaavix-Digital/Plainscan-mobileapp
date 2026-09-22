@@ -6349,46 +6349,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
   }
 
   Widget _buildTextCounterHeader(ToolExecutorController controller) {
-    final isChar = controller.getSlug() == 'character-counter';
-    final title = isChar
-        ? 'Free Character Counter — Count Words, Characters & Reading Time Instantly'
-        : 'Free Word Counter — Count Words, Characters & Reading Time Instantly';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Utility Tool',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF4F46E5),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-              height: 1.25,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox(height: 8);
   }
 
   Widget _buildTextCounterSettingsCard(
@@ -6415,16 +6376,16 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
               SizedBox(width: 8),
-              Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
+              // Text(
+              //   'Settings',
+              //   style: TextStyle(
+              //     fontSize: 16,
+              //     fontWeight: FontWeight.w700,
+              //     color: Color(0xFF0F172A),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 18),
@@ -6513,7 +6474,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.auto_awesome, size: 16),
+                      // Icon(Icons.auto_awesome, size: 16),
                       SizedBox(width: 8),
                       Text(
                         'Process',
@@ -6803,10 +6764,6 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!isDone) ...[
-          _buildImageToBase64Header(),
-          const SizedBox(height: 20),
-        ],
         if (controller.isRunning) ...[
           _buildImageToBase64ProcessingCard(controller),
         ] else if (isDone) ...[
@@ -6826,43 +6783,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     );
   }
 
-  Widget _buildImageToBase64Header() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Utility Tool',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF4F46E5),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Free Image to Base64 — Convert Image to Base64 String & Data URI',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-              height: 1.25,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Widget _buildImageToBase64InputCard(
     BuildContext context,
@@ -6886,21 +6807,6 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
-              SizedBox(width: 8),
-              Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
           const Text(
             'Select Image',
             style: TextStyle(
@@ -6964,8 +6870,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.auto_awesome, size: 16),
-                      SizedBox(width: 8),
+                     
                       Text(
                         'Process',
                         style: TextStyle(
@@ -8424,46 +8329,24 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => controller.pickFileFromDevice(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                icon: const Icon(Icons.phone_android, size: 14),
-                label: const Text(
-                  'Add from Device',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => controller.pickFileFromDevice(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => controller.scanDocumentWithCamera(true),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                icon: const Icon(Icons.document_scanner_outlined, size: 14),
-                label: const Text(
-                  'Scan with Camera',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
+            icon: const Icon(Icons.phone_android, size: 14),
+            label: const Text(
+              'Add from Device',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -8503,51 +8386,29 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Upload a file from your device or scan images with your camera.',
+            'Upload a file from your device.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => controller.pickFileFromDevice(isMulti),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  icon: const Icon(Icons.phone_android, size: 15),
-                  label: const Text(
-                    'Device Upload',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => controller.pickFileFromDevice(isMulti),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.scanDocumentWithCamera(isMulti),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 1.2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  icon: const Icon(Icons.document_scanner_outlined, size: 15),
-                  label: const Text(
-                    'Scan Document',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
+              icon: const Icon(Icons.phone_android, size: 15),
+              label: const Text(
+                'Device Upload',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -9120,33 +8981,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         );
         break;
 
-      case 'scan-ocr':
-      case 'ocr-to-text':
-      case 'ocr-to-pdf':
-      case 'ocr-to-word':
-      case 'ocr-to-excel':
-        child = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'OCR Language Code',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            DropdownButton<String>(
-              value: controller.ocrLanguage,
-              items: const [
-                DropdownMenuItem(value: 'eng', child: Text('English (eng)')),
-                DropdownMenuItem(value: 'hin', child: Text('Hindi (hin)')),
-                DropdownMenuItem(value: 'ara', child: Text('Arabic (ara)')),
-                DropdownMenuItem(value: 'fre', child: Text('French (fre)')),
-                DropdownMenuItem(value: 'spa', child: Text('Spanish (spa)')),
-              ],
-              onChanged: (val) => controller.setOcrLanguage(val!),
-            ),
-          ],
-        );
-        break;
+
 
       case 'ai-summarize':
         child = Column(
@@ -9463,7 +9298,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 DropdownMenuItem(value: 'word', child: Text('Word (.docx)')),
                 DropdownMenuItem(value: 'pdf', child: Text('PDF (.pdf)')),
                 DropdownMenuItem(value: 'txt', child: Text('Text (.txt)')),
-                DropdownMenuItem(value: 'xlsx', child: Text('Excel (.xlsx)')),
+                DropdownMenuItem(value: 'jpg', child: Text('JPG Image (.jpg)')),
+                DropdownMenuItem(value: 'png', child: Text('PNG Image (.png)')),
               ],
               onChanged: (val) => controller.setBatchTargetFormat(val!),
             ),

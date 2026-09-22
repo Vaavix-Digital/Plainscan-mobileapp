@@ -11,6 +11,7 @@ import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/utils/local_document_generators.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 class PdfViewerPage extends StatefulWidget {
   final FileModel? file;
@@ -35,6 +36,11 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   bool _isLoading = false;
   int _totalPages = 1;
   final TransformationController _transformationController = TransformationController();
+
+  // PDF Viewer Data
+  PDFViewController? _pdfViewController;
+  int _currentPdfPage = 1;
+  bool _pdfError = false;
 
   // Excel / Spreadsheet Data
   Map<String, List<List<String>>> _excelSheets = {};
@@ -101,8 +107,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
         } else if (type == 'PPTX' || type == 'PPT') {
           _loadPptxContent(bytes);
         } else if (type == 'PDF') {
-          final fileLen = bytes.length;
-          _totalPages = (fileLen / (150 * 1024)).ceil().clamp(1, 20);
+          _pdfError = false;
         }
       }
     } catch (e) {
@@ -1013,8 +1018,169 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
     );
   }
 
-  /// PDF Viewer Preview Card
+  /// PDF Viewer Preview Card using native PDFView
   Widget _buildPdfViewerCard(bool fileExists) {
+    if (!fileExists || _path == null || !File(_path!).existsSync() || _pdfError) {
+      return _buildPdfFallbackCard(fileExists);
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header Ribbon with Title and Page Indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: AppColors.coral,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: Text(
+                        _name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Page $_currentPdfPage of $_totalPages',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Native Flutter PDFView Widget
+          Expanded(
+            child: ClipRRect(
+              child: PDFView(
+                filePath: _path!,
+                enableSwipe: true,
+                swipeHorizontal: false,
+                autoSpacing: true,
+                pageFling: true,
+                pageSnap: true,
+                fitPolicy: FitPolicy.BOTH,
+                preventLinkNavigation: false,
+                onRender: (pages) {
+                  if (mounted) {
+                    setState(() {
+                      _totalPages = pages ?? 1;
+                      _pdfError = false;
+                    });
+                  }
+                },
+                onError: (error) {
+                  debugPrint('PDFView error: $error');
+                  if (mounted) {
+                    setState(() {
+                      _pdfError = true;
+                    });
+                  }
+                },
+                onPageError: (page, error) {
+                  debugPrint('PDFView page $page error: $error');
+                },
+                onViewCreated: (PDFViewController controller) {
+                  _pdfViewController = controller;
+                },
+                onPageChanged: (page, total) {
+                  if (mounted && page != null) {
+                    setState(() {
+                      _currentPdfPage = page + 1;
+                      if (total != null && total > 0) {
+                        _totalPages = total;
+                      }
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+
+          // Bottom Navigation Controls
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
+              border: Border(top: BorderSide(color: Color(0xFF334155))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
+                  tooltip: 'Previous Page',
+                  onPressed: _currentPdfPage > 1
+                      ? () {
+                          _pdfViewController?.setPage(_currentPdfPage - 2);
+                        }
+                      : null,
+                ),
+                Text(
+                  'Swipe up/down to scroll pages',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded, color: Colors.white),
+                  tooltip: 'Next Page',
+                  onPressed: _currentPdfPage < _totalPages
+                      ? () {
+                          _pdfViewController?.setPage(_currentPdfPage);
+                        }
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPdfFallbackCard(bool fileExists) {
     return InteractiveViewer(
       transformationController: _transformationController,
       minScale: 0.5,
@@ -1138,27 +1304,6 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                     ),
                   ],
                 ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'PlainScan Document Engine',
-                    style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    'PDF',
-                    style: TextStyle(fontSize: 10.5, color: AppColors.coral, fontWeight: FontWeight.bold),
-                  ),
-                ],
               ),
             ),
           ],

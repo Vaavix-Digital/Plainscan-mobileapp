@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
-import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 
@@ -23,12 +22,9 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
   String _appStoreLink = ApiConstants.appStoreUrl;
   int _totalReferred = 5;
   int _creditsEarned = 250;
-  int _userCredits = 250;
   DateTime? _proExpiryDate;
   bool _isPro = false;
   bool _isLoading = true;
-  final TextEditingController _redeemController = TextEditingController();
-  bool _isRedeeming = false;
 
   @override
   void initState() {
@@ -41,7 +37,6 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
       final referralInfo = await ReferralService.getMyReferralCode();
       final expiry = await StorageService.getProExpiryDate();
       final isPro = await StorageService.isProUser();
-      final credits = await StorageService.getUserCredits();
 
       if (mounted) {
         setState(() {
@@ -51,7 +46,6 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
           _appStoreLink = referralInfo.appStoreLink;
           _totalReferred = referralInfo.totalReferred;
           _creditsEarned = referralInfo.creditsEarned;
-          _userCredits = credits;
           _proExpiryDate = expiry;
           _isPro = isPro;
           _isLoading = false;
@@ -114,58 +108,6 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
       margin: const EdgeInsets.all(16),
       duration: const Duration(seconds: 2),
     );
-  }
-
-  Future<void> _redeemCode() async {
-    final code = _redeemController.text.trim();
-    if (code.isEmpty) return;
-
-    setState(() {
-      _isRedeeming = true;
-    });
-
-    final res = await ReferralService.applyReferralCode(code);
-
-    setState(() {
-      _isRedeeming = false;
-    });
-
-    if (res.success) {
-      _redeemController.clear();
-      await _loadReferralData();
-
-      if (Get.isRegistered<ProfileController>()) {
-        final profileCtrl = Get.find<ProfileController>();
-        profileCtrl.loadUserProfile();
-        profileCtrl.refreshCredits();
-      }
-
-      Get.snackbar(
-        'Success! 🎉',
-        res.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.emerald,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 4),
-      );
-    } else {
-      Get.snackbar(
-        'Redemption Notice',
-        res.message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.white,
-        colorText: AppColors.text,
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _redeemController.dispose();
-    super.dispose();
   }
 
   @override
@@ -270,15 +212,6 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                           color: AppColors.amber,
                           label: 'Credits Earned'.tr,
                           value: '$_creditsEarned',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.account_balance_wallet_outlined,
-                          color: AppColors.emerald,
-                          label: 'Available Credits'.tr,
-                          value: '$_userCredits',
                         ),
                       ),
                     ],
@@ -532,78 +465,7 @@ class _ReferralShareScreenState extends State<ReferralShareScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Apply Friend's Referral Code Card
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Have a Friend\'s Referral Code?'.tr,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.text,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Enter their code below to receive 50 bonus credits and unlock 1 month of unlimited PRO access.'.tr,
-                          style: const TextStyle(fontSize: 12, color: AppColors.secondaryText),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _redeemController,
-                                textCapitalization: TextCapitalization.characters,
-                                decoration: InputDecoration(
-                                  hintText: 'e.g. PLAIN2026',
-                                  hintStyle: const TextStyle(fontSize: 13, color: AppColors.secondaryText),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  filled: true,
-                                  fillColor: AppColors.background,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed: _isRedeeming ? null : _redeemCode,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                elevation: 0,
-                              ),
-                              child: _isRedeeming
-                                  ? const SizedBox(
-                                      height: 16,
-                                      width: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : Text('Redeem'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+
 
                   // How It Works
                   Container(
