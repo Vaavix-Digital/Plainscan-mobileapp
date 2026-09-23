@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/controllers/tool_executor_controller.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/file_model.dart';
@@ -40,19 +41,44 @@ class ScanController extends GetxController {
     scannedFiles.clear();
   }
 
-  void addScan(String filePath, {String? customName, String fileType = 'PDF'}) {
-    final fileName = customName ?? 'Scan_${DateTime.now().millisecondsSinceEpoch}.${fileType.toLowerCase()}';
+  FileModel addScan(
+    String filePath, {
+    String? customName,
+    String fileType = 'PDF',
+    String? sourceFileId,
+    List<String>? sourceFileIds,
+  }) {
+    String? srcId = sourceFileId;
+    List<String>? srcIds = sourceFileIds;
+
+    // Auto-link converted file to active ToolExecutorController input file(s) if not supplied
+    if (srcId == null && srcIds == null && Get.isRegistered<ToolExecutorController>()) {
+      final toolExec = Get.find<ToolExecutorController>();
+      if (toolExec.selectedFile != null) {
+        srcId = toolExec.selectedFile!.id;
+      }
+      if (toolExec.selectedFiles.isNotEmpty) {
+        srcIds = toolExec.selectedFiles.map((f) => f.id).toList();
+      }
+    }
+
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final uniqueId = '${timestamp}_${scannedFiles.length}';
+    final fileName = customName ?? 'Scan_$timestamp.${fileType.toLowerCase()}';
     final newFile = FileModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: uniqueId,
       name: fileName,
       createdDate: DateTime.now(),
       sizeKb: 1204.0, // mock size
       fileType: fileType,
       path: filePath,
+      sourceFileId: srcId,
+      sourceFileIds: srcIds,
     );
 
     scannedFiles.insert(0, newFile);
     _persistFiles();
+    return newFile;
   }
 
   FileModel? updateExistingScan(
@@ -88,8 +114,43 @@ class ScanController extends GetxController {
   }
 
   void deleteFile(String id) {
-    scannedFiles.removeWhere((file) => file.id == id);
+    final idsToDelete = <String>{id};
+    bool addedNew = true;
+
+    while (addedNew) {
+      addedNew = false;
+      for (final file in scannedFiles) {
+        if (!idsToDelete.contains(file.id)) {
+          final isChildOfDeleted = (file.sourceFileId != null && idsToDelete.contains(file.sourceFileId)) ||
+              (file.sourceFileIds != null && file.sourceFileIds!.any((srcId) => idsToDelete.contains(srcId)));
+          if (isChildOfDeleted) {
+            idsToDelete.add(file.id);
+            addedNew = true;
+          }
+        }
+      }
+    }
+
+    for (final file in scannedFiles) {
+      if (idsToDelete.contains(file.id) && file.path != null && file.path!.isNotEmpty) {
+        try {
+          final f = File(file.path!);
+          if (f.existsSync()) {
+            f.deleteSync();
+          }
+        } catch (_) {}
+      }
+    }
+
+    scannedFiles.removeWhere((file) => idsToDelete.contains(file.id));
     _persistFiles();
+
+    if (Get.isRegistered<ToolExecutorController>()) {
+      final toolExec = Get.find<ToolExecutorController>();
+      if (toolExec.convertedFile != null && idsToDelete.contains(toolExec.convertedFile!.id)) {
+        toolExec.clearPreviousResult(clearSelected: false);
+      }
+    }
   }
 
   void renameFile(String id, String newName) {

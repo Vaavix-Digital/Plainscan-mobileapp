@@ -237,6 +237,8 @@ class BackgroundJobService extends GetxService with WidgetsBindingObserver {
       final services = JobflowApiServices(accessToken: token);
       int pollingAttempt = job.pollingCount;
 
+      int pollDelayMs = 400;
+
       while (true) {
         if (!_activeJobs.values.any((j) => j.jobId == job.jobId || j.toolSlug == job.toolSlug)) {
           debugPrint('[BackgroundJobService] Job was removed. Halting polling for ${job.toolSlug}');
@@ -275,7 +277,13 @@ class BackgroundJobService extends GetxService with WidgetsBindingObserver {
           debugPrint('[BackgroundJobService] Polling transient notice: $pollError');
         }
 
-        await Future.delayed(const Duration(seconds: 2));
+        if (pollingAttempt > 60) {
+          _handleJobFailed(updatedState, 'Processing timeout. Server took too long to complete job.');
+          break;
+        }
+
+        await Future.delayed(Duration(milliseconds: pollDelayMs));
+        if (pollDelayMs < 1500) pollDelayMs += 300;
       }
     } catch (e) {
       debugPrint('[BackgroundJobService] Resume polling error: $e');

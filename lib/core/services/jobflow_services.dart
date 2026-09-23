@@ -13,6 +13,9 @@ class JobflowApiServices {
   }) : _dio = Dio(
           BaseOptions(
             baseUrl: '${ApiConstants.baseUrl}/',
+            connectTimeout: const Duration(seconds: 15),
+            receiveTimeout: const Duration(seconds: 45),
+            sendTimeout: const Duration(seconds: 45),
             headers: {
               'Authorization': 'Bearer $accessToken',
               'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
@@ -33,6 +36,9 @@ class JobflowApiServices {
               try {
                 final cloneDio = Dio(BaseOptions(
                   baseUrl: requestOptions.baseUrl,
+                  connectTimeout: const Duration(seconds: 15),
+                  receiveTimeout: const Duration(seconds: 45),
+                  sendTimeout: const Duration(seconds: 45),
                   headers: requestOptions.headers,
                 ));
                 final response = await cloneDio.request(

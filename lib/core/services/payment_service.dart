@@ -439,4 +439,69 @@ class PaymentService {
       return PaymentVerifyResult.failure('Network connection failed: $e');
     }
   }
+
+  /// Verifies Google Play In-App Purchase token
+  static Future<PaymentVerifyResult> verifyGooglePlayPayment({
+    required String packageName,
+    required String productId,
+    required String purchaseToken,
+    required String planId,
+    required String billingPeriod,
+  }) async {
+    try {
+      String? token = await StorageService.getToken();
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.verifyGooglePlayPayment}');
+
+      final payload = jsonEncode({
+        'package_name': packageName,
+        'product_id': productId,
+        'purchase_token': purchaseToken,
+        'plan_id': planId,
+        'billing_period': billingPeriod,
+      });
+
+      debugPrint('POST $uri with payload: $payload');
+
+      var response = await _client.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: payload,
+      );
+
+      debugPrint('verifyGooglePlay response: ${response.statusCode} - ${response.body}');
+
+      if ((response.statusCode == 401 || response.statusCode == 403) &&
+          token != null &&
+          token.isNotEmpty) {
+        final refresh = await AuthService.refreshToken();
+        if (refresh.success && refresh.token != null) {
+          token = refresh.token!;
+          response = await _client.post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: payload,
+          );
+        }
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return PaymentVerifyResult.fromJson(data);
+        }
+      }
+
+      final errorMsg = AuthService.parseError(response.body);
+      return PaymentVerifyResult.failure(errorMsg);
+    } catch (e) {
+      debugPrint('Error verifying Google Play payment: $e');
+      return PaymentVerifyResult.failure('Network connection failed: $e');
+    }
+  }
 }

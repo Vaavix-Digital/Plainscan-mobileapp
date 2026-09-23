@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/plan_controller.dart';

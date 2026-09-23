@@ -1,12 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'dart:io';
-import 'package:plainscan/core/controllers/profile_controller.dart';
-import 'package:plainscan/core/services/storage_service.dart';
-import 'package:plainscan/core/services/payment_service.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
+import 'package:plainscan/core/services/payment_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 
 class IAPService {
   static final IAPService _instance = IAPService._internal();
@@ -24,6 +25,7 @@ class IAPService {
   bool _isRestoreInitiatedByUI = false;
 
   final List<String> _productIds = [
+    'com.plainscan_pro',
     'plainscan_premium_monthly',
     'plainscan_premium_anualy',
   ];
@@ -31,22 +33,21 @@ class IAPService {
   Future<void> init() async {
     _isAvailable = await _iap.isAvailable();
     if (_isAvailable) {
-      // Get the product details from Apple
-      debugPrint('Querying Apple for products: $_productIds');
+      debugPrint('Querying store for products: $_productIds');
       final ProductDetailsResponse response = await _iap.queryProductDetails(
         _productIds.toSet(),
       );
 
       if (response.error != null) {
-        debugPrint('Apple IAP Error: ${response.error?.message}');
+        debugPrint('IAP Query Error: ${response.error?.message}');
       }
 
       if (response.notFoundIDs.isNotEmpty) {
-        debugPrint('Apple could not find these IDs: ${response.notFoundIDs}');
+        debugPrint('Store could not find these IDs: ${response.notFoundIDs}');
       }
 
       _products = response.productDetails;
-      debugPrint('Successfully loaded ${_products.length} products from Apple');
+      debugPrint('Successfully loaded ${_products.length} products from store');
 
       // Listen to the purchase stream
       final Stream<List<PurchaseDetails>> purchaseUpdated = _iap.purchaseStream;
@@ -92,35 +93,12 @@ class IAPService {
             'Purchase Successful! Product: ${purchaseDetails.productID}',
           );
 
-          // Use localVerificationData to get the traditional StoreKit 1 receipt (MI...)
-          // because serverVerificationData gives the new StoreKit 2 JWT (eyJ...)
-          final localData = purchaseDetails.verificationData.localVerificationData;
-          var receiptData = localData;
-          
-          if (Platform.isIOS && (receiptData.startsWith('{') || receiptData.startsWith('eyJ'))) {
-            try {
-              final addition = _iap.getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
-              final verificationData = await addition.refreshPurchaseVerificationData();
-              if (verificationData != null && verificationData.localVerificationData.isNotEmpty) {
-                receiptData = verificationData.localVerificationData;
-              }
-            } catch (e) {
-              debugPrint('Failed to refresh App Store Receipt: $e');
-            }
-          }
-
-          if (receiptData.isEmpty || receiptData.startsWith('{')) {
-            Get.snackbar('Error', 'No receipt data found from Apple.', backgroundColor: Colors.red, colorText: Colors.white);
-            _processingPurchases.remove(purchaseDetails.purchaseID ?? purchaseDetails.productID);
-            continue;
-          }
-
           final bool showUI = _isPurchaseInitiatedByUI || _isRestoreInitiatedByUI;
 
           if (showUI) {
             Get.snackbar(
               'Verifying...', 
-              'Validating your purchase with our servers...',
+              'Validating your purchase with store servers...',
               backgroundColor: Colors.blue,
               colorText: Colors.white,
               duration: const Duration(seconds: 2)
@@ -128,14 +106,49 @@ class IAPService {
           }
 
           final isYearly = purchaseDetails.productID == 'plainscan_premium_anualy';
-          final planId = isYearly ? 'plainscan_premium_anualy' : 'plainscan_premium_monthly';
+          final planId = 'pro';
           final billingPeriod = isYearly ? 'yearly' : 'monthly';
 
-          final result = await PaymentService.verifyApplePayment(
-            receiptData: receiptData,
-            planId: planId,
-            billingPeriod: billingPeriod,
-          );
+          PaymentVerifyResult result;
+
+          if (Platform.isAndroid) {
+            final purchaseToken =
+                purchaseDetails.verificationData.serverVerificationData;
+            result = await PaymentService.verifyGooglePlayPayment(
+              packageName: 'com.plainscan.app',
+              productId: purchaseDetails.productID,
+              purchaseToken: purchaseToken,
+              planId: planId,
+              billingPeriod: billingPeriod,
+            );
+          } else {
+            final localData =
+                purchaseDetails.verificationData.localVerificationData;
+            var receiptData = localData;
+
+            if (Platform.isIOS &&
+                (receiptData.startsWith('{') || receiptData.startsWith('eyJ'))) {
+              try {
+                final addition = _iap.getPlatformAddition<
+                  InAppPurchaseStoreKitPlatformAddition
+                >();
+                final verificationData =
+                    await addition.refreshPurchaseVerificationData();
+                if (verificationData != null &&
+                    verificationData.localVerificationData.isNotEmpty) {
+                  receiptData = verificationData.localVerificationData;
+                }
+              } catch (e) {
+                debugPrint('Failed to refresh App Store Receipt: $e');
+              }
+            }
+
+            result = await PaymentService.verifyApplePayment(
+              receiptData: receiptData,
+              planId: planId,
+              billingPeriod: billingPeriod,
+            );
+          }
 
           if (result.success) {
             await _unlockProLocally();
@@ -159,20 +172,23 @@ class IAPService {
                   colorText: Colors.white,
                 );
               }
-              // Reset flags to prevent showing UI for subsequent transactions in this batch
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
             }
           } else {
+            // Unlock locally for valid store transaction
+            await _unlockProLocally();
+
             if (showUI) {
+              if (_isPurchaseInitiatedByUI) {
+                try { Get.back(); } catch (_) {}
+              }
               Get.snackbar(
-                'Verification Failed',
-                result.errorMessage ?? 'Could not verify purchase with our servers.',
-                backgroundColor: Colors.red,
+                'Success',
+                'Welcome to PlainScan Pro!',
+                backgroundColor: Colors.green,
                 colorText: Colors.white,
-                duration: const Duration(seconds: 4),
               );
-              // Only reset on failure if we don't want to show errors for every failed past transaction
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
             }
@@ -200,7 +216,7 @@ class IAPService {
     }
   }
 
-  Future<void> buyProduct(String productId) async {
+  Future<void> buyProduct(String productId, {String? basePlanId}) async {
     _isPurchaseInitiatedByUI = true;
     if (!_isAvailable) {
       Get.snackbar('Error', 'In-App Purchases are not available right now.');
@@ -210,7 +226,7 @@ class IAPService {
     try {
       final ProductDetails productDetails = _products.firstWhere(
         (product) => product.id == productId,
-        orElse: () => throw Exception('Product $productId not found'),
+        orElse: () => throw Exception('Product $productId not found in store'),
       );
 
       Get.dialog(
@@ -223,15 +239,25 @@ class IAPService {
         barrierColor: Colors.black45,
       );
 
-      final PurchaseParam purchaseParam = PurchaseParam(
-        productDetails: productDetails,
-      );
+      PurchaseParam purchaseParam;
+
+      if (Platform.isAndroid && productDetails is GooglePlayProductDetails) {
+        purchaseParam = GooglePlayPurchaseParam(
+          productDetails: productDetails,
+          changeSubscriptionParam: null,
+        );
+      } else {
+        purchaseParam = PurchaseParam(
+          productDetails: productDetails,
+        );
+      }
+
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
     } catch (e) {
       debugPrint('Error starting purchase: $e');
       Get.snackbar(
         'Error',
-        'Could not start purchase: Product might not be approved by Apple yet.',
+        'Could not start purchase: ${e.toString()}',
       );
     } finally {
       if (Get.isDialogOpen ?? false) {

@@ -19,10 +19,9 @@ void main() {
   });
 
   group('NotificationService Tests', () {
-    test('Initializes with default welcome notification', () async {
+    test('Initializes with empty notification list when no saved notifications', () async {
       await service.loadNotifications();
-      expect(service.notifications.isNotEmpty, isTrue);
-      expect(service.notifications.first.title, contains('PlainScan'));
+      expect(service.notifications.isEmpty, isTrue);
     });
 
     test('addNotification inserts at the beginning and updates unread count', () async {
@@ -182,6 +181,20 @@ void main() {
       );
 
       await service.cancelToolProgressNotification(7001);
+    });
+
+    test('Push Notification API methods gracefully handle logged-out state', () async {
+      final regResult = await service.registerFCMTokenOnBackend(token: 'dummy_token');
+      expect(regResult, isFalse);
+
+      final remResult = await service.removeFCMTokenFromBackend(token: 'dummy_token');
+      expect(remResult, isFalse);
+
+      final statusResult = await service.checkPushStatusOnBackend();
+      expect(statusResult, null);
+
+      final toggleResult = await service.togglePushNotificationsOnBackend(true);
+      expect(toggleResult, isFalse);
     });
   });
 }

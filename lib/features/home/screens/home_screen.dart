@@ -7,7 +7,6 @@ import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/home/pages/dashboard_page.dart';
 import 'package:plainscan/features/profile/pages/profile_page.dart';
 import 'package:upgrader/upgrader.dart';
-import 'package:flutter/foundation.dart';
 
 class HomeScreenController extends GetxController {
   final RxInt currentIndex = 0.obs;

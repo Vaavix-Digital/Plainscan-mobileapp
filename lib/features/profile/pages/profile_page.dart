@@ -3,10 +3,9 @@ import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
-import 'package:plainscan/core/services/app_update_service.dart';
 import 'package:plainscan/core/services/permission_service.dart';
 import 'package:plainscan/features/home/widgets/notifications_sheet.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:plainscan/models/tool_model.dart';
 
 
 class ProfilePage extends StatelessWidget {
@@ -407,7 +406,7 @@ class ProfilePage extends StatelessWidget {
                         color: AppColors.purple,
                       ),
                       title: Text('Welcome Tour & Overview'.tr),
-                      subtitle: Text('Explore all 52+ tools and features'.tr),
+                      subtitle: Text('Explore all ${allPlainscanTools.length}+ tools and features'.tr),
                       trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
                       onTap: () => Get.toNamed(AppRoutes.onboarding, arguments: {'isReplay': true}),
                     ),

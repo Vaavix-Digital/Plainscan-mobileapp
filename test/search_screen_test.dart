@@ -8,6 +8,7 @@ import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/features/home/widgets/dashboard_search_bar.dart';
 import 'package:plainscan/features/search/screens/search_screen.dart';
+import 'package:plainscan/models/tool_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -41,10 +42,10 @@ void main() {
     expect(find.byIcon(Icons.tune), findsNothing);
 
     // Verify hint text
-    expect(find.text('Search 56+ PDF tools, AI actions...'), findsOneWidget);
+    expect(find.text('Search ${allPlainscanTools.length}+ PDF tools, AI actions...'), findsOneWidget);
 
     // Tap on search bar
-    await tester.tap(find.text('Search 56+ PDF tools, AI actions...'));
+    await tester.tap(find.text('Search ${allPlainscanTools.length}+ PDF tools, AI actions...'));
     await tester.pumpAndSettle();
 
     // Verify SearchScreen is open

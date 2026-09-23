@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
-import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/app_update_service.dart';
 import 'package:plainscan/core/services/notification_service.dart';
-import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/home/screens/home_screen.dart';
 
 void showNotificationsBottomSheet(BuildContext context) {
@@ -234,20 +232,9 @@ Widget _buildNotificationTile(AppNotification notif, NotificationService service
           Get.back();
           AppUpdateService.showUpdateDialog(isManualCheck: true);
         } else if (notif.type == NotificationType.toolUpdate || notif.type == NotificationType.toolExecution) {
-          Get.back();
-          String? fileId;
-          if (Get.isRegistered<ScanController>()) {
-            final scanCtrl = Get.find<ScanController>();
-            final match = scanCtrl.scannedFiles.firstWhereOrNull(
-              (f) => (notif.fileName != null && f.name == notif.fileName) ||
-                     (notif.filePath != null && f.path == notif.filePath),
-            );
-            fileId = match?.id;
-          }
           if (Get.isRegistered<HomeScreenController>()) {
             Get.find<HomeScreenController>().changeTab(0);
           }
-          Get.to(() => FilesPage(highlightFileId: fileId));
         }
       },
       child: Container(

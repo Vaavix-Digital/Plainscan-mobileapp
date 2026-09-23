@@ -30,6 +30,7 @@ class ApiConstants {
   static const String verifyPayment = '/payments/verify-payment';
   static const String verifyStripePayment = '/payments/verify-stripe-payment';
   static const String verifyApplePayment = '/payments/verify-apple';
+  static const String verifyGooglePlayPayment = '/payments/verify-google-play';
   static const String creditsPacks = '/payments/credits-packs';
   static const String createCreditOrder = '/payments/credits/create-order';
   static const String verifyCreditPayment = '/payments/credits/verify';
@@ -40,6 +41,12 @@ class ApiConstants {
   static const String applyReferral = '/referral/apply';
   static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.plainscan.app&hl=en';
   static const String appStoreUrl = 'https://apps.apple.com/app/id6813783856';
+
+  // 📲 Push Notifications
+  static const String registerPushToken = '/push/register';
+  static const String removePushToken = '/push/token';
+  static const String pushStatus = '/push/status';
+  static const String togglePush = '/push/toggle';
 
   // 🔑 Google Sign-In Configuration
  

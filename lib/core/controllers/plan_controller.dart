@@ -196,19 +196,25 @@ class PlanController extends GetxController {
       if (fetchedPlans.isNotEmpty) {
         final filtered = fetchedPlans.where((plan) => plan.planId.toLowerCase() != 'teams').toList();
         
-        if (!kIsWeb && Platform.isIOS) {
+        if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
           final iapProducts = IAPService().products;
           for (var i = 0; i < filtered.length; i++) {
              if (filtered[i].planId.toLowerCase() == 'pro') {
-                final monthlyProduct = iapProducts.firstWhereOrNull((p) => p.id == 'plainscan_premium_monthly');
-                final yearlyProduct = iapProducts.firstWhereOrNull((p) => p.id == 'plainscan_premium_anualy');
-                
-                filtered[i] = filtered[i].copyWith(
-                   priceMonthly: monthlyProduct?.rawPrice ?? filtered[i].priceMonthly,
-                   priceYearly: yearlyProduct?.rawPrice ?? filtered[i].priceYearly,
-                   currency: monthlyProduct?.currencyCode ?? filtered[i].currency,
-                   currencySymbol: monthlyProduct?.currencySymbol ?? filtered[i].currencySymbol,
+                final monthlyProduct = iapProducts.firstWhereOrNull(
+                  (p) => p.id == 'plainscan_premium_monthly' || p.id == 'com.plainscan_pro',
                 );
+                final yearlyProduct = iapProducts.firstWhereOrNull(
+                  (p) => p.id == 'plainscan_premium_anualy' || p.id == 'com.plainscan_pro',
+                );
+                
+                if (monthlyProduct != null) {
+                  filtered[i] = filtered[i].copyWith(
+                     priceMonthly: monthlyProduct.rawPrice != 0 ? monthlyProduct.rawPrice : filtered[i].priceMonthly,
+                     priceYearly: (yearlyProduct?.rawPrice ?? 0) != 0 ? yearlyProduct!.rawPrice : filtered[i].priceYearly,
+                     currency: monthlyProduct.currencyCode.isNotEmpty ? monthlyProduct.currencyCode : filtered[i].currency,
+                     currencySymbol: monthlyProduct.currencySymbol.isNotEmpty ? monthlyProduct.currencySymbol : filtered[i].currencySymbol,
+                  );
+                }
              }
           }
         }
@@ -307,12 +313,14 @@ class PlanController extends GetxController {
       return;
     }
 
-    // Step 3: Navigate directly to the dedicated Payment Page
+    // Step 3: Navigate directly to store In-App Purchase on Mobile devices
     final billingPeriod = isYearly.value ? 'yearly' : 'monthly';
     
-    if (!kIsWeb && Platform.isIOS) {
-      final productId = billingPeriod == 'yearly' ? 'plainscan_premium_anualy' : 'plainscan_premium_monthly';
-      IAPService().buyProduct(productId);
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      final productId = Platform.isAndroid
+          ? 'com.plainscan_pro'
+          : (billingPeriod == 'yearly' ? 'plainscan_premium_anualy' : 'plainscan_premium_monthly');
+      IAPService().buyProduct(productId, basePlanId: billingPeriod);
       return;
     }
 

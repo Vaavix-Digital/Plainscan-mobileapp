@@ -92,18 +92,7 @@ Widget buildDashboardHeader() {
                     ),
                 ],
               ),
-              const SizedBox(width: 10),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.border, width: 2),
-                ),
-                child: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, color: AppColors.primary),
-                ),
-              ),
+             
             ],
           ),
         ],

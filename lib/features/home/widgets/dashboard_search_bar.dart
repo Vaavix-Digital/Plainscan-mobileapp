@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/models/tool_model.dart';
 
 Widget buildDashboardSearchBar() {
   return Material(
@@ -32,7 +33,7 @@ Widget buildDashboardSearchBar() {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Search 56+ PDF tools, AI actions...'.tr,
+                'Search ${allPlainscanTools.length}+ PDF tools, AI actions...'.tr,
                 style: const TextStyle(
                   color: AppColors.secondaryText,
                   fontSize: 14,

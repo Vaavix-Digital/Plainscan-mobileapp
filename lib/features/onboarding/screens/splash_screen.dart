@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/models/tool_model.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -161,8 +162,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   const SizedBox(height: 16),
                   
                 
-                  const Text(
-                    '56 TOOLS  •  ONE WORKSPACE',
+                  Text(
+                    '${allPlainscanTools.length} TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,  

@@ -6,6 +6,8 @@ class FileModel {
   final String fileType;
   final String? path;
   final bool isFavorite;
+  final String? sourceFileId;
+  final List<String>? sourceFileIds;
 
   const FileModel({
     required this.id,
@@ -15,6 +17,8 @@ class FileModel {
     required this.fileType,
     this.path,
     this.isFavorite = false,
+    this.sourceFileId,
+    this.sourceFileIds,
   });
 
   FileModel copyWith({
@@ -24,6 +28,8 @@ class FileModel {
     double? sizeKb,
     String? fileType,
     String? path,
+    String? sourceFileId,
+    List<String>? sourceFileIds,
   }) {
     return FileModel(
       id: id,
@@ -33,6 +39,8 @@ class FileModel {
       fileType: fileType ?? this.fileType,
       path: path ?? this.path,
       isFavorite: isFavorite ?? this.isFavorite,
+      sourceFileId: sourceFileId ?? this.sourceFileId,
+      sourceFileIds: sourceFileIds ?? this.sourceFileIds,
     );
   }
 
@@ -44,6 +52,8 @@ class FileModel {
         'fileType': fileType,
         'path': path,
         'isFavorite': isFavorite,
+        if (sourceFileId != null) 'sourceFileId': sourceFileId,
+        if (sourceFileIds != null) 'sourceFileIds': sourceFileIds,
       };
 
   factory FileModel.fromJson(Map<String, dynamic> json) => FileModel(
@@ -56,5 +66,9 @@ class FileModel {
         fileType: json['fileType'] as String? ?? 'PDF',
         path: json['path'] as String?,
         isFavorite: json['isFavorite'] as bool? ?? false,
+        sourceFileId: json['sourceFileId'] as String?,
+        sourceFileIds: (json['sourceFileIds'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList(),
       );
 }

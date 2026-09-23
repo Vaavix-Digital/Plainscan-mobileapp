@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/permission_service.dart';
+import 'package:plainscan/models/tool_model.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final bool isReplay;
@@ -32,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ],
     },
     {
-      'title': '52+ PDF & AI Tools',
+      'title': '${allPlainscanTools.length}+ PDF & AI Tools',
       'subtitle': 'All-in-One Document Suite',
       'description':
           'Convert PDF to Word, Excel, PPT, summarize documents with AI, compress, merge, split, and sign with ease.',

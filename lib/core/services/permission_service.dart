@@ -50,8 +50,7 @@ class AppPermissionService {
 
       // 1. App Tracking Transparency (ATT) first (iOS only)
       if (Platform.isIOS) {
-        final attStatus =
-            await AppTrackingTransparency.requestTrackingAuthorization();
+        await AppTrackingTransparency.requestTrackingAuthorization();
         await Future.delayed(const Duration(milliseconds: 350));
       }
 

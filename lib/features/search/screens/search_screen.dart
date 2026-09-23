@@ -202,7 +202,7 @@ class SearchScreen extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Search 56+ PDF tools, AI actions...'.tr,
+                  hintText: 'Search ${allPlainscanTools.length}+ PDF tools, AI actions...'.tr,
                   hintStyle: const TextStyle(
                     fontSize: 13.5,
                     color: Color(0xFF71809D),

@@ -1,6 +1,7 @@
  import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/models/tool_model.dart';
 
 Widget buildSearchBar() {
   final AllToolsController controller =
@@ -37,7 +38,7 @@ Widget buildSearchBar() {
               size: 20,
               color: Color(0xFF71809D),
             ),
-            hintText: 'Search 56+ tools...'.tr,
+            hintText: 'Search ${allPlainscanTools.length}+ tools...'.tr,
             hintStyle: const TextStyle(
               fontSize: 14,
               color: Color(0xFF71809D),

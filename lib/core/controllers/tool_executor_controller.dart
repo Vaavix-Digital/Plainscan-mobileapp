@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
@@ -2335,6 +2334,8 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
       // STEP 3: Poll job status
       Map<String, dynamic> jobResult = {};
+      int pollDelayMs = 400; // Fast initial poll for quick AI/tool jobs
+
       while (true) {
         pollingCount++;
         errorMessage = 'Waiting for job completion (Attempt $pollingCount)...';
@@ -2376,7 +2377,12 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
           throw Exception(statusResponse['error'] ?? 'Plainscan API job failed during processing.');
         }
 
-        await Future.delayed(const Duration(seconds: 2));
+        if (pollingCount > 60) {
+          throw Exception('Processing timeout. Server took too long to complete job.');
+        }
+
+        await Future.delayed(Duration(milliseconds: pollDelayMs));
+        if (pollDelayMs < 1500) pollDelayMs += 300;
       }
 
       // STEP 4: Download Output File / Complete
@@ -3664,7 +3670,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       List<PlatformFile> resultList = [];
       if (isMulti) {
         final result = await FilePicker.pickFiles(type: fileType);
-        if (result != null && result.isNotEmpty) {
+        if (result.isNotEmpty) {
           resultList = result;
         }
       } else {
@@ -3901,7 +3907,12 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   void removeSelectedFile(FileModel file) {
     if (isRunning) return;
     selectedFiles.removeWhere((f) => f.id == file.id);
-    if (selectedFiles.isEmpty) {
+    if (selectedFile?.id == file.id) {
+      selectedFile = null;
+    }
+    scanController.deleteFile(file.id);
+
+    if (selectedFiles.isEmpty && selectedFile == null) {
       clearPreviousResult(clearSelected: true);
     } else {
       clearPreviousResult(clearSelected: false);
@@ -3910,6 +3921,9 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
   void clearSingleSelectedFile() {
     if (isRunning) return;
+    if (selectedFile != null) {
+      scanController.deleteFile(selectedFile!.id);
+    }
     clearPreviousResult(clearSelected: true);
   }
 
