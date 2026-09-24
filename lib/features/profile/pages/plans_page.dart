@@ -117,7 +117,7 @@ class PlansPage extends StatelessWidget {
                 // Free Referral Option Card
                 if (!Platform.isIOS) _buildReferralCard(),
 
-                if (Platform.isIOS)
+                if (Platform.isIOS || Platform.isAndroid)
                   Column(
                     children: [
                       TextButton(

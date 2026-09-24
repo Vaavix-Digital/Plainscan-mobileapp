@@ -401,7 +401,7 @@ class ProfileController extends GetxController {
 
               const SizedBox(height: 10),
               
-              if (Platform.isIOS)
+              if (Platform.isIOS || Platform.isAndroid)
                 TextButton(
                   onPressed: () => IAPService().restorePurchases(),
                   child: const Text(

@@ -1,12 +1,11 @@
 import 'dart:async';
-
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:plainscan/app/routes.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/models/tool_model.dart';
 
@@ -17,7 +16,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -30,13 +30,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       duration: const Duration(milliseconds: 1500),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
@@ -79,10 +81,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E224F), 
-              Color(0xFF0C0D21), 
-            ],
+            colors: [Color(0xFF1E224F), Color(0xFF0C0D21)],
           ),
         ),
         child: Center(
@@ -101,10 +100,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF6366F1), 
-                          Color(0xFF4F46E5), 
-                        ],
+                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
@@ -116,25 +112,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ],
                     ),
                     child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: const [
-                          Icon(
-                            Icons.crop_free,
-                            size: 52,
-                            color: Colors.white,
-                          ),
-                          Icon(
-                            Icons.add,
-                            size: 22,
-                            color: Colors.white,
-                          ),
-                        ],
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/image/plainscan logo icon.png',
+                          width: 65,
+                          height: 65,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Brand title (Plainscan)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -153,21 +143,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         style: TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF818CF8), 
+                          color: Color(0xFF818CF8),
                           letterSpacing: 0.5,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
-                
+
                   Text(
                     '${allPlainscanTools.length} TOOLS  •  ONE WORKSPACE',
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,  
-                      color: Color(0xFF64748B), 
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
                       letterSpacing: 2.0,
                     ),
                   ),

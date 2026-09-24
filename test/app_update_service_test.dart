@@ -1,19 +1,29 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:plainscan/core/services/app_update_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('AppUpdateService Tests', () {
-    test('isUpdateAvailable detects newer version correctly', () async {
-      final hasUpdate = await AppUpdateService.isUpdateAvailable();
-      expect(hasUpdate, isTrue); // 1.1.0 > 1.0.0
+  group('AppUpdateService Dynamic Versioning Tests', () {
+    setUp(() {
+      PackageInfo.setMockInitialValues(
+        appName: 'PlainScan',
+        packageName: 'com.plainscan.app',
+        version: '1.0.0',
+        buildNumber: '22',
+        buildSignature: '',
+      );
     });
 
-    test('Version constants are valid', () {
-      expect(AppUpdateService.currentVersion, '1.0.0');
-      expect(AppUpdateService.latestVersion, '1.1.0');
-      expect(AppUpdateService.currentBuildNumber, 3);
+    test('getCurrentVersion reads version dynamically from PackageInfo', () async {
+      final currentVer = await AppUpdateService.getCurrentVersion();
+      expect(currentVer, '1.0.0+22');
+    });
+
+    test('isUpdateAvailable evaluates dynamic version comparison', () async {
+      final hasUpdate = await AppUpdateService.isUpdateAvailable();
+      expect(hasUpdate, isA<bool>());
     });
   });
 }

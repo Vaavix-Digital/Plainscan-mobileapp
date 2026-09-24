@@ -201,10 +201,10 @@ class PlanController extends GetxController {
           for (var i = 0; i < filtered.length; i++) {
              if (filtered[i].planId.toLowerCase() == 'pro') {
                 final monthlyProduct = iapProducts.firstWhereOrNull(
-                  (p) => p.id == 'plainscan_premium_monthly' || p.id == 'com.plainscan_pro',
+                  (p) => p.id == IAPService.monthlySubscriptionId || p.id.startsWith(IAPService.monthlySubscriptionId),
                 );
                 final yearlyProduct = iapProducts.firstWhereOrNull(
-                  (p) => p.id == 'plainscan_premium_anualy' || p.id == 'com.plainscan_pro',
+                  (p) => p.id == IAPService.yearlySubscriptionId || p.id.startsWith(IAPService.yearlySubscriptionId),
                 );
                 
                 if (monthlyProduct != null) {
@@ -317,9 +317,9 @@ class PlanController extends GetxController {
     final billingPeriod = isYearly.value ? 'yearly' : 'monthly';
     
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      final productId = Platform.isAndroid
-          ? 'com.plainscan_pro'
-          : (billingPeriod == 'yearly' ? 'plainscan_premium_anualy' : 'plainscan_premium_monthly');
+      final productId = billingPeriod == 'yearly'
+          ? IAPService.yearlySubscriptionId
+          : IAPService.monthlySubscriptionId;
       IAPService().buyProduct(productId, basePlanId: billingPeriod);
       return;
     }

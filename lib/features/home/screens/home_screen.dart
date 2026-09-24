@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/app_update_service.dart';
 import 'package:plainscan/features/ai/pages/ai_page.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/home/pages/dashboard_page.dart';
 import 'package:plainscan/features/profile/pages/profile_page.dart';
-import 'package:upgrader/upgrader.dart';
 
 class HomeScreenController extends GetxController {
   final RxInt currentIndex = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.checkOnAppStart();
+    });
+  }
 
   void changeTab(int index) {
     currentIndex.value = index;
@@ -67,22 +75,13 @@ class HomeScreen extends StatelessWidget {
       ProfilePage(),
     ];
 
-    return UpgradeAlert(
-      upgrader: Upgrader(
-        durationUntilAlertAgain: const Duration(days: 1),
-      ),
-      dialogStyle: UpgradeDialogStyle.material,
-      showIgnore: false,
-      showLater: false,
-      barrierDismissible: false,
-      shouldPopScope: () => false,
-      child: Scaffold(
-        body: Obx(
-          () => IndexedStack(
-            index: controller.currentIndex.value,
-            children: pages,
-          ),
+    return Scaffold(
+      body: Obx(
+        () => IndexedStack(
+          index: controller.currentIndex.value,
+          children: pages,
         ),
+      ),
         bottomNavigationBar: BottomAppBar(
         color: AppColors.white,
         surfaceTintColor: Colors.transparent,
@@ -115,6 +114,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-    ));
+    );
   }
 }

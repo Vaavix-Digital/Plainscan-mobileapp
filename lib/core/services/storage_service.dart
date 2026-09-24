@@ -22,6 +22,9 @@ class StorageService {
   static const String _keyUserId = 'user_id';
   static const String _keyPicture = 'user_picture';
   static const String _keyRole = 'user_role';
+  static const String _keySubscriptionStatus = 'subscription_status';
+  static const String _keySubscriptionPlatform = 'subscription_platform';
+  static const String _keyAiCreditsLimit = 'ai_credits_limit';
 
   /// Generates a unique 6-character referral code per user/device
   static String generateUniqueReferralCode({String? seed}) {
@@ -77,6 +80,44 @@ class StorageService {
   static Future<String> getPlan() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyPlan) ?? 'free';
+  }
+
+  static Future<void> saveSubscriptionDetails({
+    required String planId,
+    String? expiresAt,
+    String? status,
+    String? platform,
+    int? aiCreditsLimit,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPlan, planId);
+    if (expiresAt != null && expiresAt.isNotEmpty) {
+      await prefs.setString(_keyProExpiry, expiresAt);
+    }
+    if (status != null && status.isNotEmpty) {
+      await prefs.setString(_keySubscriptionStatus, status);
+    }
+    if (platform != null && platform.isNotEmpty) {
+      await prefs.setString(_keySubscriptionPlatform, platform);
+    }
+    if (aiCreditsLimit != null) {
+      await prefs.setInt(_keyAiCreditsLimit, aiCreditsLimit);
+    }
+  }
+
+  static Future<String?> getSubscriptionStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keySubscriptionStatus);
+  }
+
+  static Future<String?> getSubscriptionPlatform() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keySubscriptionPlatform);
+  }
+
+  static Future<int?> getAiCreditsLimit() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyAiCreditsLimit);
   }
 
   static Future<String> getMyReferralCode() async {
@@ -394,6 +435,10 @@ class StorageService {
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyName);
     await prefs.remove(_keyPlan);
+    await prefs.remove(_keyProExpiry);
+    await prefs.remove(_keySubscriptionStatus);
+    await prefs.remove(_keySubscriptionPlatform);
+    await prefs.remove(_keyAiCreditsLimit);
     await prefs.remove(_keyUserId);
     await prefs.remove(_keyPicture);
     await prefs.remove(_keyRole);

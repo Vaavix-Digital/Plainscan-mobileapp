@@ -140,39 +140,80 @@ class PaymentOrderResult {
 
 class PaymentVerifyResult {
   final bool success;
+  final int? statusCode;
   final String? status;
   final String? message;
   final String? errorMessage;
+  final String? planId;
+  final String? expiresAt;
+  final String? productId;
+  final Map<String, dynamic>? user;
+  final Map<String, dynamic>? rawData;
 
   PaymentVerifyResult({
     required this.success,
+    this.statusCode,
     this.status,
     this.message,
     this.errorMessage,
+    this.planId,
+    this.expiresAt,
+    this.productId,
+    this.user,
+    this.rawData,
   });
 
-  factory PaymentVerifyResult.fromJson(Map<String, dynamic> rawJson) {
+  factory PaymentVerifyResult.fromJson(Map<String, dynamic> rawJson, {int? statusCode}) {
     final json = (rawJson['data'] is Map<String, dynamic>)
         ? rawJson['data'] as Map<String, dynamic>
         : rawJson;
 
     final status = (json['status'] ?? rawJson['status'])?.toString();
     final isOk = status == 'success' ||
+        status == 'active' ||
         json['success'] == true ||
         rawJson['success'] == true;
 
+    final user = (json['user'] is Map<String, dynamic>)
+        ? json['user'] as Map<String, dynamic>
+        : (rawJson['user'] is Map<String, dynamic>
+            ? rawJson['user'] as Map<String, dynamic>
+            : null);
+
+    final planId = (json['plan_id'] ?? rawJson['plan_id'] ?? user?['plan_id'])?.toString();
+    final expiresAt = (json['expires_at'] ??
+            json['subscription_expires_at'] ??
+            rawJson['expires_at'] ??
+            rawJson['subscription_expires_at'] ??
+            user?['subscription_expires_at'] ??
+            user?['subscription_end_date'])
+        ?.toString();
+
+    final productId = (json['product_id'] ??
+            rawJson['product_id'] ??
+            user?['google_play_product_id'])
+        ?.toString();
+
     return PaymentVerifyResult(
       success: isOk,
+      statusCode: statusCode ?? (isOk ? 200 : 400),
       status: status,
       message: (json['message'] ?? rawJson['message'])?.toString() ??
-          'Payment verified successfully',
+          'Subscription verified and Pro plan activated successfully!',
+      planId: planId,
+      expiresAt: expiresAt,
+      productId: productId,
+      user: user,
+      rawData: rawJson,
     );
   }
 
-  factory PaymentVerifyResult.failure(String error) {
+  factory PaymentVerifyResult.failure(String error, {int? statusCode, Map<String, dynamic>? rawData}) {
     return PaymentVerifyResult(
       success: false,
+      statusCode: statusCode,
       errorMessage: error,
+      rawData: rawData,
     );
   }
 }
@@ -442,14 +483,22 @@ class PaymentService {
 
   /// Verifies Google Play In-App Purchase token
   static Future<PaymentVerifyResult> verifyGooglePlayPayment({
-    required String packageName,
+    String packageName = 'com.plainscan.app',
     required String productId,
     required String purchaseToken,
-    required String planId,
+    String planId = 'pro',
     required String billingPeriod,
   }) async {
     try {
       String? token = await StorageService.getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('verifyGooglePlayPayment: No JWT token found in storage.');
+        return PaymentVerifyResult.failure(
+          'Authentication required. Please log in to activate your Pro subscription.',
+          statusCode: 401,
+        );
+      }
+
       final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.verifyGooglePlayPayment}');
 
       final payload = jsonEncode({
@@ -466,16 +515,14 @@ class PaymentService {
         uri,
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer $token',
         },
         body: payload,
       );
 
       debugPrint('verifyGooglePlay response: ${response.statusCode} - ${response.body}');
 
-      if ((response.statusCode == 401 || response.statusCode == 403) &&
-          token != null &&
-          token.isNotEmpty) {
+      if ((response.statusCode == 401 || response.statusCode == 403)) {
         final refresh = await AuthService.refreshToken();
         if (refresh.success && refresh.token != null) {
           token = refresh.token!;
@@ -487,18 +534,74 @@ class PaymentService {
             },
             body: payload,
           );
+          debugPrint('verifyGooglePlay retry response: ${response.statusCode} - ${response.body}');
         }
       }
+
+      Map<String, dynamic>? responseJson;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          responseJson = decoded;
+        }
+      } catch (_) {}
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
-          return PaymentVerifyResult.fromJson(data);
+        if (responseJson != null) {
+          return PaymentVerifyResult.fromJson(responseJson, statusCode: response.statusCode);
         }
+        return PaymentVerifyResult(
+          success: true,
+          statusCode: response.statusCode,
+          message: 'Subscription verified and Pro plan activated successfully!',
+          planId: planId,
+        );
       }
 
-      final errorMsg = AuthService.parseError(response.body);
-      return PaymentVerifyResult.failure(errorMsg);
+      // Handle specific error codes based on Google Play backend reference:
+      // 400: Missing product_id or purchase_token
+      // 402: Payment not received / Google verification failed / subscription expired
+      // 409: This purchase_token is already linked to a different account (token hijack attempt)
+      // 500: Server misconfiguration (Google service account not set up yet)
+      String errorMsg = responseJson?['message']?.toString() ??
+          responseJson?['error']?.toString() ??
+          AuthService.parseError(response.body);
+
+      switch (response.statusCode) {
+        case 400:
+          if (errorMsg.isEmpty || errorMsg == 'An error occurred') {
+            errorMsg = 'Missing product ID or purchase token. Please try again.';
+          }
+          break;
+        case 401:
+          errorMsg = 'Session expired. Please log in again to verify your purchase.';
+          break;
+        case 402:
+          if (errorMsg.isEmpty || errorMsg == 'An error occurred') {
+            errorMsg = 'Purchase could not be verified. Payment was not received or subscription expired.';
+          }
+          break;
+        case 409:
+          if (errorMsg.isEmpty || errorMsg == 'An error occurred') {
+            errorMsg = 'This purchase is already linked to a different account.';
+          }
+          break;
+        case 500:
+          if (errorMsg.isEmpty || errorMsg == 'An error occurred') {
+            errorMsg = 'Server issue during verification. Please try again later.';
+          }
+          break;
+        default:
+          if (errorMsg.isEmpty) {
+            errorMsg = 'Failed to verify Google Play purchase (Status ${response.statusCode}).';
+          }
+      }
+
+      return PaymentVerifyResult.failure(
+        errorMsg,
+        statusCode: response.statusCode,
+        rawData: responseJson,
+      );
     } catch (e) {
       debugPrint('Error verifying Google Play payment: $e');
       return PaymentVerifyResult.failure('Network connection failed: $e');

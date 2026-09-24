@@ -5,6 +5,9 @@ import 'package:get/get.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:plainscan/app/routes.dart';
+import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/controllers/plan_controller.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/services/payment_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
@@ -24,10 +27,16 @@ class IAPService {
   bool _isPurchaseInitiatedByUI = false;
   bool _isRestoreInitiatedByUI = false;
 
+  /// Google Play Product IDs (must match exact IDs in Google Play Console)
+  static const String monthlySubscriptionId = 'plainscan_premium_monthly';
+  static const String yearlySubscriptionId = 'plainscan_premium_anualy';
+  static const String androidPackageName = 'com.plainscan.app';
+
   final List<String> _productIds = [
+    monthlySubscriptionId,
+    yearlySubscriptionId,
     'com.plainscan_pro',
-    'plainscan_premium_monthly',
-    'plainscan_premium_anualy',
+    'plainscan_pro',
   ];
 
   Future<void> init() async {
@@ -74,49 +83,74 @@ class IAPService {
       } else {
         if (purchaseDetails.status == PurchaseStatus.error) {
           debugPrint('Purchase error: ${purchaseDetails.error}');
-          Get.snackbar(
-            'Purchase Failed',
-            'Something went wrong: ${purchaseDetails.error?.message}',
-          );
+          _processingPurchases.remove(purchaseDetails.purchaseID ?? purchaseDetails.productID);
+          if (_isPurchaseInitiatedByUI) {
+            Get.snackbar(
+              'Purchase Incomplete',
+              purchaseDetails.error?.message ?? 'Payment transaction was not completed.',
+              backgroundColor: const Color(0xFFDC2626),
+              colorText: Colors.white,
+              snackPosition: SnackPosition.BOTTOM,
+            );
+            _isPurchaseInitiatedByUI = false;
+          }
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
             purchaseDetails.status == PurchaseStatus.restored) {
           final txId = purchaseDetails.purchaseID ?? purchaseDetails.productID;
           if (_processingPurchases.contains(txId)) {
             if (purchaseDetails.pendingCompletePurchase) {
-              try { await _iap.completePurchase(purchaseDetails); } catch (_) {}
+              try {
+                await _iap.completePurchase(purchaseDetails);
+              } catch (_) {}
             }
             continue;
           }
           _processingPurchases.add(txId);
 
           debugPrint(
-            'Purchase Successful! Product: ${purchaseDetails.productID}',
+            'Purchase Successful in store! Product: ${purchaseDetails.productID}',
           );
 
           final bool showUI = _isPurchaseInitiatedByUI || _isRestoreInitiatedByUI;
 
           if (showUI) {
             Get.snackbar(
-              'Verifying...', 
-              'Validating your purchase with store servers...',
-              backgroundColor: Colors.blue,
+              'Verifying Subscription...',
+              'Validating your purchase with Google Play...',
+              backgroundColor: const Color(0xFF1E224F),
               colorText: Colors.white,
-              duration: const Duration(seconds: 2)
+              duration: const Duration(seconds: 4),
+              icon: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              snackPosition: SnackPosition.BOTTOM,
             );
           }
 
-          final isYearly = purchaseDetails.productID == 'plainscan_premium_anualy';
+          final rawProductId = purchaseDetails.productID;
+          final cleanProductId = rawProductId.split(':').first;
+          final isYearly = cleanProductId == yearlySubscriptionId ||
+              cleanProductId.contains('anualy') ||
+              cleanProductId.contains('yearly');
+
           final planId = 'pro';
           final billingPeriod = isYearly ? 'yearly' : 'monthly';
+          final targetProductId = isYearly ? yearlySubscriptionId : monthlySubscriptionId;
 
           PaymentVerifyResult result;
 
           if (Platform.isAndroid) {
             final purchaseToken =
                 purchaseDetails.verificationData.serverVerificationData;
+            debugPrint('Verifying Google Play token for $targetProductId ($billingPeriod)...');
             result = await PaymentService.verifyGooglePlayPayment(
-              packageName: 'com.plainscan.app',
-              productId: purchaseDetails.productID,
+              packageName: androidPackageName,
+              productId: targetProductId,
               purchaseToken: purchaseToken,
               planId: planId,
               billingPeriod: billingPeriod,
@@ -151,51 +185,72 @@ class IAPService {
           }
 
           if (result.success) {
-            await _unlockProLocally();
+            // ✅ Pro activated successfully!
+            await _onVerificationSuccess(result);
 
             if (showUI) {
               if (purchaseDetails.status == PurchaseStatus.restored) {
                 Get.snackbar(
-                  'Restored',
-                  'Your Pro subscription has been restored!',
-                  backgroundColor: Colors.green,
+                  'Subscription Restored',
+                  result.message ?? 'Your Pro subscription has been restored successfully!',
+                  backgroundColor: const Color(0xFF10B981),
                   colorText: Colors.white,
+                  snackPosition: SnackPosition.BOTTOM,
+                  icon: const Icon(Icons.check_circle_outline, color: Colors.white),
                 );
               } else {
                 if (_isPurchaseInitiatedByUI) {
-                  try { Get.back(); } catch (_) {}
+                  try {
+                    Get.back();
+                  } catch (_) {}
                 }
                 Get.snackbar(
-                  'Success',
-                  'Welcome to PlainScan Pro!',
-                  backgroundColor: Colors.green,
+                  'Pro Activated 🎉',
+                  result.message ?? 'Welcome to PlainScan Pro! Pro features unlocked.',
+                  backgroundColor: const Color(0xFF10B981),
                   colorText: Colors.white,
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 4),
+                  icon: const Icon(Icons.check_circle_outline, color: Colors.white),
                 );
               }
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
             }
+
+            // Complete purchase in Google Play Billing client now that backend acknowledged it
+            if (purchaseDetails.pendingCompletePurchase) {
+              try {
+                await _iap.completePurchase(purchaseDetails);
+              } catch (e) {
+                debugPrint('Error completing purchase: $e');
+              }
+            }
           } else {
-            // Unlock locally for valid store transaction
-            await _unlockProLocally();
+            // ❌ Server verification failed
+            debugPrint('Subscription verification failed: status=${result.statusCode}, msg=${result.errorMessage}');
+            _processingPurchases.remove(txId);
 
             if (showUI) {
-              if (_isPurchaseInitiatedByUI) {
-                try { Get.back(); } catch (_) {}
-              }
-              Get.snackbar(
-                'Success',
-                'Welcome to PlainScan Pro!',
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
-              );
+              _showVerificationErrorDialog(result);
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
+            }
+
+            // Acknowledge fatal errors on client so they don't loop endlessly
+            if (result.statusCode == 400 || result.statusCode == 402 || result.statusCode == 409) {
+              if (purchaseDetails.pendingCompletePurchase) {
+                try {
+                  await _iap.completePurchase(purchaseDetails);
+                } catch (_) {}
+              }
             }
           }
         }
 
-        if (purchaseDetails.pendingCompletePurchase) {
+        if (purchaseDetails.pendingCompletePurchase &&
+            purchaseDetails.status != PurchaseStatus.purchased &&
+            purchaseDetails.status != PurchaseStatus.restored) {
           try {
             await _iap.completePurchase(purchaseDetails);
           } catch (e) {
@@ -206,38 +261,255 @@ class IAPService {
     }
   }
 
-  Future<void> _unlockProLocally() async {
-    // Save to local storage so the app knows the user is Pro
-    await StorageService.savePlan('pro');
+  Future<void> _onVerificationSuccess(PaymentVerifyResult result) async {
+    // 1. Save subscription details in persistent storage
+    await StorageService.saveSubscriptionDetails(
+      planId: result.planId ?? 'pro',
+      expiresAt: result.expiresAt,
+      status: result.status ?? 'active',
+      platform: 'google_play',
+      aiCreditsLimit: (result.user?['ai_credits_limit'] is num)
+          ? (result.user!['ai_credits_limit'] as num).toInt()
+          : null,
+    );
 
-    // Refresh the profile controller if it exists
+    // 2. Refresh ProfileController
     if (Get.isRegistered<ProfileController>()) {
-      Get.find<ProfileController>().loadUserProfile();
+      final profileCtrl = Get.find<ProfileController>();
+      profileCtrl.userPlan.value = result.planId ?? 'pro';
+      profileCtrl.isPro.value = true;
+      await profileCtrl.loadUserProfile();
     }
+
+    // 3. Refresh PlanController
+    if (Get.isRegistered<PlanController>()) {
+      Get.find<PlanController>().loadPlansData();
+    }
+  }
+
+  void _showVerificationErrorDialog(PaymentVerifyResult result) {
+    String title = 'Verification Notice';
+    String message = result.errorMessage ?? 'Could not verify your purchase with the server.';
+
+    switch (result.statusCode) {
+      case 400:
+        title = 'Invalid Request';
+        message = 'Missing purchase details. Please try again.';
+        break;
+      case 401:
+        title = 'Login Required';
+        message = 'Your session has expired. Please log in again to link your Pro subscription.';
+        break;
+      case 402:
+        title = 'Verification Failed';
+        message = 'Google Play verification failed. Payment was not received or subscription is expired.';
+        break;
+      case 409:
+        title = 'Subscription Already Linked';
+        message = 'This Google Play purchase is already linked to another PlainScan account.';
+        break;
+      case 500:
+        title = 'Server Error';
+        message = 'A server issue occurred while verifying your subscription. Please try again later.';
+        break;
+    }
+
+    Get.defaultDialog(
+      title: title,
+      titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      middleText: message,
+      textConfirm: 'OK',
+      confirmTextColor: Colors.white,
+      buttonColor: AppColors.primary,
+      onConfirm: () => Get.back(),
+    );
+  }
+
+  ProductDetails? _findProduct(String productId) {
+    if (_products.isEmpty) return null;
+
+    // 1. Direct match by ID or ID prefix
+    var match = _products.firstWhereOrNull(
+      (product) =>
+          product.id == productId ||
+          product.id.startsWith('$productId:') ||
+          (product is GooglePlayProductDetails &&
+              product.productDetails.productId == productId),
+    );
+    if (match != null) return match;
+
+    // 2. Match by Base Plan ID or Offer ID in GooglePlayProductDetails
+    for (var p in _products) {
+      if (p is GooglePlayProductDetails) {
+        final offers = p.productDetails.subscriptionOfferDetails;
+        if (offers != null &&
+            p.subscriptionIndex != null &&
+            p.subscriptionIndex! < offers.length) {
+          final offer = offers[p.subscriptionIndex!];
+          if (offer.basePlanId == productId ||
+              offer.offerId == productId ||
+              (productId.contains('monthly') &&
+                  (offer.basePlanId.contains('monthly') ||
+                      offer.basePlanId == 'p1m')) ||
+              (productId.contains('anualy') &&
+                  (offer.basePlanId.contains('anualy') ||
+                      offer.basePlanId.contains('yearly') ||
+                      offer.basePlanId == 'p1y'))) {
+            return p;
+          }
+        }
+      }
+    }
+
+    // 3. Match by billing period keyword (monthly vs yearly)
+    final isYearly =
+        productId.contains('anualy') || productId.contains('yearly');
+    match = _products.firstWhereOrNull((p) {
+      final id = p.id.toLowerCase();
+      if (isYearly) {
+        return id.contains('anualy') ||
+            id.contains('yearly') ||
+            id.contains('annual');
+      } else {
+        return id.contains('monthly') || id.contains('month');
+      }
+    });
+    if (match != null) return match;
+
+    // 4. Fallback to any pro product in store
+    match = _products.firstWhereOrNull(
+      (p) =>
+          p.id == 'com.plainscan_pro' ||
+          p.id.contains('pro') ||
+          p.id.contains('premium'),
+    );
+
+    return match;
   }
 
   Future<void> buyProduct(String productId, {String? basePlanId}) async {
     _isPurchaseInitiatedByUI = true;
-    if (!_isAvailable) {
-      Get.snackbar('Error', 'In-App Purchases are not available right now.');
+
+    // Check if user is authenticated before purchasing
+    final hasSession = await StorageService.hasSession();
+    if (!hasSession) {
+      Get.defaultDialog(
+        title: 'Account Required',
+        middleText:
+            'Please log in or sign up before subscribing so your Pro plan is linked to your account.',
+        textConfirm: 'Log In / Sign Up',
+        textCancel: 'Cancel',
+        confirmTextColor: Colors.white,
+        buttonColor: AppColors.primary,
+        onConfirm: () {
+          Get.back();
+          Get.toNamed(AppRoutes.auth);
+        },
+      );
       return;
     }
 
     try {
-      final ProductDetails productDetails = _products.firstWhere(
-        (product) => product.id == productId,
-        orElse: () => throw Exception('Product $productId not found in store'),
-      );
+      _isAvailable = await _iap.isAvailable();
+    } catch (_) {}
 
-      Get.dialog(
-        const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
-        ),
-        barrierDismissible: false,
-        barrierColor: Colors.black45,
+    if (!_isAvailable) {
+      Get.defaultDialog(
+        title: 'Google Play Unavailable',
+        middleText:
+            'Google Play Billing is not supported or not available on this device.\n\nWould you like to complete payment via Card / UPI checkout instead?',
+        textConfirm: 'Online Checkout',
+        textCancel: 'Cancel',
+        confirmTextColor: Colors.white,
+        buttonColor: AppColors.primary,
+        onConfirm: () {
+          Get.back();
+          final plan = Get.isRegistered<PlanController>()
+              ? Get.find<PlanController>()
+                  .plans
+                  .firstWhereOrNull((p) => p.planId == 'pro')
+              : null;
+          if (plan != null) {
+            Get.toNamed(AppRoutes.payment, arguments: {
+              'plan': plan,
+              'billingPeriod': basePlanId ?? 'monthly',
+            });
+          }
+        },
       );
+      return;
+    }
+
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      ),
+      barrierDismissible: false,
+      barrierColor: Colors.black45,
+    );
+
+    try {
+      debugPrint('IAP: buyProduct called for productId: $productId');
+      debugPrint('IAP: Current cached products: ${_products.map((p) => p.id).toList()}');
+
+      // Query or refresh products if not cached or matching product is not found
+      if (_products.isEmpty || _findProduct(productId) == null) {
+        debugPrint('IAP: Querying store for product IDs: $_productIds');
+        final resp = await _iap.queryProductDetails(_productIds.toSet());
+        debugPrint(
+            'IAP: Store query response: found=${resp.productDetails.map((p) => p.id).toList()}, notFound=${resp.notFoundIDs}, error=${resp.error?.message}');
+        if (resp.productDetails.isNotEmpty) {
+          _products = resp.productDetails;
+        }
+      }
+
+      final ProductDetails? productDetails = _findProduct(productId);
+
+      if (productDetails == null) {
+        if (Get.isDialogOpen ?? false) {
+          Get.back();
+        }
+
+        final foundIds = _products.map((p) => p.id).toList();
+        debugPrint(
+            'IAP: Product $productId could not be found. Available in store: $foundIds');
+
+        Get.defaultDialog(
+          title: 'Product Not Found in Play Store',
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          middleText:
+              'Google Play Store could not find subscription "$productId".\n\n'
+              '• If recently created in Google Play Console, it can take 2-24 hours to propagate.\n'
+              '• Ensure the Base Plan in Play Console is set to "Active" (not Draft).\n'
+              '• Ensure your Google account is added as a License Tester.\n\n'
+              'Would you like to complete payment via standard Online Checkout instead?',
+          textConfirm: 'Online Checkout',
+          textCancel: 'Close',
+          confirmTextColor: Colors.white,
+          buttonColor: AppColors.primary,
+          onConfirm: () {
+            Get.back();
+            final plan = Get.isRegistered<PlanController>()
+                ? Get.find<PlanController>()
+                    .plans
+                    .firstWhereOrNull((p) => p.planId == 'pro')
+                : null;
+            if (plan != null) {
+              Get.toNamed(AppRoutes.payment, arguments: {
+                'plan': plan,
+                'billingPeriod': basePlanId ?? 'monthly',
+              });
+            }
+          },
+        );
+        return;
+      }
+
+      debugPrint(
+          'IAP: Launching billing flow for: ${productDetails.id} (${productDetails.title}, ${productDetails.price})');
 
       PurchaseParam purchaseParam;
 
@@ -256,8 +528,9 @@ class IAPService {
     } catch (e) {
       debugPrint('Error starting purchase: $e');
       Get.snackbar(
-        'Error',
-        'Could not start purchase: ${e.toString()}',
+        'Purchase Error',
+        'Could not initiate Google Play purchase: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       if (Get.isDialogOpen ?? false) {
@@ -268,15 +541,42 @@ class IAPService {
 
   Future<void> restorePurchases() async {
     _isRestoreInitiatedByUI = true;
+
+    final hasSession = await StorageService.hasSession();
+    if (!hasSession) {
+      Get.defaultDialog(
+        title: 'Account Required',
+        middleText: 'Please log in to restore your subscription.',
+        textConfirm: 'Log In / Sign Up',
+        textCancel: 'Cancel',
+        confirmTextColor: Colors.white,
+        buttonColor: AppColors.primary,
+        onConfirm: () {
+          Get.back();
+          Get.toNamed(AppRoutes.auth);
+        },
+      );
+      return;
+    }
+
     if (!_isAvailable) {
       Get.snackbar('Error', 'In-App Purchases are not available right now.');
       return;
     }
+
     try {
+      Get.snackbar(
+        'Restoring...',
+        'Checking with Google Play for your active subscriptions...',
+        backgroundColor: const Color(0xFF1E224F),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 3),
+      );
       await _iap.restorePurchases();
     } catch (e) {
       debugPrint('Error restoring purchases: $e');
-      Get.snackbar('Error', 'Could not restore purchases.');
+      Get.snackbar('Error', 'Could not restore purchases: $e', snackPosition: SnackPosition.BOTTOM);
     }
   }
 

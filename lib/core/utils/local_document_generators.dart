@@ -1450,15 +1450,148 @@ class LocalDocumentPdfGenerator {
     return buffer.toBytes();
   }
 
-  /// Unlocks / removes password protection and encryption from a PDF
+  /// Parses a hex string from a PDF dictionary value (e.g. "&lt;aabbcc&gt;").
+  static List<int>? _parsePdfHex(String hexStr) {
+    final cleaned = hexStr.replaceAll(RegExp(r'[^0-9a-fA-F]'), '');
+    if (cleaned.isEmpty || cleaned.length % 2 != 0) return null;
+    final result = <int>[];
+    for (int i = 0; i < cleaned.length; i += 2) {
+      result.add(int.parse(cleaned.substring(i, i + 2), radix: 16));
+    }
+    return result;
+  }
+
+  /// Verifies a PDF user password against the stored /U, /O, /P values
+  /// and file ID using the same algorithm used in [lockPdf] (Standard Security V=2, R=3).
+  /// Returns true if the password is valid.
+  static bool _verifyPdfUserPassword({
+    required String password,
+    required List<int> storedU,
+    required List<int> storedO,
+    required int p,
+    required List<int> fileId,
+  }) {
+    final paddedUser = _padPassword(password);
+
+    // Recompute /U using the same algorithm as lockPdf
+    final keyInput = <int>[];
+    keyInput.addAll(paddedUser);
+    keyInput.addAll(storedO);
+    keyInput.add(p & 0xFF);
+    keyInput.add((p >> 8) & 0xFF);
+    keyInput.add((p >> 16) & 0xFF);
+    keyInput.add((p >> 24) & 0xFF);
+    keyInput.addAll(fileId);
+
+    final encKeyDigest = crypto.md5.convert(keyInput).bytes;
+    final uDigest = crypto.md5.convert(encKeyDigest).bytes;
+    final uBytes = <int>[];
+    for (int i = 0; i < 32; i++) {
+      uBytes.add(_pdfPadding[i] ^ uDigest[i % uDigest.length]);
+    }
+
+    // Per PDF spec (R=3), compare only the first 16 bytes of /U
+    final compareLen = storedU.length >= 16 ? 16 : storedU.length;
+    for (int i = 0; i < compareLen; i++) {
+      if (uBytes[i] != storedU[i]) return false;
+    }
+    return true;
+  }
+
+  /// Unlocks / removes password protection and encryption from a PDF.
+  /// Verifies the [password] before removing encryption — throws an
+  /// [Exception] if the password is incorrect or missing.
   static Uint8List unlockPdf(Uint8List bytes, {String? password}) {
     if (bytes.length < 5) return bytes;
     final str = latin1.decode(bytes);
     if (!str.startsWith('%PDF-')) return bytes;
 
-    // Remove /Encrypt references from trailer and dictionary objects
+    // Check if the PDF actually has an /Encrypt entry
+    if (!str.contains('/Encrypt')) {
+      // Not encrypted; nothing to unlock
+      return bytes;
+    }
+
+    // --- Password Verification ---
+    // Step 1: Find the encrypt object number from "/Encrypt N 0 R" in the trailer.
+    final encRefMatch =
+        RegExp(r'/Encrypt\s+(\d+)\s+\d+\s+R').firstMatch(str);
+
+    if (encRefMatch != null) {
+      final encObjNum = encRefMatch.group(1)!;
+
+      // Step 2: Find the body of object "N 0 obj ... endobj"
+      final encObjBodyMatch =
+          RegExp('$encObjNum\\s+0\\s+obj(.*?)endobj', dotAll: true)
+              .firstMatch(str);
+
+      if (encObjBodyMatch != null) {
+        final encBody = encObjBodyMatch.group(1)!;
+
+        // Step 3: Extract /O, /U, /P from the object body.
+        // Hex strings in PDF look like <hexhex…> (any hex chars, no spaces by our encoder).
+        final oMatch =
+            RegExp(r'/O\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
+        final uMatch =
+            RegExp(r'/U\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
+        final pMatch = RegExp(r'/P\s*(-?\d+)').firstMatch(encBody);
+
+        // Step 4: Extract the first file ID from "/ID [<hex> <hex>]" in the trailer.
+        final idMatch =
+            RegExp(r'/ID\s*\[<([0-9a-fA-F]+)>').firstMatch(str);
+
+        final storedO = oMatch != null ? _parsePdfHex(oMatch.group(1)!) : null;
+        final storedU = uMatch != null ? _parsePdfHex(uMatch.group(1)!) : null;
+        final pValue =
+            pMatch != null ? int.tryParse(pMatch.group(1)!) : null;
+        final fileId =
+            idMatch != null ? _parsePdfHex(idMatch.group(1)!) : null;
+
+        if (storedO != null &&
+            storedU != null &&
+            pValue != null &&
+            fileId != null) {
+          // Full cryptographic verification using the same algorithm as lockPdf.
+          final pwd = password ?? '';
+          if (!_verifyPdfUserPassword(
+            password: pwd,
+            storedU: storedU,
+            storedO: storedO,
+            p: pValue,
+            fileId: fileId,
+          )) {
+            throw Exception(
+                'Incorrect password. Please enter the correct password to unlock this PDF.');
+          }
+          // Password verified — fall through to strip /Encrypt.
+        } else {
+          // Encrypt object found but fields couldn't be parsed (non-standard format).
+          // Require a non-empty password as a minimum safeguard.
+          if (password == null || password.trim().isEmpty) {
+            throw Exception(
+                'Please enter the password to decrypt and unlock this PDF document.');
+          }
+        }
+      } else {
+        // Object number found but the object body couldn't be located.
+        if (password == null || password.trim().isEmpty) {
+          throw Exception(
+              'Please enter the password to decrypt and unlock this PDF document.');
+        }
+      }
+    } else {
+      // /Encrypt key found but not in "N 0 R" indirect-reference form
+      // (inline dict or non-standard). Require non-empty password as a guard.
+      if (password == null || password.trim().isEmpty) {
+        throw Exception(
+            'Please enter the password to decrypt and unlock this PDF document.');
+      }
+    }
+
+    // --- Password verified (or best-effort passed) — erase the /Encrypt reference ---
     final output = Uint8List.fromList(bytes);
-    final encryptRefRegex = RegExp(r'/Encrypt\s+(\d+\s+\d+\s+R|<<[^>]*>>)');
+    final encryptRefRegex =
+        RegExp(r'/Encrypt\s+(\d+\s+\d+\s+R|<<[^>]*>>)');
     for (final match in encryptRefRegex.allMatches(str)) {
       for (int i = match.start; i < match.end; i++) {
         output[i] = 0x20;
