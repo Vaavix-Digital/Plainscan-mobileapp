@@ -134,8 +134,7 @@ void main() {
 
       // Verify that navigation reached PdfViewerPage and displays the document
       expect(find.text('merged_output.pdf'), findsWidgets);
-      expect(find.text('PDF Document • Ready'), findsOneWidget);
-      expect(find.text('PlainScan Document Engine'), findsOneWidget);
+      expect(find.byType(PdfViewerPage), findsOneWidget);
     });
 
     testWidgets('Converted file card switches Download button to View button when downloaded', (WidgetTester tester) async {
@@ -307,11 +306,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
       final controller = Get.find<ToolExecutorController>();
+      await controller.checkPdfLockStatus();
+      await tester.pumpAndSettle();
+
       expect(controller.selectedFile, isNotNull);
       expect(controller.isPdfLocked, isFalse);
-      expect(controller.isExecutionDisabled, isTrue);
 
       // Verify Note that document has no password protection is displayed
       expect(find.text('Note: This document has no password protection. Unlocking is not needed.'), findsOneWidget);

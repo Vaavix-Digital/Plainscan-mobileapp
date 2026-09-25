@@ -854,7 +854,7 @@ class LocalDocumentPdfGenerator {
     if (s.isNotEmpty) infoSb.writeln('  /Subject ($s)');
     if (cr.isNotEmpty) infoSb.writeln('  /Copyright ($cr)');
     if (sw.isNotEmpty) infoSb.writeln('  /Creator ($sw)');
-    infoSb.writeln('  /Producer (PlainScan PDF Engine)');
+    infoSb.writeln('  /Producer (PlainScan Document Engine)');
     if (cm.isNotEmpty) infoSb.writeln('  /Comment ($cm)');
     infoSb.writeln('  /CreationDate ($dateStr)');
     infoSb.writeln('  /ModDate ($dateStr)');
@@ -880,13 +880,24 @@ class LocalDocumentPdfGenerator {
     final infoObjOffset = buffer.length;
     buffer.add(latin1.encode(newInfoObj));
 
+    // Find the previous startxref offset — required for /Prev in incremental update trailer (PDF spec §7.5.6)
+    int prevStartXref = 0;
+    final startxrefMatches = RegExp(r'startxref\s+(\d+)').allMatches(cleanStr).toList();
+    if (startxrefMatches.isNotEmpty) {
+      prevStartXref = int.tryParse(startxrefMatches.last.group(1)!) ?? 0;
+    }
+
+    // /Size must equal highest object number + 1 per PDF spec §7.5.8
+    final newSize = nextObj + 1;
+
     final trailerXrefOffset = buffer.length;
     final xrefSb = StringBuffer();
     xrefSb.writeln('xref');
     xrefSb.writeln('$nextObj 1');
     xrefSb.writeln('${infoObjOffset.toString().padLeft(10, '0')} 00000 n ');
     xrefSb.writeln('trailer');
-    xrefSb.writeln('<< /Root $rootRef /Info $nextObj 0 R >>');
+    // /Size and /Prev are mandatory for incremental updates — without them viewers skip the new Info object
+    xrefSb.writeln('<< /Size $newSize /Root $rootRef /Info $nextObj 0 R /Prev $prevStartXref >>');
     xrefSb.writeln('startxref');
     xrefSb.writeln('$trailerXrefOffset');
     xrefSb.write('%%EOF');
@@ -918,8 +929,269 @@ class LocalDocumentPdfGenerator {
         comment: comment,
       );
     }
-    // For images, strip existing and return sanitized bytes
+    if (ext == 'jpg' || ext == 'jpeg') {
+      return updateJpegMetadata(
+        bytes,
+        title: title,
+        author: author,
+        description: description,
+        copyright: copyright,
+        software: software,
+        comment: comment,
+      );
+    }
+    if (ext == 'png') {
+      return updatePngMetadata(
+        bytes,
+        title: title,
+        author: author,
+        description: description,
+        copyright: copyright,
+        software: software,
+        comment: comment,
+      );
+    }
+    // Fallback — strip only for unsupported formats
     return stripMetadata(bytes, ext);
+  }
+
+  // ─── JPEG EXIF metadata writer ────────────────────────────────────────────
+  // Builds a minimal EXIF APP1 block (little-endian TIFF IFD0) and injects it
+  // immediately after the JPEG SOI marker, replacing any previous EXIF/XMP blocks.
+
+
+  static void _writeLE16(List<int> buf, int offset, int val) {
+    buf[offset] = val & 0xFF;
+    buf[offset + 1] = (val >> 8) & 0xFF;
+  }
+
+  static void _writeLE32(List<int> buf, int offset, int val) {
+    buf[offset] = val & 0xFF;
+    buf[offset + 1] = (val >> 8) & 0xFF;
+    buf[offset + 2] = (val >> 16) & 0xFF;
+    buf[offset + 3] = (val >> 24) & 0xFF;
+  }
+
+  /// Writes user-supplied metadata into a JPEG file as a compact EXIF APP1 segment.
+  static Uint8List updateJpegMetadata(
+    Uint8List bytes, {
+    String? title,
+    String? author,
+    String? description,
+    String? copyright,
+    String? software,
+    String? comment,
+  }) {
+    if (bytes.length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8) return bytes;
+
+    // 1. Strip existing EXIF / XMP / COM segments
+    final stripped = stripJpegMetadata(bytes);
+
+    // 2. Collect non-empty fields → EXIF IFD0 tags
+    //    Tag IDs (decimal/hex):
+    //      0x010E = ImageDescription (title/description)
+    //      0x013B = Artist           (author)
+    //      0x8298 = Copyright
+    //      0x0131 = Software
+    //      0x9286 = UserComment      (comment — in "ASCII\0\0\0<text>" encoding)
+    final fields = <MapEntry<int, String>>[];
+    final effectiveTitle = (title != null && title.isNotEmpty)
+        ? title
+        : (description != null && description.isNotEmpty ? description : null);
+    if (effectiveTitle != null && effectiveTitle.isNotEmpty) {
+      fields.add(MapEntry(0x010E, effectiveTitle));
+    }
+    if (author != null && author.isNotEmpty) fields.add(MapEntry(0x013B, author));
+    if (copyright != null && copyright.isNotEmpty) fields.add(MapEntry(0x8298, copyright));
+
+    final sw = (software != null && software.isNotEmpty) ? software : 'PlainScan';
+    fields.add(MapEntry(0x0131, sw));
+
+    // Sort tags ascending (required by EXIF spec)
+    fields.sort((a, b) => a.key.compareTo(b.key));
+
+    if (fields.isEmpty && (comment == null || comment.isEmpty)) {
+      // Nothing to write — return stripped bytes
+      return stripped;
+    }
+
+    // 3. Build EXIF IFD0
+    // TIFF header (8 bytes): II (little-endian), 0x002A, offset-to-IFD0=8
+    final tiffHeader = [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00];
+
+    final int entryCount = fields.length;
+    // IFD0: 2 bytes count + entryCount * 12 bytes + 4 bytes next-IFD = 0
+    final int ifd0Size = 2 + entryCount * 12 + 4;
+    // IFD0 starts at offset 8 from TIFF header start
+    final int valueAreaStart = 8 + ifd0Size;
+
+    // Build value area and fix up offsets in each IFD entry
+    final ifd0 = List<int>.filled(ifd0Size, 0);
+    _writeLE16(ifd0, 0, entryCount);
+
+    final valueArea = BytesBuilder();
+    for (int i = 0; i < entryCount; i++) {
+      final tag = fields[i].key;
+      final valueBytes = latin1.encode('${fields[i].value}\x00');
+      final count = valueBytes.length;
+      final entryOffset = 2 + i * 12;
+      _writeLE16(ifd0, entryOffset, tag);
+      _writeLE16(ifd0, entryOffset + 2, 2); // ASCII
+      _writeLE32(ifd0, entryOffset + 4, count);
+      if (count <= 4) {
+        // Value fits inline — pad with zeros
+        for (int b = 0; b < count; b++) { ifd0[entryOffset + 8 + b] = valueBytes[b]; }
+      } else {
+        final valOffset = valueAreaStart + valueArea.length;
+        _writeLE32(ifd0, entryOffset + 8, valOffset);
+        valueArea.add(valueBytes);
+      }
+    }
+    // Next IFD offset = 0
+    // (already zero-filled)
+
+    // 4. Assemble EXIF APP1 payload = "Exif\x00\x00" + TIFF header + IFD0 + value area
+    final exifPayload = BytesBuilder();
+    exifPayload.add(latin1.encode('Exif\x00\x00'));
+    exifPayload.add(tiffHeader);
+    exifPayload.add(ifd0);
+    exifPayload.add(valueArea.toBytes());
+
+    // 5. Add UserComment (tag 0x9286) as a JPEG COM segment instead (simpler & universal)
+    //    COM segments are supported by all viewers, unlike EXIF UserComment which needs Exif IFD.
+    final comBytes = BytesBuilder();
+    if (comment != null && comment.isNotEmpty) {
+      final comData = latin1.encode(comment);
+      final comLen = comData.length + 2; // length field includes its own 2 bytes
+      comBytes.add([0xFF, 0xFE]);
+      comBytes.add([(comLen >> 8) & 0xFF, comLen & 0xFF]);
+      comBytes.add(comData);
+    }
+
+    // 6. Build final JPEG:  SOI + APP1(EXIF) + COM? + rest of stripped JPEG (skip SOI)
+    final app1Payload = exifPayload.toBytes();
+    final app1Len = app1Payload.length + 2; // +2 for the length field itself
+    final result = BytesBuilder();
+    result.add([0xFF, 0xD8]); // SOI
+    result.add([0xFF, 0xE1]); // APP1 marker
+    result.add([(app1Len >> 8) & 0xFF, app1Len & 0xFF]);
+    result.add(app1Payload);
+    if (comBytes.length > 0) result.add(comBytes.toBytes());
+    // Append stripped JPEG content (skip the first 2 bytes = SOI already added)
+    if (stripped.length > 2) result.add(stripped.sublist(2));
+
+    return result.toBytes();
+  }
+
+  // ─── PNG tEXt metadata writer ─────────────────────────────────────────────
+  // Injects standard tEXt chunks (keyword\x00value) immediately after IHDR.
+  // CRC-32 is computed per PNG spec.
+
+  static int _pngCrc32(List<int> data) {
+    const table = [
+      0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F,
+      0xE963A535, 0x9E6495A3, 0x0EDB8832, 0x79DCB8A4, 0xE0D5E91B, 0x97D2D988,
+      0x09B64C2B, 0x7EB17CBF, 0xE7B82D09, 0x90BF1FBD, 0x1DB71064, 0x6AB020F2,
+      0xF3B97148, 0x84BE41DE, 0x1ADAD47D, 0x6DDDE4EB, 0xF4D4B551, 0x83D385C7,
+      0x136C9856, 0x646BA8C0, 0xFD62F97A, 0x8A65C9EC, 0x14015C4F, 0x63066CD9,
+      0xFA0F3D63, 0x8D080DF5, 0x3B6E20C8, 0x4C69105E, 0xD56041E4, 0xA2677172,
+      0x3C03E4D1, 0x4B04D447, 0xD20D85FD, 0xA50AB56B, 0x35B5A8FA, 0x42B2986C,
+      0xDBBBC9D6, 0xACBCF940, 0x32D86CE3, 0x45DF5C75, 0xDCD60DCF, 0xABD13D59,
+      0x26D930AC, 0x51DE003A, 0xC8D75180, 0xBFD06116, 0x21B4F927, 0x56B3C423,
+      0xCFBA9599, 0xB8BDA50F, 0x2802B89E, 0x5F058808, 0xC60CD9B2, 0xB10BE924,
+      0x2F6F7C87, 0x58684C11, 0xC1611DAB, 0xB6662D3D, 0x76DC4190, 0x01DB7106,
+      0x98D220BC, 0xEFD5102A, 0x71B18589, 0x06B6B51F, 0x9FBFE4A5, 0xE8B8D433,
+      0x7807C9A2, 0x0F00F934, 0x9609A88E, 0xE10E9818, 0x7F6AD2BB, 0x086D3D2D,
+      0x91646C97, 0xE6635C01, 0x6B6B51F4, 0x1C6C6162, 0x856530D8, 0xF262004E,
+      0x6C0695ED, 0x1B01A57B, 0x8208F4C1, 0xF50FC457, 0x65B0D9C6, 0x12B7E950,
+      0x8BBEB8EA, 0xFCB9887C, 0x62DD1D7F, 0x15DA2D49, 0x8CD37CF3, 0xFBD44C65,
+      0x4DB26158, 0x3AB551CE, 0xA3BC0074, 0xD4BB30E2, 0x4ADFA541, 0x3DD895D7,
+      0xA4D1C46D, 0xD3D6F4FB, 0x4369E96A, 0x346ED9FC, 0xAD678846, 0xDA60B8D0,
+      0x44042D73, 0x33031DE5, 0xAA0A4C5F, 0xDD0D7CC9, 0x5005713C, 0x270241AA,
+      0xBE0B1010, 0xC90C2086, 0x5768B525, 0x206F85B3, 0xB966D409, 0xCE61E49F,
+      0x5EDEF90E, 0x29D9C998, 0xB0D09822, 0xC7D7A8B4, 0x59B33D17, 0x2EB40D81,
+      0xB7BD5C3B, 0xC0BA6CAD, 0xEDB88320, 0x9ABFB3B6, 0x03B6E20C, 0x74B1D29A,
+      0xEAD54739, 0x9DD277AF, 0x04DB2615, 0x73DC1683, 0xE3630B12, 0x94643B84,
+      0x0D6D6A3E, 0x7A6A5AA8, 0xE40ECF0B, 0x9309FF9D, 0x0A00AE27, 0x7D079EB1,
+      0xF00F9344, 0x8708A3D2, 0x1E01F268, 0x6906C2FE, 0xF762575D, 0x806567CB,
+      0x196C3671, 0x6E6B06E7, 0xFED41B76, 0x89D32BE0, 0x10DA7A5A, 0x67DD4ACC,
+      0xF9B9DF6F, 0x8EBEEFF9, 0x17B7BE43, 0x60B08ED5, 0xD6D6A3E8, 0xA1D1937E,
+      0x38D8C2C4, 0x4FDFF252, 0xD1BB67F1, 0xA6BC5767, 0x3FB506DD, 0x48B2364B,
+      0xD80D2BDA, 0xAF0A1B4C, 0x36034AF6, 0x41047A60, 0xDF60EFC3, 0xA8670955,
+      0x316658EF, 0x4669682B, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D,
+    ];
+    int crc = 0xFFFFFFFF;
+    for (final b in data) {
+      crc = table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+    }
+    return crc ^ 0xFFFFFFFF;
+  }
+
+  static List<int> _pngTextChunk(String keyword, String value) {
+    // tEXt chunk: keyword \x00 value (Latin-1)
+    final chunkData = <int>[...latin1.encode(keyword), 0x00, ...latin1.encode(value)];
+    final typeBytes = latin1.encode('tEXt');
+    final crcData = [...typeBytes, ...chunkData];
+    final crc = _pngCrc32(crcData);
+    final length = chunkData.length;
+    return [
+      (length >> 24) & 0xFF, (length >> 16) & 0xFF, (length >> 8) & 0xFF, length & 0xFF,
+      ...typeBytes,
+      ...chunkData,
+      (crc >> 24) & 0xFF, (crc >> 16) & 0xFF, (crc >> 8) & 0xFF, crc & 0xFF,
+    ];
+  }
+
+  /// Writes user-supplied metadata into a PNG file as tEXt chunks after IHDR.
+  static Uint8List updatePngMetadata(
+    Uint8List bytes, {
+    String? title,
+    String? author,
+    String? description,
+    String? copyright,
+    String? software,
+    String? comment,
+  }) {
+    const pngSig = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (bytes.length < 8) return bytes;
+    for (int i = 0; i < 8; i++) {
+      if (bytes[i] != pngSig[i]) return bytes;
+    }
+
+    // 1. Strip existing metadata chunks
+    final stripped = stripPngMetadata(bytes);
+
+    // 2. Build new tEXt chunks for non-empty fields using standard PNG keywords
+    final newChunks = BytesBuilder();
+    if (title != null && title.isNotEmpty) {
+      newChunks.add(_pngTextChunk('Title', title));
+    }
+    if (author != null && author.isNotEmpty) {
+      newChunks.add(_pngTextChunk('Author', author));
+    }
+    if (description != null && description.isNotEmpty) {
+      newChunks.add(_pngTextChunk('Description', description));
+    }
+    if (copyright != null && copyright.isNotEmpty) {
+      newChunks.add(_pngTextChunk('Copyright', copyright));
+    }
+    final sw = (software != null && software.isNotEmpty) ? software : 'PlainScan';
+    newChunks.add(_pngTextChunk('Software', sw));
+    if (comment != null && comment.isNotEmpty) {
+      newChunks.add(_pngTextChunk('Comment', comment));
+    }
+
+    if (newChunks.isEmpty) return stripped;
+
+    // 3. Insert new tEXt chunks immediately after IHDR (sig + IHDR = 8 + 4+4+13+4 = 33 bytes)
+    const ihdrEnd = 33; // PNG sig(8) + length(4) + 'IHDR'(4) + data(13) + CRC(4)
+    if (stripped.length < ihdrEnd) return stripped;
+
+    final result = BytesBuilder();
+    result.add(stripped.sublist(0, ihdrEnd));
+    result.add(newChunks.toBytes());
+    result.add(stripped.sublist(ihdrEnd));
+    return result.toBytes();
   }
 
   /// Extracts structured metadata from PDF or Image bytes
@@ -1363,38 +1635,55 @@ class LocalDocumentPdfGenerator {
     if (allowPrinting) p |= 4 | 2048;
     if (allowCopying) p |= 16 | 512;
 
-    // Compute File ID
-    final fileIdBytes = crypto.md5.convert(bytes.sublist(0, bytes.length.clamp(0, 1024))).bytes;
+    // Compute or extract File ID from original trailer if present
+    final idMatch = RegExp(r'/ID\s*\[\s*<([0-9a-fA-F]+)>').firstMatch(str);
+    final existingId = idMatch != null ? _parsePdfHex(idMatch.group(1)!) : null;
+    final fileIdBytes = existingId ??
+        crypto.md5.convert(bytes.sublist(0, bytes.length.clamp(0, 1024))).bytes;
     final fileIdHex = fileIdBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-    // 1. Owner Key (O)
+    // 1. Owner Key (O) - Standard ISO 32000-1 Algorithm 3.3
     final paddedOwner = _padPassword(effectiveOwnerPwd);
-    final ownerDigest = crypto.md5.convert(paddedOwner).bytes;
+    var ownerMd5 = crypto.md5.convert(paddedOwner).bytes;
+    for (int i = 0; i < 50; i++) {
+      ownerMd5 = crypto.md5.convert(ownerMd5).bytes;
+    }
+    final ownerKey = ownerMd5.sublist(0, 16);
     final paddedUser = _padPassword(userPassword);
-
-    final oBytes = <int>[];
-    for (int i = 0; i < 32; i++) {
-      oBytes.add(paddedUser[i] ^ ownerDigest[i % ownerDigest.length]);
+    var oBytes = _rc4(ownerKey, paddedUser);
+    for (int i = 1; i < 20; i++) {
+      final iterKey = ownerKey.map((b) => b ^ i).toList();
+      oBytes = _rc4(iterKey, oBytes);
     }
     final oHex = oBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-    // 2. Encryption Key & User Key (U)
-    final keyInput = <int>[];
-    keyInput.addAll(paddedUser);
-    keyInput.addAll(oBytes);
-    keyInput.add(p & 0xFF);
-    keyInput.add((p >> 8) & 0xFF);
-    keyInput.add((p >> 16) & 0xFF);
-    keyInput.add((p >> 24) & 0xFF);
-    keyInput.addAll(fileIdBytes);
+    // 2. Encryption Key - Standard ISO 32000-1 Algorithm 3.2
+    final encKey = _computeStandardEncryptionKey(
+      userPassword: userPassword,
+      o: oBytes,
+      p: p,
+      fileId: fileIdBytes,
+      revision: 3,
+    );
 
-    final encKeyDigest = crypto.md5.convert(keyInput).bytes;
-    final uDigest = crypto.md5.convert(encKeyDigest).bytes;
-    final uBytes = <int>[];
-    for (int i = 0; i < 32; i++) {
-      uBytes.add(_pdfPadding[i] ^ uDigest[i % uDigest.length]);
+    // 3. User Key (U) - Standard ISO 32000-1 Algorithm 3.5
+    final uInput = <int>[];
+    uInput.addAll(_pdfPadding);
+    uInput.addAll(fileIdBytes);
+    var uDigest = crypto.md5.convert(uInput).bytes;
+    uDigest = _rc4(encKey, uDigest);
+    for (int i = 1; i < 20; i++) {
+      final iterKey = encKey.map((b) => b ^ i).toList();
+      uDigest = _rc4(iterKey, uDigest);
+    }
+    final uBytes = List<int>.filled(32, 0);
+    for (int i = 0; i < 16; i++) {
+      uBytes[i] = uDigest[i];
     }
     final uHex = uBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    // 4. Encrypt all content streams using ISO 32000-1 Algorithm 3.1
+    final encryptedBody = _processAllPdfStreams(bytes, encKey, encrypt: true);
 
     // Find next available object index
     final maxObjMatches = RegExp(r'(\d+)\s+0\s+obj').allMatches(str);
@@ -1424,7 +1713,7 @@ class LocalDocumentPdfGenerator {
     final infoRef = infoMatch?.group(1);
 
     final buffer = BytesBuilder();
-    buffer.add(bytes);
+    buffer.add(encryptedBody);
 
     final encryptObjOffset = buffer.length;
     buffer.add(latin1.encode(newEncryptObj));
@@ -1461,10 +1750,40 @@ class LocalDocumentPdfGenerator {
     return result;
   }
 
-  /// Verifies a PDF user password against the stored /U, /O, /P values
-  /// and file ID using the same algorithm used in [lockPdf] (Standard Security V=2, R=3).
-  /// Returns true if the password is valid.
-  static bool _verifyPdfUserPassword({
+  static List<int> _rc4(List<int> key, List<int> data) {
+    final s = List<int>.generate(256, (i) => i);
+    int j = 0;
+    for (int i = 0; i < 256; i++) {
+      j = (j + s[i] + key[i % key.length]) & 0xFF;
+      final temp = s[i];
+      s[i] = s[j];
+      s[j] = temp;
+    }
+    int i = 0;
+    j = 0;
+    final result = Uint8List(data.length);
+    for (int k = 0; k < data.length; k++) {
+      i = (i + 1) & 0xFF;
+      j = (j + s[i]) & 0xFF;
+      final temp = s[i];
+      s[i] = s[j];
+      s[j] = temp;
+      final t = (s[i] + s[j]) & 0xFF;
+      result[k] = data[k] ^ s[t];
+    }
+    return result;
+  }
+
+  static bool _listEquals(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Verifies a PDF user password using PlainScan's local mock algorithm.
+  static bool _verifyPdfMockUserPassword({
     required String password,
     required List<int> storedU,
     required List<int> storedO,
@@ -1472,8 +1791,6 @@ class LocalDocumentPdfGenerator {
     required List<int> fileId,
   }) {
     final paddedUser = _padPassword(password);
-
-    // Recompute /U using the same algorithm as lockPdf
     final keyInput = <int>[];
     keyInput.addAll(paddedUser);
     keyInput.addAll(storedO);
@@ -1490,12 +1807,230 @@ class LocalDocumentPdfGenerator {
       uBytes.add(_pdfPadding[i] ^ uDigest[i % uDigest.length]);
     }
 
-    // Per PDF spec (R=3), compare only the first 16 bytes of /U
     final compareLen = storedU.length >= 16 ? 16 : storedU.length;
     for (int i = 0; i < compareLen; i++) {
       if (uBytes[i] != storedU[i]) return false;
     }
     return true;
+  }
+
+  /// Computes standard PDF encryption key (ISO 32000-1 Algorithm 3.2).
+  static List<int> _computeStandardEncryptionKey({
+    required String userPassword,
+    required List<int> o,
+    required int p,
+    required List<int> fileId,
+    int revision = 3,
+    int keyLength = 16,
+  }) {
+    final paddedUser = _padPassword(userPassword);
+    final keyInput = <int>[];
+    keyInput.addAll(paddedUser);
+    keyInput.addAll(o);
+    keyInput.add(p & 0xFF);
+    keyInput.add((p >> 8) & 0xFF);
+    keyInput.add((p >> 16) & 0xFF);
+    keyInput.add((p >> 24) & 0xFF);
+    keyInput.addAll(fileId);
+
+    var md5Digest = crypto.md5.convert(keyInput).bytes;
+    if (revision >= 3) {
+      for (int round = 0; round < 50; round++) {
+        md5Digest = crypto.md5.convert(md5Digest.sublist(0, keyLength)).bytes;
+      }
+    }
+    return md5Digest.sublist(0, keyLength);
+  }
+
+  /// Encrypts or decrypts all content streams in [pdfBytes] with per-object RC4 keys (ISO 32000-1 Algorithm 3.1).
+  static Uint8List _processAllPdfStreams(
+    Uint8List pdfBytes,
+    List<int> encKey, {
+    required bool encrypt,
+  }) {
+    final res = Uint8List.fromList(pdfBytes);
+    final str = latin1.decode(pdfBytes);
+
+    final streamRegex = RegExp(r'\bstream(?:\r\n|\n|\r)');
+    final endStreamRegex = RegExp(r'(?:\r\n|\n|\r)endstream\b');
+    final objRegex = RegExp(r'(\d+)\s+(\d+)\s+obj\b');
+
+    final streamMatches = streamRegex.allMatches(str);
+    for (final sm in streamMatches) {
+      final streamStart = sm.end;
+      final endMatches = endStreamRegex.allMatches(str, streamStart);
+      if (endMatches.isEmpty) continue;
+      final streamEnd = endMatches.first.start;
+
+      // Find the object definition immediately preceding this stream
+      final prefix = str.substring(0, sm.start);
+      final objMatches = objRegex.allMatches(prefix);
+      if (objMatches.isEmpty) continue;
+
+      final lastObj = objMatches.last;
+      final objNum = int.tryParse(lastObj.group(1) ?? '') ?? 0;
+      final genNum = int.tryParse(lastObj.group(2) ?? '') ?? 0;
+
+      // Object key derivation (Algorithm 3.1)
+      final keyData = <int>[];
+      keyData.addAll(encKey);
+      keyData.add(objNum & 0xFF);
+      keyData.add((objNum >> 8) & 0xFF);
+      keyData.add((objNum >> 16) & 0xFF);
+      keyData.add(genNum & 0xFF);
+      keyData.add((genNum >> 8) & 0xFF);
+
+      final objKey = crypto.md5.convert(keyData).bytes.sublist(0, 16);
+      final streamSlice = res.sublist(streamStart, streamEnd);
+      final processedStream = _rc4(objKey, streamSlice);
+
+      for (int i = 0; i < processedStream.length; i++) {
+        res[streamStart + i] = processedStream[i];
+      }
+    }
+
+    return res;
+  }
+
+  /// Verifies standard PDF user password (ISO 32000-1 Algorithm 3.2 / 3.4 / 3.5).
+  static bool _verifyStandardPdfUserPassword({
+    required String password,
+    required List<int> storedU,
+    required List<int> storedO,
+    required int p,
+    required List<int> fileId,
+    int revision = 3,
+    int keyLength = 16,
+  }) {
+    try {
+      final encKey = _computeStandardEncryptionKey(
+        userPassword: password,
+        o: storedO,
+        p: p,
+        fileId: fileId,
+        revision: revision,
+        keyLength: keyLength,
+      );
+
+      if (revision == 2) {
+        final r2U = _rc4(encKey, _pdfPadding);
+        final compareLen = storedU.length >= 16 ? 16 : storedU.length;
+        return _listEquals(r2U.sublist(0, compareLen), storedU.sublist(0, compareLen));
+      } else {
+        final hashInput = <int>[];
+        hashInput.addAll(_pdfPadding);
+        hashInput.addAll(fileId);
+        var uDigest3 = crypto.md5.convert(hashInput).bytes;
+        for (int i = 0; i <= 19; i++) {
+          final iterKey = encKey.map((b) => b ^ i).toList();
+          uDigest3 = _rc4(iterKey, uDigest3);
+        }
+        final compareLen = storedU.length >= 16 ? 16 : storedU.length;
+        return _listEquals(uDigest3.sublist(0, compareLen), storedU.sublist(0, compareLen));
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Verifies modern AES-256 PDF user password (Revision 5 / Revision 6).
+  static bool _verifyAes256PdfUserPassword({
+    required String password,
+    required List<int> storedU,
+  }) {
+    if (storedU.length < 40) return false;
+    try {
+      final validationSalt = storedU.sublist(32, 40);
+      final utf8Sha = crypto.sha256.convert(utf8.encode(password) + validationSalt).bytes;
+      if (_listEquals(utf8Sha.sublist(0, 32), storedU.sublist(0, 32))) return true;
+
+      final latinSha = crypto.sha256.convert(latin1.encode(password) + validationSalt).bytes;
+      if (_listEquals(latinSha.sublist(0, 32), storedU.sublist(0, 32))) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  /// Verifies a PDF user password against stored security dictionary entries.
+  /// Checks mock Plainscan format, standard PDF (R=2, R=3), and AES-256.
+  static bool _verifyPdfUserPassword({
+    required String password,
+    required List<int> storedU,
+    required List<int> storedO,
+    required int p,
+    required List<int> fileId,
+    int revision = 3,
+  }) {
+    if (_verifyPdfMockUserPassword(
+      password: password,
+      storedU: storedU,
+      storedO: storedO,
+      p: p,
+      fileId: fileId,
+    )) {
+      return true;
+    }
+    if (_verifyStandardPdfUserPassword(
+      password: password,
+      storedU: storedU,
+      storedO: storedO,
+      p: p,
+      fileId: fileId,
+      revision: revision,
+    )) {
+      return true;
+    }
+    if (_verifyAes256PdfUserPassword(
+      password: password,
+      storedU: storedU,
+    )) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Checks if a PDF was created locally by [lockPdf] and can be safely unlocked
+  /// on-device without requiring full server-side stream decryption.
+  static bool isLocallyUnlockable(Uint8List bytes, {required String password}) {
+    if (bytes.length < 5) return false;
+    final str = latin1.decode(bytes);
+    if (!str.startsWith('%PDF-') || !str.contains('/Encrypt')) return false;
+
+    final encRefMatch = RegExp(r'/Encrypt\s+(\d+)\s+\d+\s+R').firstMatch(str);
+    if (encRefMatch == null) return false;
+
+    final encObjNum = encRefMatch.group(1)!;
+    final encObjBodyMatch =
+        RegExp('$encObjNum\\s+0\\s+obj(.*?)endobj', dotAll: true).firstMatch(str);
+    if (encObjBodyMatch == null) return false;
+
+    final encBody = encObjBodyMatch.group(1)!;
+    final oMatch = RegExp(r'/O\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
+    final uMatch = RegExp(r'/U\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
+    final pMatch = RegExp(r'/P\s*(-?\d+)').firstMatch(encBody);
+    final idMatch = RegExp(r'/ID\s*\[\s*<([0-9a-fA-F]+)>').firstMatch(str);
+
+    final storedO = oMatch != null ? _parsePdfHex(oMatch.group(1)!) : null;
+    final storedU = uMatch != null ? _parsePdfHex(uMatch.group(1)!) : null;
+    final pValue = pMatch != null ? int.tryParse(pMatch.group(1)!) : null;
+    final fileId = idMatch != null ? _parsePdfHex(idMatch.group(1)!) : null;
+
+    if (storedO != null && storedU != null && pValue != null && fileId != null) {
+      return _verifyPdfMockUserPassword(
+            password: password,
+            storedU: storedU,
+            storedO: storedO,
+            p: pValue,
+            fileId: fileId,
+          ) ||
+          _verifyStandardPdfUserPassword(
+            password: password,
+            storedU: storedU,
+            storedO: storedO,
+            p: pValue,
+            fileId: fileId,
+          );
+    }
+    return false;
   }
 
   /// Unlocks / removes password protection and encryption from a PDF.
@@ -1512,33 +2047,31 @@ class LocalDocumentPdfGenerator {
       return bytes;
     }
 
+    if (password == null || password.trim().isEmpty) {
+      throw Exception(
+          'Please enter the password to decrypt and unlock this PDF document.');
+    }
+
     // --- Password Verification ---
-    // Step 1: Find the encrypt object number from "/Encrypt N 0 R" in the trailer.
     final encRefMatch =
         RegExp(r'/Encrypt\s+(\d+)\s+\d+\s+R').firstMatch(str);
 
     if (encRefMatch != null) {
       final encObjNum = encRefMatch.group(1)!;
-
-      // Step 2: Find the body of object "N 0 obj ... endobj"
       final encObjBodyMatch =
           RegExp('$encObjNum\\s+0\\s+obj(.*?)endobj', dotAll: true)
               .firstMatch(str);
 
       if (encObjBodyMatch != null) {
         final encBody = encObjBodyMatch.group(1)!;
-
-        // Step 3: Extract /O, /U, /P from the object body.
-        // Hex strings in PDF look like <hexhex…> (any hex chars, no spaces by our encoder).
         final oMatch =
             RegExp(r'/O\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
         final uMatch =
             RegExp(r'/U\s*<([0-9a-fA-F]+)>').firstMatch(encBody);
         final pMatch = RegExp(r'/P\s*(-?\d+)').firstMatch(encBody);
-
-        // Step 4: Extract the first file ID from "/ID [<hex> <hex>]" in the trailer.
+        final rMatch = RegExp(r'/R\s*(\d+)').firstMatch(encBody);
         final idMatch =
-            RegExp(r'/ID\s*\[<([0-9a-fA-F]+)>').firstMatch(str);
+            RegExp(r'/ID\s*\[\s*<([0-9a-fA-F]+)>').firstMatch(str);
 
         final storedO = oMatch != null ? _parsePdfHex(oMatch.group(1)!) : null;
         final storedU = uMatch != null ? _parsePdfHex(uMatch.group(1)!) : null;
@@ -1546,49 +2079,40 @@ class LocalDocumentPdfGenerator {
             pMatch != null ? int.tryParse(pMatch.group(1)!) : null;
         final fileId =
             idMatch != null ? _parsePdfHex(idMatch.group(1)!) : null;
+        final revision =
+            rMatch != null ? (int.tryParse(rMatch.group(1)!) ?? 3) : 3;
 
         if (storedO != null &&
             storedU != null &&
             pValue != null &&
             fileId != null) {
-          // Full cryptographic verification using the same algorithm as lockPdf.
-          final pwd = password ?? '';
+          final pwd = password;
           if (!_verifyPdfUserPassword(
             password: pwd,
             storedU: storedU,
             storedO: storedO,
             p: pValue,
             fileId: fileId,
+            revision: revision,
           )) {
             throw Exception(
                 'Incorrect password. Please enter the correct password to unlock this PDF.');
           }
-          // Password verified — fall through to strip /Encrypt.
-        } else {
-          // Encrypt object found but fields couldn't be parsed (non-standard format).
-          // Require a non-empty password as a minimum safeguard.
-          if (password == null || password.trim().isEmpty) {
-            throw Exception(
-                'Please enter the password to decrypt and unlock this PDF document.');
-          }
+
+          // If standard or mock encryption key can be derived, decrypt all streams back to plaintext
+          final encKey = _computeStandardEncryptionKey(
+            userPassword: pwd,
+            o: storedO,
+            p: pValue,
+            fileId: fileId,
+            revision: revision,
+          );
+          bytes = _processAllPdfStreams(bytes, encKey, encrypt: false);
         }
-      } else {
-        // Object number found but the object body couldn't be located.
-        if (password == null || password.trim().isEmpty) {
-          throw Exception(
-              'Please enter the password to decrypt and unlock this PDF document.');
-        }
-      }
-    } else {
-      // /Encrypt key found but not in "N 0 R" indirect-reference form
-      // (inline dict or non-standard). Require non-empty password as a guard.
-      if (password == null || password.trim().isEmpty) {
-        throw Exception(
-            'Please enter the password to decrypt and unlock this PDF document.');
       }
     }
 
-    // --- Password verified (or best-effort passed) — erase the /Encrypt reference ---
+    // Erase the /Encrypt reference
     final output = Uint8List.fromList(bytes);
     final encryptRefRegex =
         RegExp(r'/Encrypt\s+(\d+\s+\d+\s+R|<<[^>]*>>)');

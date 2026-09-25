@@ -85,14 +85,67 @@ class IAPService {
           debugPrint('Purchase error: ${purchaseDetails.error}');
           _processingPurchases.remove(purchaseDetails.purchaseID ?? purchaseDetails.productID);
           if (_isPurchaseInitiatedByUI) {
-            Get.snackbar(
-              'Purchase Incomplete',
-              purchaseDetails.error?.message ?? 'Payment transaction was not completed.',
-              backgroundColor: const Color(0xFFDC2626),
-              colorText: Colors.white,
-              snackPosition: SnackPosition.BOTTOM,
-            );
             _isPurchaseInitiatedByUI = false;
+            final msg = purchaseDetails.error?.message ?? '';
+            final details = purchaseDetails.error?.details?.toString() ?? '';
+            final errCombined = '$msg $details'.toLowerCase();
+
+            final isDevError = errCombined.contains('developererror') ||
+                errCombined.contains('signed correctly') ||
+                errCombined.contains('not configured for billing') ||
+                errCombined.contains('responsecode: 5') ||
+                msg == 'BillingResponse.developerError';
+
+            if (isDevError) {
+              Get.defaultDialog(
+                title: 'Google Play Setup Notice',
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                content: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Column(
+                    children: const [
+                      Text(
+                        'This application build is not configured with Google Play App Signing key or is running in debug mode.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Would you like to complete your Pro subscription via standard Online Checkout (Card / UPI / NetBanking) instead?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+                textConfirm: 'Online Checkout',
+                textCancel: 'Close',
+                confirmTextColor: Colors.white,
+                buttonColor: AppColors.primary,
+                onConfirm: () {
+                  Get.back();
+                  final plan = Get.isRegistered<PlanController>()
+                      ? Get.find<PlanController>()
+                          .plans
+                          .firstWhereOrNull((p) => p.planId == 'pro')
+                      : null;
+                  if (plan != null) {
+                    Get.toNamed(AppRoutes.payment, arguments: {
+                      'plan': plan,
+                      'billingPeriod': 'monthly',
+                    });
+                  }
+                },
+              );
+            } else {
+              Get.snackbar(
+                'Purchase Incomplete',
+                msg.isNotEmpty ? msg : 'Payment transaction was not completed.',
+                backgroundColor: const Color(0xFFDC2626),
+                colorText: Colors.white,
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            }
           }
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
             purchaseDetails.status == PurchaseStatus.restored) {

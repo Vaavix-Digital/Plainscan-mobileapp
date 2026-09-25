@@ -42,6 +42,14 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   int _currentPdfPage = 1;
   bool _pdfError = false;
 
+  // PDF Password Protection
+  String? _pdfPassword;
+  String? _decryptedPdfPath;
+  final TextEditingController _passwordInputController = TextEditingController();
+  bool _isPasswordProtected = false;
+  bool _isPasswordInvalid = false;
+  bool _isPasswordVisible = false;
+
   // Excel / Spreadsheet Data
   Map<String, List<List<String>>> _excelSheets = {};
   String? _selectedSheet;
@@ -80,6 +88,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   @override
   void dispose() {
     _transformationController.dispose();
+    _passwordInputController.dispose();
     super.dispose();
   }
 
@@ -108,6 +117,13 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
           _loadPptxContent(bytes);
         } else if (type == 'PDF') {
           _pdfError = false;
+          final strHeader = latin1.decode(bytes.sublist(0, bytes.length.clamp(0, 4096)));
+          final strTail = bytes.length > 8192
+              ? latin1.decode(bytes.sublist(bytes.length - 8192))
+              : strHeader;
+          if (strHeader.contains('/Encrypt') || strTail.contains('/Encrypt')) {
+            _isPasswordProtected = true;
+          }
         }
       }
     } catch (e) {
@@ -1020,7 +1036,15 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
 
   /// PDF Viewer Preview Card using native PDFView
   Widget _buildPdfViewerCard(bool fileExists) {
-    if (!fileExists || _path == null || !File(_path!).existsSync() || _pdfError) {
+    if (!fileExists || _path == null || !File(_path!).existsSync()) {
+      return _buildPdfFallbackCard(fileExists);
+    }
+
+    if (_isPasswordProtected) {
+      return _buildPdfPasswordCard();
+    }
+
+    if (_pdfError) {
       return _buildPdfFallbackCard(fileExists);
     }
 
@@ -1092,7 +1116,9 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
           Expanded(
             child: ClipRRect(
               child: PDFView(
-                filePath: _path!,
+                key: ValueKey('${_decryptedPdfPath ?? _path!}_$_pdfPassword'),
+                filePath: _decryptedPdfPath ?? _path!,
+                password: _pdfPassword,
                 enableSwipe: true,
                 swipeHorizontal: false,
                 autoSpacing: true,
@@ -1105,15 +1131,33 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                     setState(() {
                       _totalPages = pages ?? 1;
                       _pdfError = false;
+                      _isPasswordProtected = false;
+                      _isPasswordInvalid = false;
                     });
                   }
                 },
                 onError: (error) {
                   debugPrint('PDFView error: $error');
-                  if (mounted) {
-                    setState(() {
-                      _pdfError = true;
-                    });
+                  final errStr = error.toString().toLowerCase();
+                  if (errStr.contains('password') ||
+                      errStr.contains('pdfpasswordexception') ||
+                      errStr.contains('encrypt') ||
+                      errStr.contains('security')) {
+                    if (mounted) {
+                      setState(() {
+                        if (_pdfPassword != null && _pdfPassword!.isNotEmpty) {
+                          _isPasswordInvalid = true;
+                        }
+                        _isPasswordProtected = true;
+                        _pdfError = false;
+                      });
+                    }
+                  } else {
+                    if (mounted) {
+                      setState(() {
+                        _pdfError = true;
+                      });
+                    }
                   }
                 },
                 onPageError: (page, error) {
@@ -1173,6 +1217,255 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
                       : null,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _unlockAndOpenPdf() {
+    final pwd = _passwordInputController.text.trim();
+    if (pwd.isEmpty) {
+      Get.rawSnackbar(
+        messageText: const Text(
+          'Please enter the document password to open.',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.red.shade800,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // Check if the PDF can be unlocked locally (e.g. mock locked PDF)
+    try {
+      if (_path != null && File(_path!).existsSync()) {
+        final bytes = File(_path!).readAsBytesSync();
+        if (LocalDocumentPdfGenerator.isLocallyUnlockable(bytes, password: pwd)) {
+          final unlocked = LocalDocumentPdfGenerator.unlockPdf(bytes, password: pwd);
+          final tempDir = Directory.systemTemp;
+          final outPath = '${tempDir.path}/temp_view_${DateTime.now().millisecondsSinceEpoch}.pdf';
+          File(outPath).writeAsBytesSync(unlocked);
+          setState(() {
+            _decryptedPdfPath = outPath;
+            _pdfPassword = null;
+            _isPasswordProtected = false;
+            _isPasswordInvalid = false;
+            _pdfError = false;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Standard encrypted PDF: pass password to native PDFView engine
+    setState(() {
+      _pdfPassword = pwd;
+      _isPasswordProtected = false;
+      _isPasswordInvalid = false;
+      _pdfError = false;
+    });
+  }
+
+  Widget _buildPdfPasswordCard() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header Ribbon
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: AppColors.coral,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Text(
+                        _name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Protected',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Body with password prompt
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.lock_rounded,
+                          size: 52,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Password Protected Document',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This PDF is encrypted. Enter the correct password to open and view this document.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF94A3B8),
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (_isPasswordInvalid) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade900.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade400.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, size: 18, color: Colors.red.shade300),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Invalid password. The password you entered is incorrect. Please try again.',
+                                  style: TextStyle(
+                                    color: Colors.red.shade200,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _passwordInputController,
+                        obscureText: !_isPasswordVisible,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        onSubmitted: (_) => _unlockAndOpenPdf(),
+                        decoration: InputDecoration(
+                          hintText: 'Enter password to unlock',
+                          hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          prefixIcon: const Icon(Icons.key_rounded, color: Color(0xFF94A3B8), size: 20),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: const Color(0xFF94A3B8),
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF334155)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF334155)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _unlockAndOpenPdf,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.lock_open_rounded, size: 18),
+                          label: const Text(
+                            'Open Document',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],

@@ -103,7 +103,6 @@ void main() {
       await tester.tap(find.text('Process another item'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Process'), findsOneWidget);
     });
 

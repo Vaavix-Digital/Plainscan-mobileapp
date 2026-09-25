@@ -153,6 +153,9 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   bool isOwnerPasswordVisible = false;
 
   bool get isPasswordError {
+    if (currentStep != 'error') {
+      return false;
+    }
     final slug = getSlug();
     final lower = errorMessage.toLowerCase();
 
@@ -173,7 +176,6 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     if (slug == 'pdf-unlock') {
       return lower.contains('password') ||
           lower.contains('incorrect') ||
-          lower.contains('decrypt') ||
           lower.contains('invalid') ||
           lower.contains('wrong');
     }
@@ -186,8 +188,8 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
   bool get isExecutionDisabled {
     final slug = getSlug();
-    if (slug == 'pdf-unlock' && selectedFile != null && !isPdfLocked) {
-      return true;
+    if (slug == 'pdf-unlock') {
+      return selectedFile == null;
     }
     return false;
   }
@@ -1474,27 +1476,32 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
       }
     }
 
-    if (slug == 'pdf-unlock' && selectedFile != null && !isPdfLocked) {
-      if (!Get.testMode && Get.overlayContext != null) {
-        Get.rawSnackbar(
-          titleText: const Text(
-            'Document Not Locked',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          messageText: const Text(
-            'This PDF document is already unlocked and does not require password removal.',
-            style: TextStyle(color: Colors.white, fontSize: 12),
-          ),
-          backgroundColor: Colors.blueGrey.shade800,
-          icon: const Icon(Icons.info_outline, color: Colors.amber, size: 24),
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 4),
-        );
+    if (slug == 'pdf-unlock' && selectedFile != null) {
+      if (!isPdfLocked) {
+        await checkPdfLockStatus();
       }
-      currentStep = 'error';
-      errorMessage = 'This PDF document is not password-protected and does not require unlocking.';
-      update();
-      return;
+      if (!isPdfLocked && passwordController.text.trim().isEmpty) {
+        if (!Get.testMode && Get.overlayContext != null) {
+          Get.rawSnackbar(
+            titleText: const Text(
+              'Document Not Locked',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            messageText: const Text(
+              'This PDF document is already unlocked and does not require password removal.',
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            backgroundColor: Colors.blueGrey.shade800,
+            icon: const Icon(Icons.info_outline, color: Colors.amber, size: 24),
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 4),
+          );
+        }
+        currentStep = 'error';
+        errorMessage = 'This PDF document is not password-protected and does not require unlocking.';
+        update();
+        return;
+      }
     }
 
     final isFree = tool.isFree ?? true;
@@ -1724,62 +1731,68 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         errorMessage = 'Encrypting and locking PDF document...';
         update();
 
-        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
-        final rawBytes = await inputFile.readAsBytes();
-        final lockedBytes = LocalDocumentPdfGenerator.lockPdf(
-          rawBytes,
-          userPassword: userPwd,
-          ownerPassword: ownerPasswordController.text.trim(),
-          allowPrinting: allowPrinting,
-          allowCopying: allowCopying,
-          encryption: encryption,
-        );
-
-        final inputName = selectedFile!.name;
-        final baseName = inputName.contains('.')
-            ? inputName.substring(0, inputName.lastIndexOf('.'))
-            : inputName;
-        final tempDir = Directory.systemTemp;
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final outName = '${baseName}_locked_$timestamp.pdf';
-        final outPath = '${tempDir.path}/$outName';
-        await File(outPath).writeAsBytes(lockedBytes);
-
-        final pdfFile = File(outPath);
-        final fileSizeKb = (await pdfFile.length()) / 1024.0;
-
-        scanController.addScan(
-          outPath,
-          customName: outName,
-          fileType: 'PDF',
-        );
-
-        final newFile = FileModel(
-          id: timestamp.toString(),
-          name: outName,
-          createdDate: DateTime.now(),
-          sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
-          fileType: 'PDF',
-          path: outPath,
-        );
-
-        convertedFile = newFile;
-        isPdfLocked = true;
-        currentStep = 'success';
-        errorMessage = 'Success! PDF document has been password-protected and encrypted.';
-        outputFileName = outName;
-        isRunning = false;
-        update();
-
-        if (Get.isRegistered<NotificationService>()) {
-          NotificationService.to.updateToolProgressNotification(
-            id: notificationId,
-            toolName: tool.name,
-            step: ToolExecutionStep.completed,
-            detail: outName,
+        // In test mode, lock locally so tests run offline without backend dependency
+        if (Get.testMode) {
+          final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+          final rawBytes = await inputFile.readAsBytes();
+          final lockedBytes = LocalDocumentPdfGenerator.lockPdf(
+            rawBytes,
+            userPassword: userPwd,
+            ownerPassword: ownerPasswordController.text.trim(),
+            allowPrinting: allowPrinting,
+            allowCopying: allowCopying,
+            encryption: encryption,
           );
+
+          final inputName = selectedFile!.name;
+          final baseName = inputName.contains('.')
+              ? inputName.substring(0, inputName.lastIndexOf('.'))
+              : inputName;
+          final tempDir = Directory.systemTemp;
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final outName = '${baseName}_locked_$timestamp.pdf';
+          final outPath = '${tempDir.path}/$outName';
+          await File(outPath).writeAsBytes(lockedBytes);
+
+          final pdfFile = File(outPath);
+          final fileSizeKb = (await pdfFile.length()) / 1024.0;
+
+          scanController.addScan(
+            outPath,
+            customName: outName,
+            fileType: 'PDF',
+          );
+
+          final newFile = FileModel(
+            id: timestamp.toString(),
+            name: outName,
+            createdDate: DateTime.now(),
+            sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+            fileType: 'PDF',
+            path: outPath,
+          );
+
+          convertedFile = newFile;
+          isPdfLocked = true;
+          currentStep = 'success';
+          errorMessage = 'Success! PDF document has been password-protected and encrypted.';
+          outputFileName = outName;
+          isRunning = false;
+          update();
+
+          if (Get.isRegistered<NotificationService>()) {
+            NotificationService.to.updateToolProgressNotification(
+              id: notificationId,
+              toolName: tool.name,
+              step: ToolExecutionStep.completed,
+              detail: outName,
+            );
+          }
+          return;
         }
-        return;
+
+        // On physical devices, proceed to backend server runner
+        // for standard, compliant PDF encryption (qpdf/pikepdf AES-128/256)!
       }
 
       if (slug == 'pdf-unlock') {
@@ -1795,58 +1808,68 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         errorMessage = 'Decrypting and unlocking PDF document...';
         update();
 
-        final inputFile = await getOrCreatePhysicalFile(selectedFile!);
-        final rawBytes = await inputFile.readAsBytes();
-        final unlockedBytes = LocalDocumentPdfGenerator.unlockPdf(
-          rawBytes,
-          password: userPwd,
-        );
+        // Check if the document can be safely unlocked locally on-device
+        try {
+          final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+          final rawBytes = await inputFile.readAsBytes();
+          if (LocalDocumentPdfGenerator.isLocallyUnlockable(rawBytes, password: userPwd)) {
+            final unlockedBytes = LocalDocumentPdfGenerator.unlockPdf(
+              rawBytes,
+              password: userPwd,
+            );
 
-        final inputName = selectedFile!.name;
-        final baseName = inputName.contains('.')
-            ? inputName.substring(0, inputName.lastIndexOf('.'))
-            : inputName;
-        final tempDir = Directory.systemTemp;
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final outName = '${baseName}_unlocked_$timestamp.pdf';
-        final outPath = '${tempDir.path}/$outName';
-        await File(outPath).writeAsBytes(unlockedBytes);
+            final inputName = selectedFile!.name;
+            final baseName = inputName.contains('.')
+                ? inputName.substring(0, inputName.lastIndexOf('.'))
+                : inputName;
+            final tempDir = Directory.systemTemp;
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final outName = '${baseName}_unlocked_$timestamp.pdf';
+            final outPath = '${tempDir.path}/$outName';
+            await File(outPath).writeAsBytes(unlockedBytes);
 
-        final pdfFile = File(outPath);
-        final fileSizeKb = (await pdfFile.length()) / 1024.0;
+            final pdfFile = File(outPath);
+            final fileSizeKb = (await pdfFile.length()) / 1024.0;
 
-        scanController.addScan(
-          outPath,
-          customName: outName,
-          fileType: 'PDF',
-        );
+            scanController.addScan(
+              outPath,
+              customName: outName,
+              fileType: 'PDF',
+            );
 
-        final newFile = FileModel(
-          id: timestamp.toString(),
-          name: outName,
-          createdDate: DateTime.now(),
-          sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
-          fileType: 'PDF',
-          path: outPath,
-        );
+            final newFile = FileModel(
+              id: timestamp.toString(),
+              name: outName,
+              createdDate: DateTime.now(),
+              sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+              fileType: 'PDF',
+              path: outPath,
+            );
 
-        convertedFile = newFile;
-        isPdfLocked = false;
-        currentStep = 'success';
-        errorMessage = 'Success! PDF document has been unlocked and decrypted.';
-        outputFileName = outName;
-        isRunning = false;
-        update();
+            convertedFile = newFile;
+            isPdfLocked = false;
+            currentStep = 'success';
+            errorMessage = 'Success! PDF document has been unlocked and decrypted.';
+            outputFileName = outName;
+            isRunning = false;
+            update();
 
-        if (Get.isRegistered<NotificationService>()) {
-          NotificationService.to.updateToolProgressNotification(
-            id: notificationId,
-            toolName: tool.name,
-            step: ToolExecutionStep.completed,
-            detail: outName,
-          );
+            if (Get.isRegistered<NotificationService>()) {
+              NotificationService.to.updateToolProgressNotification(
+                id: notificationId,
+                toolName: tool.name,
+                step: ToolExecutionStep.completed,
+                detail: outName,
+              );
+            }
+            return;
+          }
+        } catch (_) {
+          // If local unlock fails or requires full stream decryption, proceed to server job runner
         }
-        return;
+
+        // For standard encrypted PDFs (AES-128, AES-256, standard Acrobat),
+        // proceed to backend server job runner for full native stream decryption!
       }
 
 
@@ -2695,6 +2718,70 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
             );
           }
           return;
+        } catch (_) {}
+      }
+
+      if (slug == 'pdf-lock' && selectedFile != null) {
+        try {
+          final userPwd = passwordController.text.trim();
+          if (userPwd.isNotEmpty) {
+            final inputFile = await getOrCreatePhysicalFile(selectedFile!);
+            final rawBytes = await inputFile.readAsBytes();
+            final lockedBytes = LocalDocumentPdfGenerator.lockPdf(
+              rawBytes,
+              userPassword: userPwd,
+              ownerPassword: ownerPasswordController.text.trim(),
+              allowPrinting: allowPrinting,
+              allowCopying: allowCopying,
+              encryption: encryption,
+            );
+
+            final inputName = selectedFile!.name;
+            final baseName = inputName.contains('.')
+                ? inputName.substring(0, inputName.lastIndexOf('.'))
+                : inputName;
+            final tempDir = Directory.systemTemp;
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final outName = '${baseName}_locked_$timestamp.pdf';
+            final outPath = '${tempDir.path}/$outName';
+            await File(outPath).writeAsBytes(lockedBytes);
+
+            final pdfFile = File(outPath);
+            final fileSizeKb = (await pdfFile.length()) / 1024.0;
+
+            scanController.addScan(
+              outPath,
+              customName: outName,
+              fileType: 'PDF',
+            );
+
+            final newFile = FileModel(
+              id: timestamp.toString(),
+              name: outName,
+              createdDate: DateTime.now(),
+              sizeKb: fileSizeKb > 0 ? fileSizeKb : 42.0,
+              fileType: 'PDF',
+              path: outPath,
+            );
+
+            convertedFile = newFile;
+            isPdfLocked = true;
+            currentStep = 'success';
+            errorMessage = 'Success! PDF document has been password-protected and encrypted.';
+            outputFileName = outName;
+            isRunning = false;
+            update();
+
+            if (Get.isRegistered<NotificationService>()) {
+              NotificationService.to.updateToolProgressNotification(
+                id: notificationId,
+                toolName: tool.name,
+                step: ToolExecutionStep.completed,
+                detail: outName,
+              );
+            }
+            return;
+          }
         } catch (_) {}
       }
 
@@ -3573,7 +3660,19 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
         return 'Network connection error. Please check your internet connection and try again.';
       }
       // For any invalid password, job failure, or decryption error during PDF Unlock
-      return 'Invalid password. The password you entered is incorrect for this document. Please check the password and try again.';
+      if (lower.contains('invalid password') ||
+          lower.contains('incorrect password') ||
+          lower.contains('bad user password') ||
+          lower.contains('bad password') ||
+          lower.contains('wrong password') ||
+          lower.contains('not been decrypted') ||
+          lower.contains('qpdf') ||
+          lower.contains('plainscan api job failed during processing') ||
+          lower.contains('failed during processing') ||
+          lower.contains('password')) {
+        return 'Invalid password. The password you entered is incorrect for this document. Please check the password and try again.';
+      }
+      return rawMsg.trim();
     }
 
     if (slug == 'pdf-lock') {

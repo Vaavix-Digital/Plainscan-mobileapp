@@ -8916,7 +8916,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Note: This document has no password protection. Unlocking is not needed.',
+                        'Note: If this document has password protection, enter the password below to decrypt and unlock it.',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.amber.shade900,
@@ -8928,7 +8928,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
               ),
             ],
-            if (hasFile && isLocked) ...[
+            if (hasFile) ...[
               const SizedBox(height: 14),
               const Text(
                 'Enter Document Password',
