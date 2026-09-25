@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
+import 'package:plainscan/core/utils/local_document_generators.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/features/files/pages/files_page.dart';
 import 'package:plainscan/features/files/pages/pdf_viewer_page.dart';
@@ -17,16 +19,21 @@ void main() {
 
   group('PDF Tools - View in File Tests', () {
     late ScanController scanController;
+    late Directory tempDir;
 
     setUp(() {
       SharedPreferences.setMockInitialValues({});
       Get.reset();
+      tempDir = Directory.systemTemp.createTempSync('tool_exec_test_');
       scanController = Get.put(ScanController());
       Get.put(HomeScreenController());
     });
 
     tearDown(() {
       Get.reset();
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
     });
 
     testWidgets('FilesPage renders and highlights generated file with NEW badge', (WidgetTester tester) async {
@@ -289,12 +296,16 @@ void main() {
         category: 'PDF Tools',
       );
 
+      final testPdf = File('${tempDir.path}/Statement_Public.pdf');
+      testPdf.writeAsBytesSync(LocalDocumentPdfGenerator.minimalPdfBytes);
+
       final unencryptedFile = FileModel(
         id: 'unlocked_file_1',
         name: 'Statement_Public.pdf',
         createdDate: DateTime.now(),
         sizeKb: 1024,
         fileType: 'PDF',
+        path: testPdf.path,
       );
 
       await tester.pumpWidget(
@@ -314,14 +325,14 @@ void main() {
       expect(controller.isPdfLocked, isFalse);
 
       // Verify Note that document has no password protection is displayed
-      expect(find.text('Note: This document has no password protection. Unlocking is not needed.'), findsOneWidget);
+      expect(find.text('PDF is Not Locked (No Password Required)'), findsOneWidget);
 
       // Verify Password TextField is NOT displayed
       expect(find.text('Enter Document Password'), findsNothing);
       expect(find.byType(TextField), findsNothing);
 
-      // Verify disabled state of Run button
-      expect(find.text('Document Already Unlocked'), findsOneWidget);
+      // Verify already unlocked text is displayed
+      expect(find.textContaining('already unlocked and does not require password removal'), findsOneWidget);
       final runButton = tester.widget<ElevatedButton>(find.byType(ElevatedButton).last);
       expect(runButton.onPressed, isNull);
     });

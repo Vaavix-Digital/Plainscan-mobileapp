@@ -4,6 +4,7 @@ import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/plan_controller.dart';
 import 'package:plainscan/core/services/payment_service.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/models/plan_model.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -91,6 +92,16 @@ class _PaymentPageState extends State<PaymentPage> {
     return _plan.formattedAmount(_billingPeriod == 'yearly');
   }
 
+  void _redirectToProfile() {
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
+    }
+    Get.offAllNamed(AppRoutes.home);
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isYearly = _billingPeriod == 'yearly';
@@ -104,7 +115,7 @@ class _PaymentPageState extends State<PaymentPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.text),
-          onPressed: () => Get.back(),
+          onPressed: _redirectToProfile,
         ),
         title: const Text(
           'Checkout & Payment',

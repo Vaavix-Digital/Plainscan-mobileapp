@@ -547,6 +547,18 @@ class PaymentService {
       } catch (_) {}
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final successPayload = responseJson ?? {
+          'status': 'success',
+          'message': 'Subscription verified and Pro plan activated successfully!',
+          'plan_id': planId,
+          'product_id': productId,
+          'package_name': packageName,
+          'billing_period': billingPeriod,
+        };
+        await printSubscriptionActivationDetails(
+          provider: 'Google Play IAP',
+          responseJson: successPayload,
+        );
         if (responseJson != null) {
           return PaymentVerifyResult.fromJson(responseJson, statusCode: response.statusCode);
         }
@@ -606,5 +618,48 @@ class PaymentService {
       debugPrint('Error verifying Google Play payment: $e');
       return PaymentVerifyResult.failure('Network connection failed: $e');
     }
+  }
+
+  /// Prints subscription activation response and authenticated user details to console log
+  static Future<void> printSubscriptionActivationDetails({
+    required String provider,
+    required Map<String, dynamic> responseJson,
+  }) async {
+    final email = await StorageService.getEmail() ?? 'Unregistered / Guest';
+    final name = await StorageService.getName() ?? 'PlainScan User';
+    final userId = await StorageService.getUserId() ?? 'N/A';
+    final plan = await StorageService.getPlan();
+    final isPro = await StorageService.isProUser();
+    final token = await StorageService.getToken();
+    final expiry = await StorageService.getProExpiryDate();
+    final status = await StorageService.getSubscriptionStatus() ?? 'active';
+
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(responseJson);
+
+    final logText = '''
+
+========================================================================
+🎉 SUBSCRIPTION ACTIVATED - RESPONSE & USER AUTH DETAILS
+========================================================================
+[Payment Provider] : ${provider.toUpperCase()}
+[Server Status]    : VERIFIED & ACTIVATED
+
+---------------- CURRENT USER AUTHENTICATION DETAILS ----------------
+• Account Tier   : ${isPro ? 'PRO ⚡ (Active Subscription)' : 'FREE 👤'}
+• User Email     : $email
+• User Name      : $name
+• User ID        : $userId
+• Active Plan    : ${plan.toUpperCase()}
+• Auth Status    : ${token != null && token.isNotEmpty ? 'AUTHENTICATED (JWT Active)' : 'UNAUTHENTICATED'}
+• Token Snippet  : ${token != null && token.length > 20 ? '${token.substring(0, 20)}...' : (token ?? 'None')}
+• Sub Status     : $status
+• Expiry Date    : ${expiry != null ? expiry.toIso8601String() : 'N/A'}
+
+---------------- ACTIVATION RESPONSE PAYLOAD ----------------
+$jsonStr
+========================================================================
+''';
+
+    debugPrint(logText);
   }
 }

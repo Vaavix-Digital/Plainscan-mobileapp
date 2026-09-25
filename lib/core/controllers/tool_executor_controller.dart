@@ -280,7 +280,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
           final length = await file.length();
           if (length > 0) {
             final bytes = await file.readAsBytes();
-            final content = String.fromCharCodes(bytes);
+            final content = latin1.decode(bytes);
             if (content.contains('/Encrypt') ||
                 content.contains('/Standard') ||
                 content.contains('/Filter/Standard') ||

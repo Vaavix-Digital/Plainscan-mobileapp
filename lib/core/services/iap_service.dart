@@ -11,6 +11,7 @@ import 'package:plainscan/core/controllers/plan_controller.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/services/payment_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 
 class IAPService {
   static final IAPService _instance = IAPService._internal();
@@ -87,65 +88,15 @@ class IAPService {
           if (_isPurchaseInitiatedByUI) {
             _isPurchaseInitiatedByUI = false;
             final msg = purchaseDetails.error?.message ?? '';
-            final details = purchaseDetails.error?.details?.toString() ?? '';
-            final errCombined = '$msg $details'.toLowerCase();
 
-            final isDevError = errCombined.contains('developererror') ||
-                errCombined.contains('signed correctly') ||
-                errCombined.contains('not configured for billing') ||
-                errCombined.contains('responsecode: 5') ||
-                msg == 'BillingResponse.developerError';
-
-            if (isDevError) {
-              Get.defaultDialog(
-                title: 'Google Play Setup Notice',
-                titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                content: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Column(
-                    children: const [
-                      Text(
-                        'This application build is not configured with Google Play App Signing key or is running in debug mode.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Would you like to complete your Pro subscription via standard Online Checkout (Card / UPI / NetBanking) instead?',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                ),
-                textConfirm: 'Online Checkout',
-                textCancel: 'Close',
-                confirmTextColor: Colors.white,
-                buttonColor: AppColors.primary,
-                onConfirm: () {
-                  Get.back();
-                  final plan = Get.isRegistered<PlanController>()
-                      ? Get.find<PlanController>()
-                          .plans
-                          .firstWhereOrNull((p) => p.planId == 'pro')
-                      : null;
-                  if (plan != null) {
-                    Get.toNamed(AppRoutes.payment, arguments: {
-                      'plan': plan,
-                      'billingPeriod': 'monthly',
-                    });
-                  }
-                },
-              );
-            } else {
-              Get.snackbar(
-                'Purchase Incomplete',
-                msg.isNotEmpty ? msg : 'Payment transaction was not completed.',
-                backgroundColor: const Color(0xFFDC2626),
-                colorText: Colors.white,
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            }
+            Get.snackbar(
+              'Purchase Incomplete',
+              msg.isNotEmpty ? msg : 'Payment transaction was not completed.',
+              backgroundColor: const Color(0xFFDC2626),
+              colorText: Colors.white,
+              snackPosition: SnackPosition.BOTTOM,
+            );
+            _redirectToProfile();
           }
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
             purchaseDetails.status == PurchaseStatus.restored) {
@@ -269,6 +220,9 @@ class IAPService {
               }
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
+
+              // Redirect user to Profile page whether successful or failed
+              _redirectToProfile();
             }
 
             // Complete purchase in Google Play Billing client now that backend acknowledged it
@@ -288,6 +242,7 @@ class IAPService {
               _showVerificationErrorDialog(result);
               _isPurchaseInitiatedByUI = false;
               _isRestoreInitiatedByUI = false;
+              _redirectToProfile();
             }
 
             // Acknowledge fatal errors on client so they don't loop endlessly
@@ -311,6 +266,16 @@ class IAPService {
           }
         }
       }
+    }
+  }
+
+  void _redirectToProfile() {
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
+    }
+    Get.offAllNamed(AppRoutes.home);
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
     }
   }
 
@@ -367,14 +332,14 @@ class IAPService {
         break;
     }
 
-    Get.defaultDialog(
-      title: title,
-      titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      middleText: message,
-      textConfirm: 'OK',
-      confirmTextColor: Colors.white,
-      buttonColor: AppColors.primary,
-      onConfirm: () => Get.back(),
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: const Color(0xFFDC2626),
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(12),
+      borderRadius: 10,
     );
   }
 
@@ -467,29 +432,20 @@ class IAPService {
     } catch (_) {}
 
     if (!_isAvailable) {
-      Get.defaultDialog(
-        title: 'Google Play Unavailable',
-        middleText:
-            'Google Play Billing is not supported or not available on this device.\n\nWould you like to complete payment via Card / UPI checkout instead?',
-        textConfirm: 'Online Checkout',
-        textCancel: 'Cancel',
-        confirmTextColor: Colors.white,
-        buttonColor: AppColors.primary,
-        onConfirm: () {
-          Get.back();
-          final plan = Get.isRegistered<PlanController>()
-              ? Get.find<PlanController>()
-                  .plans
-                  .firstWhereOrNull((p) => p.planId == 'pro')
-              : null;
-          if (plan != null) {
-            Get.toNamed(AppRoutes.payment, arguments: {
-              'plan': plan,
-              'billingPeriod': basePlanId ?? 'monthly',
-            });
-          }
-        },
-      );
+      debugPrint('Google Play unavailable. Routing to Online Checkout...');
+      final plan = Get.isRegistered<PlanController>()
+          ? Get.find<PlanController>()
+              .plans
+              .firstWhereOrNull((p) => p.planId == 'pro')
+          : null;
+      if (plan != null) {
+        Get.toNamed(AppRoutes.payment, arguments: {
+          'plan': plan,
+          'billingPeriod': basePlanId ?? 'monthly',
+        });
+      } else {
+        _redirectToProfile();
+      }
       return;
     }
 
@@ -527,37 +483,21 @@ class IAPService {
 
         final foundIds = _products.map((p) => p.id).toList();
         debugPrint(
-            'IAP: Product $productId could not be found. Available in store: $foundIds');
+            'IAP: Product $productId could not be found ($foundIds). Routing to Online Checkout...');
 
-        Get.defaultDialog(
-          title: 'Product Not Found in Play Store',
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          middleText:
-              'Google Play Store could not find subscription "$productId".\n\n'
-              '• If recently created in Google Play Console, it can take 2-24 hours to propagate.\n'
-              '• Ensure the Base Plan in Play Console is set to "Active" (not Draft).\n'
-              '• Ensure your Google account is added as a License Tester.\n\n'
-              'Would you like to complete payment via standard Online Checkout instead?',
-          textConfirm: 'Online Checkout',
-          textCancel: 'Close',
-          confirmTextColor: Colors.white,
-          buttonColor: AppColors.primary,
-          onConfirm: () {
-            Get.back();
-            final plan = Get.isRegistered<PlanController>()
-                ? Get.find<PlanController>()
-                    .plans
-                    .firstWhereOrNull((p) => p.planId == 'pro')
-                : null;
-            if (plan != null) {
-              Get.toNamed(AppRoutes.payment, arguments: {
-                'plan': plan,
-                'billingPeriod': basePlanId ?? 'monthly',
-              });
-            }
-          },
-        );
+        final plan = Get.isRegistered<PlanController>()
+            ? Get.find<PlanController>()
+                .plans
+                .firstWhereOrNull((p) => p.planId == 'pro')
+            : null;
+        if (plan != null) {
+          Get.toNamed(AppRoutes.payment, arguments: {
+            'plan': plan,
+            'billingPeriod': basePlanId ?? 'monthly',
+          });
+        } else {
+          _redirectToProfile();
+        }
         return;
       }
 

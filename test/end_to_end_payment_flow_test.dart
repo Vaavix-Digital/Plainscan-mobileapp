@@ -177,7 +177,7 @@ void main() {
 
       // CTA Buttons
       expect(find.text('Start Using PlainScan Pro'), findsOneWidget);
-      expect(find.text('View My Plan Details'), findsOneWidget);
+      expect(find.text('View My Profile'), findsOneWidget);
     });
 
     testWidgets('SubscriptionSuccessPage renders Stripe payment details accurately',

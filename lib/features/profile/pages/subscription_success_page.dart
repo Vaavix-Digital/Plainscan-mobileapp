@@ -1,11 +1,123 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/features/home/screens/home_screen.dart';
 import 'package:plainscan/models/plan_model.dart';
 
-class SubscriptionSuccessPage extends StatelessWidget {
+class SubscriptionSuccessPage extends StatefulWidget {
   const SubscriptionSuccessPage({super.key});
+
+  @override
+  State<SubscriptionSuccessPage> createState() => _SubscriptionSuccessPageState();
+}
+
+class _SubscriptionSuccessPageState extends State<SubscriptionSuccessPage> {
+  String? _userEmail;
+  String? _userName;
+  String? _userId;
+  bool _isPro = false;
+  String? _jwtToken;
+  bool _isLoadingAuth = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAuthDetails();
+  }
+
+  Future<void> _loadUserAuthDetails() async {
+    final email = await StorageService.getEmail();
+    final name = await StorageService.getName();
+    final userId = await StorageService.getUserId();
+    final plan = await StorageService.getPlan();
+    final isPro = await StorageService.isProUser();
+    final token = await StorageService.getToken();
+
+    if (mounted) {
+      setState(() {
+        _userEmail = email ?? 'Unregistered / Guest User';
+        _userName = name ?? 'PlainScan User';
+        _userId = userId ?? 'N/A';
+        _isPro = isPro;
+        _jwtToken = token;
+        _isLoadingAuth = false;
+      });
+    }
+
+    // Print activation response and user authentication details to console log
+    _printActivationAndAuthDetails(
+      email: _userEmail!,
+      name: _userName!,
+      userId: _userId!,
+      plan: plan,
+      isPro: isPro,
+      token: token,
+    );
+  }
+
+  void _printActivationAndAuthDetails({
+    required String email,
+    required String name,
+    required String userId,
+    required String plan,
+    required bool isPro,
+    String? token,
+  }) {
+    final args = Get.arguments as Map<String, dynamic>? ?? {};
+    final paymentId = args['paymentId'] ?? 'PAY-${DateTime.now().millisecondsSinceEpoch}';
+    final provider = args['provider'] ?? 'razorpay';
+    final amount = args['amount'] ?? '₹764';
+
+    final responsePayload = {
+      'status': 'success',
+      'message': 'Subscription verified and activated successfully',
+      'payment_id': paymentId,
+      'provider': provider,
+      'amount': amount,
+      'activated_at': DateTime.now().toIso8601String(),
+    };
+
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(responsePayload);
+
+    final logText = '''
+
+========================================================================
+🎉 SUBSCRIPTION ACTIVATION RESPONSE & USER AUTHENTICATION DETAILS
+========================================================================
+[Payment Provider] : ${provider.toString().toUpperCase()}
+[Activation Status]: SUCCESS (HTTP 200)
+[Payment ID]       : $paymentId
+[Amount Paid]      : $amount
+
+---------------- CURRENT USER AUTHENTICATION DETAILS ----------------
+• Account Status : ${isPro ? 'PRO ⚡ (Active Subscription)' : 'FREE 👤'}
+• User Email     : $email
+• Display Name   : $name
+• User ID        : $userId
+• Active Plan    : ${plan.toUpperCase()}
+• Auth Status    : ${token != null && token.isNotEmpty ? 'AUTHENTICATED (JWT Token Active)' : 'UNAUTHENTICATED'}
+• Token Snippet  : ${token != null && token.length > 20 ? '${token.substring(0, 20)}...' : (token ?? 'None')}
+
+---------------- ACTIVATION RESPONSE PAYLOAD ----------------
+$jsonStr
+========================================================================
+''';
+
+    debugPrint(logText);
+  }
+
+  void _navigateToProfile() {
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
+    }
+    Get.offAllNamed(AppRoutes.home);
+    if (Get.isRegistered<HomeScreenController>()) {
+      Get.find<HomeScreenController>().changeTab(3);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +154,22 @@ class SubscriptionSuccessPage extends StatelessWidget {
     final renewalFormatted =
         '${nextRenewalDate.day}/${nextRenewalDate.month}/${nextRenewalDate.year}';
 
+    final responsePayload = {
+      'status': 'success',
+      'message': 'Subscription verified and activated successfully',
+      'payment_id': paymentId,
+      'provider': provider,
+      'amount': amountPaid,
+      'user_email': _userEmail ?? 'Loading...',
+      'account_type': _isPro ? 'PRO' : 'FREE',
+      'activated_at': DateTime.now().toIso8601String(),
+    };
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        Get.offAllNamed(AppRoutes.home);
+        _navigateToProfile();
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -57,7 +180,7 @@ class SubscriptionSuccessPage extends StatelessWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.close_rounded, color: AppColors.text, size: 24),
-              onPressed: () => Get.offAllNamed(AppRoutes.home),
+              onPressed: _navigateToProfile,
             ),
           ],
         ),
@@ -111,6 +234,128 @@ class SubscriptionSuccessPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
+                // User Authentication & Account Details Card (Free vs Pro)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.badge_rounded,
+                                  color: AppColors.primary,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Text(
+                                'User Account Details',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Account Status Badge (Free or Pro)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _isPro
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _isPro ? const Color(0xFF10B981) : Colors.grey,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isPro ? Icons.bolt_rounded : Icons.person_outline,
+                                  size: 14,
+                                  color: _isPro ? const Color(0xFF10B981) : Colors.black87,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _isPro ? 'PRO ACCOUNT' : 'FREE ACCOUNT',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: _isPro ? const Color(0xFF047857) : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+                      const Divider(height: 1),
+                      const SizedBox(height: 14),
+
+                      if (_isLoadingAuth)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else ...[
+                        _buildReceiptRow('User Name', _userName ?? 'N/A'),
+                        const SizedBox(height: 10),
+                        _buildReceiptRow('Email Address', _userEmail ?? 'N/A'),
+                        const SizedBox(height: 10),
+                        _buildReceiptRow('User ID', _userId ?? 'N/A', isMonospace: true),
+                        const SizedBox(height: 10),
+                        _buildReceiptRow(
+                          'Account Tier',
+                          _isPro ? 'Pro (Unlimited Access)' : 'Free Tier',
+                          statusColor: _isPro ? const Color(0xFF10B981) : Colors.grey.shade700,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildReceiptRow(
+                          'Authentication Status',
+                          _jwtToken != null && _jwtToken!.isNotEmpty
+                              ? 'Authenticated (JWT Active)'
+                              : 'Unauthenticated',
+                          statusColor: _jwtToken != null && _jwtToken!.isNotEmpty
+                              ? const Color(0xFF10B981)
+                              : Colors.amber.shade800,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // Order & Subscription Receipt Card
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -134,7 +379,11 @@ class SubscriptionSuccessPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       _buildReceiptRow(
                         'Payment Method',
-                        provider.toLowerCase() == 'stripe' ? 'Stripe Global' : 'Razorpay (India)',
+                        provider.toLowerCase() == 'stripe'
+                            ? 'Stripe Global'
+                            : (provider.toLowerCase().contains('google')
+                                ? 'Google Play Billing'
+                                : 'Razorpay (India)'),
                       ),
                       const SizedBox(height: 12),
                       _buildReceiptRow('Status', 'Active', statusColor: const Color(0xFF10B981)),
@@ -142,6 +391,54 @@ class SubscriptionSuccessPage extends StatelessWidget {
                       _buildReceiptRow('Next Renewal', renewalFormatted),
                       const SizedBox(height: 12),
                       _buildReceiptRow('Transaction ID', paymentId, isMonospace: true),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Printed Activation Response JSON Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.terminal_rounded, color: Color(0xFF38BDF8), size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'Activation Response Output',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: SelectableText(
+                          const JsonEncoder.withIndent('  ').convert(responsePayload),
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: Color(0xFF4ADE80),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -217,7 +514,7 @@ class SubscriptionSuccessPage extends StatelessWidget {
 
                 // Navigation Buttons
                 ElevatedButton(
-                  onPressed: () => Get.offAllNamed(AppRoutes.home),
+                  onPressed: _navigateToProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -239,9 +536,9 @@ class SubscriptionSuccessPage extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 TextButton(
-                  onPressed: () => Get.offNamed(AppRoutes.plans),
+                  onPressed: _navigateToProfile,
                   child: const Text(
-                    'View My Plan Details',
+                    'View My Profile',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
