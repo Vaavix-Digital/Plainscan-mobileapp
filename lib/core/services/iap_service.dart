@@ -29,14 +29,16 @@ class IAPService {
   bool _isRestoreInitiatedByUI = false;
 
   /// Google Play Product IDs (must match exact IDs in Google Play Console)
-  static const String monthlySubscriptionId = 'plainscan_premium_monthly';
-  static const String yearlySubscriptionId = 'plainscan_premium_anualy';
+  static const String proSubscriptionId = 'com.plainscan_pro';
+  static const String monthlySubscriptionId = 'com.plainscan_pro';
+  static const String yearlySubscriptionId = 'com.plainscan_pro';
   static const String androidPackageName = 'com.plainscan.app';
 
   final List<String> _productIds = [
-    monthlySubscriptionId,
-    yearlySubscriptionId,
-    'com.plainscan_pro',
+    proSubscriptionId,
+    'plainscan_premium_monthly',
+    'plainscan_premium_anualy',
+    'plainscan_premium_annually',
     'plainscan_pro',
   ];
 
@@ -137,21 +139,27 @@ class IAPService {
           }
 
           final rawProductId = purchaseDetails.productID;
-          final cleanProductId = rawProductId.split(':').first;
+          final cleanProductId = rawProductId.contains(':')
+              ? rawProductId.split(':').first
+              : rawProductId;
           final isYearly = cleanProductId == yearlySubscriptionId ||
               cleanProductId.contains('anualy') ||
+              cleanProductId.contains('annual') ||
               cleanProductId.contains('yearly');
 
           final planId = 'pro';
           final billingPeriod = isYearly ? 'yearly' : 'monthly';
-          final targetProductId = isYearly ? yearlySubscriptionId : monthlySubscriptionId;
+          // Must send exact product ID returned by Google Play for this purchase token
+          final targetProductId = cleanProductId.isNotEmpty
+              ? cleanProductId
+              : (isYearly ? yearlySubscriptionId : monthlySubscriptionId);
 
           PaymentVerifyResult result;
 
           if (Platform.isAndroid) {
             final purchaseToken =
                 purchaseDetails.verificationData.serverVerificationData;
-            debugPrint('Verifying Google Play token for $targetProductId ($billingPeriod)...');
+            debugPrint('Verifying Google Play token for product "$targetProductId" (raw: "$rawProductId", billingPeriod: $billingPeriod)...');
             result = await PaymentService.verifyGooglePlayPayment(
               packageName: androidPackageName,
               productId: targetProductId,
@@ -343,10 +351,53 @@ class IAPService {
     );
   }
 
-  ProductDetails? _findProduct(String productId) {
+  ProductDetails? _findProduct(String productId, {String? basePlanId}) {
     if (_products.isEmpty) return null;
 
-    // 1. Direct match by ID or ID prefix
+    final targetBasePlan = (basePlanId ??
+            (productId.contains('yearly') || productId.contains('anual')
+                ? 'yearly'
+                : 'monthly'))
+        .toLowerCase();
+
+    // 1. Search for matching base plan offer in GooglePlayProductDetails
+    for (var p in _products) {
+      if (p is GooglePlayProductDetails) {
+        final offers = p.productDetails.subscriptionOfferDetails;
+        if (offers != null && offers.isNotEmpty) {
+          final subIdx = p.subscriptionIndex ?? 0;
+          if (subIdx < offers.length) {
+            final offer = offers[subIdx];
+            final bId = offer.basePlanId.toLowerCase();
+            if (bId == targetBasePlan ||
+                (targetBasePlan == 'yearly' &&
+                    (bId.contains('yearly') ||
+                        bId.contains('annual') ||
+                        bId.contains('anual'))) ||
+                (targetBasePlan == 'monthly' &&
+                    (bId.contains('monthly') || bId.contains('month')))) {
+              return p;
+            }
+          }
+          // Check other offers if subIdx didn't match
+          for (int idx = 0; idx < offers.length; idx++) {
+            final offer = offers[idx];
+            final bId = offer.basePlanId.toLowerCase();
+            if (bId == targetBasePlan ||
+                (targetBasePlan == 'yearly' &&
+                    (bId.contains('yearly') ||
+                        bId.contains('annual') ||
+                        bId.contains('anual'))) ||
+                (targetBasePlan == 'monthly' &&
+                    (bId.contains('monthly') || bId.contains('month')))) {
+              return p;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Direct match by ID or ID prefix
     var match = _products.firstWhereOrNull(
       (product) =>
           product.id == productId ||
@@ -356,53 +407,13 @@ class IAPService {
     );
     if (match != null) return match;
 
-    // 2. Match by Base Plan ID or Offer ID in GooglePlayProductDetails
-    for (var p in _products) {
-      if (p is GooglePlayProductDetails) {
-        final offers = p.productDetails.subscriptionOfferDetails;
-        if (offers != null &&
-            p.subscriptionIndex != null &&
-            p.subscriptionIndex! < offers.length) {
-          final offer = offers[p.subscriptionIndex!];
-          if (offer.basePlanId == productId ||
-              offer.offerId == productId ||
-              (productId.contains('monthly') &&
-                  (offer.basePlanId.contains('monthly') ||
-                      offer.basePlanId == 'p1m')) ||
-              (productId.contains('anualy') &&
-                  (offer.basePlanId.contains('anualy') ||
-                      offer.basePlanId.contains('yearly') ||
-                      offer.basePlanId == 'p1y'))) {
-            return p;
-          }
-        }
-      }
-    }
-
-    // 3. Match by billing period keyword (monthly vs yearly)
-    final isYearly =
-        productId.contains('anualy') || productId.contains('yearly');
-    match = _products.firstWhereOrNull((p) {
-      final id = p.id.toLowerCase();
-      if (isYearly) {
-        return id.contains('anualy') ||
-            id.contains('yearly') ||
-            id.contains('annual');
-      } else {
-        return id.contains('monthly') || id.contains('month');
-      }
-    });
-    if (match != null) return match;
-
-    // 4. Fallback to any pro product in store
-    match = _products.firstWhereOrNull(
+    // 3. Fallback to any pro product in store
+    return _products.firstWhereOrNull(
       (p) =>
           p.id == 'com.plainscan_pro' ||
           p.id.contains('pro') ||
           p.id.contains('premium'),
     );
-
-    return match;
   }
 
   Future<void> buyProduct(String productId, {String? basePlanId}) async {
@@ -460,11 +471,11 @@ class IAPService {
     );
 
     try {
-      debugPrint('IAP: buyProduct called for productId: $productId');
+      debugPrint('IAP: buyProduct called for productId: $productId, basePlanId: $basePlanId');
       debugPrint('IAP: Current cached products: ${_products.map((p) => p.id).toList()}');
 
       // Query or refresh products if not cached or matching product is not found
-      if (_products.isEmpty || _findProduct(productId) == null) {
+      if (_products.isEmpty || _findProduct(productId, basePlanId: basePlanId) == null) {
         debugPrint('IAP: Querying store for product IDs: $_productIds');
         final resp = await _iap.queryProductDetails(_productIds.toSet());
         debugPrint(
@@ -474,7 +485,7 @@ class IAPService {
         }
       }
 
-      final ProductDetails? productDetails = _findProduct(productId);
+      final ProductDetails? productDetails = _findProduct(productId, basePlanId: basePlanId);
 
       if (productDetails == null) {
         if (Get.isDialogOpen ?? false) {
@@ -520,11 +531,17 @@ class IAPService {
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
     } catch (e) {
       debugPrint('Error starting purchase: $e');
-      Get.snackbar(
-        'Purchase Error',
-        'Could not initiate Google Play purchase: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final plan = Get.isRegistered<PlanController>()
+          ? Get.find<PlanController>()
+              .plans
+              .firstWhereOrNull((p) => p.planId == 'pro')
+          : null;
+      if (plan != null) {
+        Get.toNamed(AppRoutes.payment, arguments: {
+          'plan': plan,
+          'billingPeriod': basePlanId ?? 'monthly',
+        });
+      }
     } finally {
       if (Get.isDialogOpen ?? false) {
         Get.back();

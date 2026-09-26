@@ -519,6 +519,29 @@ class PlansPage extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  if (!plan.isFree && !isCurrent) ...[
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Get.toNamed(AppRoutes.payment, arguments: {
+                            'plan': plan,
+                            'billingPeriod': isYearly ? 'yearly' : 'monthly',
+                          });
+                        },
+                        icon: const Icon(Icons.credit_card, size: 15, color: AppColors.secondaryText),
+                        label: Text(
+                          'Or pay via Card / Web Checkout'.tr,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.secondaryText,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

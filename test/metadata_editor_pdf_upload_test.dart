@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -417,4 +418,71 @@ void main() {
     expect(formatted.contains('Subject: Q1 Metrics'), isTrue);
     expect(formatted.contains('Creator: Plainscan PDF Engine'), isTrue);
   });
+
+  test('Metadata Editor updates JPEG metadata and Read Metadata extracts edited fields', () {
+    final originalBytes = Uint8List.fromList(LocalDocumentPdfGenerator.minimalJpegBytes);
+    final editedBytes = LocalDocumentPdfGenerator.updateJpegMetadata(
+      originalBytes,
+      title: 'laptop',
+      author: 'Abhinav S',
+      description: 'laptop on table',
+      copyright: 'Abhinav S',
+      software: 'Plainscan',
+      comment: 'Sample comment',
+    );
+
+    expect(editedBytes, isNotNull);
+    expect(editedBytes.length, greaterThan(originalBytes.length));
+
+    final extractedMap = LocalDocumentPdfGenerator.extractMetadata(
+      editedBytes,
+      'photo_edited.jpg',
+    );
+
+    expect(extractedMap, isNotNull);
+    final meta = extractedMap['metadata'] as Map<String, dynamic>;
+    expect(meta['Title'], 'laptop');
+    expect(meta['Author'], 'Abhinav S');
+    expect(meta['Description'], 'laptop');
+    expect(meta['Copyright'], 'Abhinav S');
+    expect(meta['Software'], 'Plainscan');
+    expect(meta['Comment'], 'Sample comment');
+  });
+
+  test('Metadata Editor updates PNG metadata and Read Metadata extracts edited fields', () {
+    // Minimal PNG byte structure
+    final pngHeader = Uint8List.fromList([
+      137, 80, 78, 71, 13, 10, 26, 10, // Signature
+      0, 0, 0, 13, 73, 72, 68, 82, // IHDR
+      0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137,
+      0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130 // IEND
+    ]);
+
+    final editedBytes = LocalDocumentPdfGenerator.updatePngMetadata(
+      pngHeader,
+      title: 'laptop',
+      author: 'Abhinav S',
+      description: 'laptop on table',
+      copyright: 'Abhinav S',
+      software: 'Plainscan',
+      comment: 'Sample comment',
+    );
+
+    expect(editedBytes, isNotNull);
+
+    final extractedMap = LocalDocumentPdfGenerator.extractMetadata(
+      editedBytes,
+      'image_edited.png',
+    );
+
+    expect(extractedMap, isNotNull);
+    final meta = extractedMap['metadata'] as Map<String, dynamic>;
+    expect(meta['Title'], 'laptop');
+    expect(meta['Author'], 'Abhinav S');
+    expect(meta['Description'], 'laptop on table');
+    expect(meta['Copyright'], 'Abhinav S');
+    expect(meta['Software'], 'Plainscan');
+    expect(meta['Comment'], 'Sample comment');
+  });
 }
+

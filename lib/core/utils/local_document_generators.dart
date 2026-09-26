@@ -1087,39 +1087,27 @@ class LocalDocumentPdfGenerator {
   // Injects standard tEXt chunks (keyword\x00value) immediately after IHDR.
   // CRC-32 is computed per PNG spec.
 
+  static List<int>? _crc32Table;
+  static List<int> _getCrc32Table() {
+    if (_crc32Table != null) return _crc32Table!;
+    final table = List<int>.filled(256, 0);
+    for (int i = 0; i < 256; i++) {
+      int c = i;
+      for (int k = 0; k < 8; k++) {
+        if ((c & 1) != 0) {
+          c = 0xEDB88320 ^ (c >> 1);
+        } else {
+          c = c >> 1;
+        }
+      }
+      table[i] = c;
+    }
+    _crc32Table = table;
+    return table;
+  }
+
   static int _pngCrc32(List<int> data) {
-    const table = [
-      0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F,
-      0xE963A535, 0x9E6495A3, 0x0EDB8832, 0x79DCB8A4, 0xE0D5E91B, 0x97D2D988,
-      0x09B64C2B, 0x7EB17CBF, 0xE7B82D09, 0x90BF1FBD, 0x1DB71064, 0x6AB020F2,
-      0xF3B97148, 0x84BE41DE, 0x1ADAD47D, 0x6DDDE4EB, 0xF4D4B551, 0x83D385C7,
-      0x136C9856, 0x646BA8C0, 0xFD62F97A, 0x8A65C9EC, 0x14015C4F, 0x63066CD9,
-      0xFA0F3D63, 0x8D080DF5, 0x3B6E20C8, 0x4C69105E, 0xD56041E4, 0xA2677172,
-      0x3C03E4D1, 0x4B04D447, 0xD20D85FD, 0xA50AB56B, 0x35B5A8FA, 0x42B2986C,
-      0xDBBBC9D6, 0xACBCF940, 0x32D86CE3, 0x45DF5C75, 0xDCD60DCF, 0xABD13D59,
-      0x26D930AC, 0x51DE003A, 0xC8D75180, 0xBFD06116, 0x21B4F927, 0x56B3C423,
-      0xCFBA9599, 0xB8BDA50F, 0x2802B89E, 0x5F058808, 0xC60CD9B2, 0xB10BE924,
-      0x2F6F7C87, 0x58684C11, 0xC1611DAB, 0xB6662D3D, 0x76DC4190, 0x01DB7106,
-      0x98D220BC, 0xEFD5102A, 0x71B18589, 0x06B6B51F, 0x9FBFE4A5, 0xE8B8D433,
-      0x7807C9A2, 0x0F00F934, 0x9609A88E, 0xE10E9818, 0x7F6AD2BB, 0x086D3D2D,
-      0x91646C97, 0xE6635C01, 0x6B6B51F4, 0x1C6C6162, 0x856530D8, 0xF262004E,
-      0x6C0695ED, 0x1B01A57B, 0x8208F4C1, 0xF50FC457, 0x65B0D9C6, 0x12B7E950,
-      0x8BBEB8EA, 0xFCB9887C, 0x62DD1D7F, 0x15DA2D49, 0x8CD37CF3, 0xFBD44C65,
-      0x4DB26158, 0x3AB551CE, 0xA3BC0074, 0xD4BB30E2, 0x4ADFA541, 0x3DD895D7,
-      0xA4D1C46D, 0xD3D6F4FB, 0x4369E96A, 0x346ED9FC, 0xAD678846, 0xDA60B8D0,
-      0x44042D73, 0x33031DE5, 0xAA0A4C5F, 0xDD0D7CC9, 0x5005713C, 0x270241AA,
-      0xBE0B1010, 0xC90C2086, 0x5768B525, 0x206F85B3, 0xB966D409, 0xCE61E49F,
-      0x5EDEF90E, 0x29D9C998, 0xB0D09822, 0xC7D7A8B4, 0x59B33D17, 0x2EB40D81,
-      0xB7BD5C3B, 0xC0BA6CAD, 0xEDB88320, 0x9ABFB3B6, 0x03B6E20C, 0x74B1D29A,
-      0xEAD54739, 0x9DD277AF, 0x04DB2615, 0x73DC1683, 0xE3630B12, 0x94643B84,
-      0x0D6D6A3E, 0x7A6A5AA8, 0xE40ECF0B, 0x9309FF9D, 0x0A00AE27, 0x7D079EB1,
-      0xF00F9344, 0x8708A3D2, 0x1E01F268, 0x6906C2FE, 0xF762575D, 0x806567CB,
-      0x196C3671, 0x6E6B06E7, 0xFED41B76, 0x89D32BE0, 0x10DA7A5A, 0x67DD4ACC,
-      0xF9B9DF6F, 0x8EBEEFF9, 0x17B7BE43, 0x60B08ED5, 0xD6D6A3E8, 0xA1D1937E,
-      0x38D8C2C4, 0x4FDFF252, 0xD1BB67F1, 0xA6BC5767, 0x3FB506DD, 0x48B2364B,
-      0xD80D2BDA, 0xAF0A1B4C, 0x36034AF6, 0x41047A60, 0xDF60EFC3, 0xA8670955,
-      0x316658EF, 0x4669682B, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D,
-    ];
+    final table = _getCrc32Table();
     int crc = 0xFFFFFFFF;
     for (final b in data) {
       crc = table[(crc ^ b) & 0xFF] ^ (crc >> 8);
@@ -1214,6 +1202,9 @@ class LocalDocumentPdfGenerator {
     int pageCount = 1;
     bool isEncrypted = false;
 
+    String? description;
+    String? software;
+
     if (isPdf && bytes.isNotEmpty) {
       try {
         final str = latin1.decode(bytes);
@@ -1240,7 +1231,7 @@ class LocalDocumentPdfGenerator {
           }
         }
 
-        // Extract /Info Dictionary values (both literal `(...)` and hex `<...>`)
+        // Extract /Info Dictionary values (both literal `(...)` and hex `<... >`)
         String? extractKey(String key) {
           final literalMatch = RegExp('$key\\s*(\\([^\\)]*\\))').firstMatch(str);
           if (literalMatch != null && literalMatch.group(1) != null) {
@@ -1318,12 +1309,44 @@ class LocalDocumentPdfGenerator {
           }
         }
       } catch (_) {}
+    } else if (!isPdf && bytes.isNotEmpty) {
+      try {
+        final ext = fileName.toLowerCase().contains('.')
+            ? fileName.substring(fileName.lastIndexOf('.') + 1)
+            : '';
+        final imgMeta = (ext == 'png')
+            ? _extractPngMetadata(bytes)
+            : _extractJpegMetadata(bytes);
+
+        if (imgMeta.containsKey('title') && imgMeta['title']!.isNotEmpty) {
+          title = imgMeta['title']!;
+        }
+        if (imgMeta.containsKey('author') && imgMeta['author']!.isNotEmpty) {
+          author = imgMeta['author'];
+        }
+        if (imgMeta.containsKey('description') && imgMeta['description']!.isNotEmpty) {
+          description = imgMeta['description'];
+        }
+        if (imgMeta.containsKey('copyright') && imgMeta['copyright']!.isNotEmpty) {
+          copyright = imgMeta['copyright'];
+        }
+        if (imgMeta.containsKey('software') && imgMeta['software']!.isNotEmpty) {
+          software = imgMeta['software'];
+        }
+        if (imgMeta.containsKey('comment') && imgMeta['comment']!.isNotEmpty) {
+          comment = imgMeta['comment'];
+        }
+      } catch (_) {}
+    }
+
+    if (description != null && description.isNotEmpty) {
+      subject = description;
     }
 
     author ??= 'PlainScan User';
     subject ??= isPdf ? 'PDF Document' : 'Digital Media';
     keywords ??= 'plainscan, document, clean';
-    creator ??= 'PlainScan Document Suite';
+    creator ??= software ?? (isPdf ? 'PlainScan Document Suite' : 'PlainScan Camera Subsystem');
     producer ??= isPdf ? 'PlainScan PDF Engine v1.0' : 'PlainScan Image Processing Subsystem';
 
     return {
@@ -1340,7 +1363,7 @@ class LocalDocumentPdfGenerator {
         'Title': title,
         'Author': author,
         'Subject': subject,
-        'Description': subject,
+        'Description': description ?? subject,
         'Copyright': copyright ?? '',
         'Keywords': keywords,
         'Comment': comment ?? '',
@@ -1354,10 +1377,178 @@ class LocalDocumentPdfGenerator {
           'XResolution': 300,
           'YResolution': 300,
           'ExifVersion': '0232',
-          'Software': 'PlainScan Camera Subsystem',
+          'Software': software ?? creator,
         },
       },
     };
+  }
+
+  static Map<String, String> _extractJpegMetadata(Uint8List bytes) {
+    final result = <String, String>{};
+    if (bytes.length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8) return result;
+
+    int offset = 2;
+    while (offset + 4 <= bytes.length) {
+      if (bytes[offset] != 0xFF) break;
+      final marker = bytes[offset + 1];
+      if (marker == 0xDA || marker == 0xD9) break; // SOS or EOI -> stop
+
+      final len = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      if (len < 2 || offset + 2 + len > bytes.length) break;
+
+      final segmentData = bytes.sublist(offset + 4, offset + 2 + len);
+
+      // JPEG COM (0xFF, 0xFE) segment
+      if (marker == 0xFE) {
+        try {
+          final comStr = latin1.decode(segmentData).trim();
+          if (comStr.isNotEmpty) {
+            result['comment'] = comStr;
+          }
+        } catch (_) {}
+      }
+
+      // JPEG APP1 (0xFF, 0xE1) segment (EXIF)
+      if (marker == 0xE1 && segmentData.length >= 14) {
+        final header = latin1.decode(segmentData.sublist(0, 6));
+        if (header == 'Exif\x00\x00') {
+          final tiffBytes = segmentData.sublist(6);
+          _parseTiffIfd0(tiffBytes, result);
+        }
+      }
+
+      offset += 2 + len;
+    }
+    return result;
+  }
+
+  static void _parseTiffIfd0(Uint8List bytes, Map<String, String> result) {
+    if (bytes.length < 8) return;
+    final isLE = bytes[0] == 0x49 && bytes[1] == 0x49; // "II"
+    final isBE = bytes[0] == 0x4D && bytes[1] == 0x4D; // "MM"
+    if (!isLE && !isBE) return;
+
+    int read16(int o) {
+      if (o + 2 > bytes.length) return 0;
+      return isLE ? (bytes[o] | (bytes[o + 1] << 8)) : ((bytes[o] << 8) | bytes[o + 1]);
+    }
+
+    int read32(int o) {
+      if (o + 4 > bytes.length) return 0;
+      return isLE
+          ? (bytes[o] | (bytes[o + 1] << 8) | (bytes[o + 2] << 16) | (bytes[o + 3] << 24))
+          : ((bytes[o] << 24) | (bytes[o + 1] << 16) | (bytes[o + 2] << 8) | bytes[o + 3]);
+    }
+
+    final magic = read16(2);
+    if (magic != 0x002A) return;
+
+    final ifd0Offset = read32(4);
+    if (ifd0Offset < 8 || ifd0Offset + 2 > bytes.length) return;
+
+    final entryCount = read16(ifd0Offset);
+    int entryOffset = ifd0Offset + 2;
+
+    for (int i = 0; i < entryCount; i++) {
+      if (entryOffset + 12 > bytes.length) break;
+      final tag = read16(entryOffset);
+      final type = read16(entryOffset + 2);
+      final count = read32(entryOffset + 4);
+
+      if (type == 2) {
+        String val = '';
+        if (count <= 4) {
+          final strBytes = bytes.sublist(entryOffset + 8, entryOffset + 8 + count);
+          val = latin1.decode(strBytes);
+        } else {
+          final valOffset = read32(entryOffset + 8);
+          if (valOffset > 0 && valOffset + count <= bytes.length) {
+            final strBytes = bytes.sublist(valOffset, valOffset + count);
+            val = latin1.decode(strBytes);
+          }
+        }
+        val = val.replaceAll('\x00', '').trim();
+
+        if (val.isNotEmpty) {
+          switch (tag) {
+            case 0x010E: // ImageDescription
+              result['title'] = val;
+              result['description'] = val;
+              break;
+            case 0x013B: // Artist
+              result['author'] = val;
+              break;
+            case 0x8298: // Copyright
+              result['copyright'] = val;
+              break;
+            case 0x0131: // Software
+              result['software'] = val;
+              break;
+            case 0x9286: // UserComment
+              result['comment'] = val;
+              break;
+          }
+        }
+      }
+      entryOffset += 12;
+    }
+  }
+
+  static Map<String, String> _extractPngMetadata(Uint8List bytes) {
+    final result = <String, String>{};
+    const pngSig = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (bytes.length < 8) return result;
+    for (int i = 0; i < 8; i++) {
+      if (bytes[i] != pngSig[i]) return result;
+    }
+
+    int offset = 8;
+    while (offset + 12 <= bytes.length) {
+      final len = (bytes[offset] << 24) |
+          (bytes[offset + 1] << 16) |
+          (bytes[offset + 2] << 8) |
+          bytes[offset + 3];
+      final type = latin1.decode(bytes.sublist(offset + 4, offset + 8));
+
+      if (offset + 12 + len > bytes.length) break;
+      final chunkData = bytes.sublist(offset + 8, offset + 8 + len);
+
+      if (type == 'tEXt') {
+        final nullIdx = chunkData.indexOf(0x00);
+        if (nullIdx > 0 && nullIdx < chunkData.length - 1) {
+          final key = latin1.decode(chunkData.sublist(0, nullIdx)).trim();
+          final val = latin1.decode(chunkData.sublist(nullIdx + 1)).trim();
+          if (val.isNotEmpty) {
+            switch (key.toLowerCase()) {
+              case 'title':
+                result['title'] = val;
+                break;
+              case 'author':
+              case 'artist':
+                result['author'] = val;
+                break;
+              case 'description':
+              case 'subject':
+                result['description'] = val;
+                break;
+              case 'copyright':
+                result['copyright'] = val;
+                break;
+              case 'software':
+                result['software'] = val;
+                break;
+              case 'comment':
+                result['comment'] = val;
+                break;
+            }
+          }
+        }
+      }
+
+      if (type == 'IEND') break;
+      offset += 12 + len;
+    }
+    return result;
   }
 
   /// Formats extracted metadata map into clean, readable plain text (TXT format)

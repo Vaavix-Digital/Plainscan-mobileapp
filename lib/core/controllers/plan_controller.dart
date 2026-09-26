@@ -201,10 +201,16 @@ class PlanController extends GetxController {
           for (var i = 0; i < filtered.length; i++) {
              if (filtered[i].planId.toLowerCase() == 'pro') {
                 final monthlyProduct = iapProducts.firstWhereOrNull(
-                  (p) => p.id == IAPService.monthlySubscriptionId || p.id.startsWith(IAPService.monthlySubscriptionId),
+                  (p) => p.id == IAPService.monthlySubscriptionId ||
+                         p.id.startsWith('${IAPService.monthlySubscriptionId}:') ||
+                         p.id.contains('monthly'),
                 );
                 final yearlyProduct = iapProducts.firstWhereOrNull(
-                  (p) => p.id == IAPService.yearlySubscriptionId || p.id.startsWith(IAPService.yearlySubscriptionId),
+                  (p) => p.id == IAPService.yearlySubscriptionId ||
+                         p.id.startsWith('${IAPService.yearlySubscriptionId}:') ||
+                         p.id.contains('anualy') ||
+                         p.id.contains('annual') ||
+                         p.id.contains('yearly'),
                 );
                 
                 if (monthlyProduct != null) {
