@@ -483,6 +483,19 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Obx(
+                      () => controller.appVersion.value.isNotEmpty
+                          ? Text(
+                              'Version ${controller.appVersion.value}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.secondaryText,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                   ],
                 ),
               ),

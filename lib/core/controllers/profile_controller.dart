@@ -14,6 +14,7 @@ import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/notification_service.dart';
+import 'package:plainscan/core/services/app_update_service.dart';
 
 class ProfileController extends GetxController {
   final RxString userName = 'User'.obs;
@@ -24,6 +25,7 @@ class ProfileController extends GetxController {
   final RxString userPlan = 'free'.obs;
   final RxBool isPro = false.obs;
   final RxInt userCredits = 250.obs;
+  final RxString appVersion = ''.obs;
 
   final RxBool autoSave = true.obs;
   final RxBool cloudBackup = false.obs;
@@ -32,6 +34,16 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     loadUserProfile();
+    loadAppVersion();
+  }
+
+  Future<void> loadAppVersion() async {
+    try {
+      final ver = await AppUpdateService.getCurrentVersion();
+      appVersion.value = ver;
+    } catch (e) {
+      debugPrint('Error loading app version: $e');
+    }
   }
 
   Future<void> refreshCredits() async {
