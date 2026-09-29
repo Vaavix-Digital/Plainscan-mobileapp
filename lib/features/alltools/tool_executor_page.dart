@@ -1122,24 +1122,9 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'AI Tool',
-            style: TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+
         const Text(
-          'Free AI Email Writer — Generate Professional Business Emails Instantly',
+          'AI Email Writer — Generate Professional Business Emails Instantly',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -1149,29 +1134,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
+       
       ],
     );
   }
@@ -1206,8 +1169,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
-              SizedBox(width: 8),
+              
               Text(
                 'Settings',
                 style: TextStyle(
@@ -1319,7 +1281,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     }
                     controller.executeJobFlow();
                   },
-                  icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                  // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                   label: const Text(
                     'Process with AI',
                     style: TextStyle(
@@ -1455,7 +1417,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 child: Row(
                   children: const [
-                    Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
+                    // Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
                     SizedBox(width: 8),
                     Text(
                       'Corrected Text',
@@ -1521,7 +1483,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       ),
                     ),
                     child: const Text(
-                      'Download TXT',
+                      'Share TXT',
                       style: TextStyle(
                         color: Color(0xFF334155),
                         fontWeight: FontWeight.w600,
@@ -1589,7 +1551,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF334155),
@@ -1823,9 +1785,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const SizedBox(height: 8),
         const Text(
-          'Free AI Proofreader — Fix Grammar,\nSpelling, and Style Instantly',
+          'AI Proofreader — Fix Grammar,\nSpelling, and Style Instantly',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -1835,28 +1796,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+        
         const SizedBox(height: 24),
       ],
     );
@@ -1885,7 +1825,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 18),
               SizedBox(width: 8),
               Text(
                 'Settings',
@@ -2011,7 +1951,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     }
                     controller.executeJobFlow();
                   },
-                  icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                  // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                   label: const Text(
                     'Process with AI',
                     style: TextStyle(
@@ -2149,7 +2089,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 child: Row(
                   children: const [
-                    Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
+                    // Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
                     SizedBox(width: 8),
                     Text(
                       'Corrected Text',
@@ -2215,7 +2155,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       ),
                     ),
                     child: const Text(
-                      'Download TXT',
+                      'Share TXT',
                       style: TextStyle(
                         color: Color(0xFF334155),
                         fontWeight: FontWeight.w600,
@@ -2283,7 +2223,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF334155),
@@ -2384,22 +2324,6 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'AI Tool',
-            style: TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         const Text(
           'AI Citation Generator — Create APA,\nMLA & Chicago Citations Instantly',
           textAlign: TextAlign.center,
@@ -2440,7 +2364,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+                  // Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
                   SizedBox(width: 8),
                   Text(
                     'Settings',
@@ -2579,7 +2503,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       onPressed: () {
                         controller.executeJobFlow();
                       },
-                      icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                      // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                       label: const Text(
                         'Process with AI',
                         style: TextStyle(
@@ -2900,7 +2824,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             style: TextStyle(
                               color: Color(0xFF334155),
                               fontWeight: FontWeight.w600,
@@ -2968,7 +2892,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                                   ),
                                 ),
                                 child: const Text(
-                                  'Download TXT',
+                                  'Share TXT',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Color(0xFF334155),
@@ -3133,22 +3057,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'AI Tool',
-            style: TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+       
         const Text(
           'AI Flashcard Generator — Create Study Cards From Any PDF or Document',
           textAlign: TextAlign.center,
@@ -3160,29 +3069,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
+       
+  
       ],
     );
   }
@@ -3477,7 +3365,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
               SizedBox(width: 8),
               Text(
                 'Settings',
@@ -3553,7 +3441,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: controller.executeJobFlow,
-                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                     label: const Text(
                       'Process with AI',
                       style: TextStyle(
@@ -3690,7 +3578,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 child: Row(
                   children: const [
-                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    // Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
                     SizedBox(width: 8),
                     Text(
                       'Corrected Text',
@@ -3754,7 +3642,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       ),
                     ),
                     child: const Text(
-                      'Download TXT',
+                      'Share TXT',
                       style: TextStyle(
                         color: Color(0xFF334155),
                         fontWeight: FontWeight.w600,
@@ -3822,7 +3710,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF334155),
@@ -3980,21 +3868,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'AI Tool',
-            style: TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+       
         const SizedBox(height: 12),
         const Text(
           'AI Quiz Generator — Create Quizzes from Any PDF, Document, or Text',
@@ -4007,28 +3881,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+        
         const SizedBox(height: 24),
       ],
     );
@@ -4332,7 +4185,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
               SizedBox(width: 8),
               Text(
                 'Settings',
@@ -4447,7 +4300,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: controller.executeJobFlow,
-                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                     label: const Text(
                       'Process with AI',
                       style: TextStyle(
@@ -4584,7 +4437,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 child: Row(
                   children: const [
-                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    // Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
                     SizedBox(width: 8),
                     Text(
                       'Corrected Text',
@@ -4648,7 +4501,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       ),
                     ),
                     child: const Text(
-                      'Download TXT',
+                      'Share TXT',
                       style: TextStyle(
                         color: Color(0xFF334155),
                         fontWeight: FontWeight.w600,
@@ -4716,7 +4569,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF334155),
@@ -5598,9 +5451,9 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const SizedBox(height: 12),
+       
         const Text(
-          'Free ATS Resume Scanner — Check Your Resume Score',
+          'ATS Resume Scanner — Check Your Resume Score',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -5609,29 +5462,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             height: 1.3,
           ),
         ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+       
         const SizedBox(height: 24),
       ],
     );
@@ -5816,7 +5647,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
               SizedBox(width: 8),
               Text(
                 'Settings',
@@ -5948,7 +5779,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: controller.executeJobFlow,
-                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                     label: const Text(
                       'Process with AI',
                       style: TextStyle(
@@ -6085,7 +5916,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
                 child: Row(
                   children: const [
-                    Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
+                    // Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
                     SizedBox(width: 8),
                     Text(
                       'Corrected Text',
@@ -6149,7 +5980,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                       ),
                     ),
                     child: const Text(
-                      'Download TXT',
+                      'Share TXT',
                       style: TextStyle(
                         color: Color(0xFF334155),
                         fontWeight: FontWeight.w600,
@@ -6217,7 +6048,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             ),
                           ),
                           child: const Text(
-                            'Download TXT',
+                            'Share TXT',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFF334155),
@@ -8154,6 +7985,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               TextField(
                 controller: controller.rawTextController,
                 maxLines: 5,
+                onChanged: controller.onRawTextChanged,
                 decoration: InputDecoration(
                   hintText: 'Enter text to process...',
                   border: OutlineInputBorder(
@@ -10516,6 +10348,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     color: AppColors.text,
                   ),
                 ),
+                SizedBox(width: 5,),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(

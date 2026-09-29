@@ -157,22 +157,21 @@ class DashboardUpdateBannerState extends UpgradeCardState {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (widget.showLater)
-                TextButton(
-                  onPressed: onUserLater,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    foregroundColor: AppColors.secondaryText,
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+              TextButton(
+                onPressed: onUserLater,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  child: Text(laterText),
+                  foregroundColor: AppColors.secondaryText,
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                child: const Text('Update Later'),
+              ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: onUserUpdated,

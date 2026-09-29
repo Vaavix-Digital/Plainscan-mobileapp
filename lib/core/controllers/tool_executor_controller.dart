@@ -600,6 +600,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     _loadInterstitialAd();
     loadSavedToken();
     initializeDefaults();
+    rawTextController.addListener(_onRawTextControllerChanged);
     _applyInitialFiles();
   }
 
@@ -4028,8 +4029,26 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
 
   void toggleUseRawText(bool val) {
     if (isRunning) return;
-    useRawText = val;
-    update();
+    if (useRawText != val || currentStep != 'idle' || convertedFile != null) {
+      useRawText = val;
+      clearPreviousResult(clearSelected: false);
+    } else {
+      update();
+    }
+  }
+
+  void _onRawTextControllerChanged() {
+    if (isRunning) return;
+    if (currentStep != 'idle' || convertedFile != null) {
+      clearPreviousResult(clearSelected: false);
+    }
+  }
+
+  void onRawTextChanged([String? _]) {
+    if (isRunning) return;
+    if (currentStep != 'idle' || convertedFile != null) {
+      clearPreviousResult(clearSelected: false);
+    }
   }
 
   Future<void> saveToken(String token) async {
@@ -6478,6 +6497,7 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
   void onClose() {
     _interstitialAd?.dispose();
     tokenController.dispose();
+    rawTextController.removeListener(_onRawTextControllerChanged);
     rawTextController.dispose();
     pageOrderController.dispose();
     formFillingDataController.dispose();
