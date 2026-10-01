@@ -90,9 +90,23 @@ class AllToolsController extends GetxController {
 
   ToolModel? findToolByIdOrSlug(String id) {
     final cleanId = id.replaceAll('_', '-');
-    return tools.firstWhereOrNull(
+    final match = tools.firstWhereOrNull(
       (t) => t.id == id || t.slug == id || t.id == cleanId || t.slug == cleanId,
     );
+    if (match != null) return match;
+    if (cleanId == 'summarize-pdf' || cleanId == 'summarize-long-pdf') {
+      return tools.firstWhereOrNull((t) => t.id == 'summarize-long-pdfs');
+    }
+    if (cleanId == 'ai-detection' || cleanId == 'ai-detector') {
+      return tools.firstWhereOrNull((t) => t.id == 'ai-detector');
+    }
+    if (cleanId == 'humanize-ai' || cleanId == 'humanize-ai-content') {
+      return tools.firstWhereOrNull((t) => t.id == 'humanize-ai-content');
+    }
+    if (cleanId == 'grammar-correction' || cleanId == 'grammar-checker') {
+      return tools.firstWhereOrNull((t) => t.id == 'grammar-checker');
+    }
+    return null;
   }
 
   Future<void> loadRecentTools() async {

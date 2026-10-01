@@ -11,6 +11,8 @@ import 'package:plainscan/core/services/background_job_service.dart';
 import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/core/services/iap_service.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
+import 'package:plainscan/core/services/subscription_service.dart';
 import 'package:plainscan/firebase_options.dart';
 
 void main() async {
@@ -31,6 +33,8 @@ void main() async {
   Get.put(ScanController(), permanent: true);
   Get.put(NotificationService(), permanent: true);
   Get.put(BackgroundJobService(), permanent: true);
+  Get.put(ProfileController(), permanent: true);
+  Get.put(SubscriptionService(), permanent: true);
   await StorageService.captureReferral();
   final savedLanguage = await StorageService.getLanguage();
   runApp(PlainScanApp(initialLocale: Locale(savedLanguage)));

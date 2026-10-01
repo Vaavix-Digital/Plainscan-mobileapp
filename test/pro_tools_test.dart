@@ -44,6 +44,7 @@ void main() {
       'ai-quiz',
       'chat-with-pdf',
       'ats-scanner',
+      'id-templates',
     ];
 
     test('all AI tools and specified tools are marked as Pro (isFree == false)', () {

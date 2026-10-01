@@ -117,6 +117,20 @@ class ProfileController extends GetxController {
     }
   }
 
+  void handlePlanExpired() {
+    userPlan.value = 'free';
+    isPro.value = false;
+    update();
+  }
+
+  Future<void> refreshUserProfile() async {
+    final localPlan = await StorageService.getPlan();
+    final pro = await StorageService.isProUser();
+    userPlan.value = localPlan;
+    isPro.value = pro;
+    update();
+  }
+
   Future<void> upgradeToPro() async {
     isPro.value = true;
     userPlan.value = 'pro';

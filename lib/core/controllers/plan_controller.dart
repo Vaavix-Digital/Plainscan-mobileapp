@@ -603,4 +603,19 @@ class PlanController extends GetxController {
     }
     return planId.toLowerCase() == 'free';
   }
+
+  /// Automatically updates currentPlan to Free plan when subscription expires
+  void handlePlanExpired() {
+    final freePlan = plans.firstWhereOrNull((p) => p.isFree) ??
+        PlanModel(
+          planId: 'free',
+          name: 'Free',
+          description: 'Perfect for occasional use',
+          priceMonthly: 0.0,
+          priceYearly: 0.0,
+        );
+    currentPlan.value = freePlan;
+    selectedPlanId.value = 'pro';
+    update();
+  }
 }

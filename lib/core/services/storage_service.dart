@@ -1,5 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:get/get.dart';
+import 'package:plainscan/core/controllers/plan_controller.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
+import 'package:plainscan/core/services/subscription_service.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:play_install_referrer/play_install_referrer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,10 +79,23 @@ class StorageService {
   static Future<void> savePlan(String plan) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyPlan, plan);
+    if (plan.toLowerCase() == 'free') {
+      _notifyPlanExpiration();
+    } else {
+      _notifyPlanUpdated();
+    }
   }
 
   static Future<String> getPlan() async {
     final prefs = await SharedPreferences.getInstance();
+    final isPro = await isProUser();
+    if (!isPro) {
+      final currentPlan = prefs.getString(_keyPlan) ?? 'free';
+      if (currentPlan.toLowerCase() == 'pro' || currentPlan.toLowerCase().contains('pro')) {
+        await expireProPlan();
+        return 'free';
+      }
+    }
     return prefs.getString(_keyPlan) ?? 'free';
   }
 
@@ -90,12 +107,31 @@ class StorageService {
     int? aiCreditsLimit,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyPlan, planId);
+
+    bool isExpired = false;
+    if (expiresAt != null && expiresAt.isNotEmpty) {
+      final expiry = DateTime.tryParse(expiresAt);
+      if (expiry != null && (DateTime.now().isAfter(expiry) || DateTime.now().isAtSameMomentAs(expiry))) {
+        isExpired = true;
+      }
+    }
+    if (status != null &&
+        (status.toLowerCase() == 'expired' ||
+         status.toLowerCase() == 'inactive' ||
+         status.toLowerCase() == 'canceled' ||
+         status.toLowerCase() == 'cancelled')) {
+      isExpired = true;
+    }
+
+    final effectivePlan = isExpired ? 'free' : planId;
+    final effectiveStatus = isExpired ? 'expired' : (status ?? 'active');
+
+    await prefs.setString(_keyPlan, effectivePlan);
     if (expiresAt != null && expiresAt.isNotEmpty) {
       await prefs.setString(_keyProExpiry, expiresAt);
     }
-    if (status != null && status.isNotEmpty) {
-      await prefs.setString(_keySubscriptionStatus, status);
+    if (effectiveStatus.isNotEmpty) {
+      await prefs.setString(_keySubscriptionStatus, effectiveStatus);
     }
     if (platform != null && platform.isNotEmpty) {
       await prefs.setString(_keySubscriptionPlatform, platform);
@@ -103,6 +139,92 @@ class StorageService {
     if (aiCreditsLimit != null) {
       await prefs.setInt(_keyAiCreditsLimit, aiCreditsLimit);
     }
+
+    if (effectivePlan.toLowerCase() == 'free') {
+      _notifyPlanExpiration();
+    } else {
+      _notifyPlanUpdated();
+    }
+  }
+
+  /// Parses and persists subscription details from various backend response formats
+  static Future<void> processAndSaveSubscription({
+    required Map<String, dynamic> data,
+    Map<String, dynamic>? user,
+  }) async {
+    final userObj = user ??
+        (data['user'] is Map<String, dynamic> ? data['user'] as Map<String, dynamic> : null);
+
+    // Extract plan
+    String planId = (userObj?['plan_id'] ??
+            userObj?['plan'] ??
+            data['plan_id'] ??
+            data['plan'] ??
+            'free')
+        .toString();
+
+    // Extract expiry timestamp
+    dynamic rawExpiry = userObj?['expires_at'] ??
+        userObj?['subscription_expires_at'] ??
+        userObj?['subscription_end_date'] ??
+        userObj?['pro_expires_at'] ??
+        data['expires_at'] ??
+        data['subscription_expires_at'] ??
+        data['subscription_end_date'] ??
+        data['pro_expiry'] ??
+        data['pro_expires_at'];
+
+    if (rawExpiry == null && data['subscription'] is Map) {
+      final sub = data['subscription'] as Map;
+      rawExpiry = sub['expires_at'] ?? sub['end_date'] ?? sub['current_period_end'];
+    }
+    if (rawExpiry == null && userObj?['subscription'] is Map) {
+      final sub = userObj!['subscription'] as Map;
+      rawExpiry = sub['expires_at'] ?? sub['end_date'] ?? sub['current_period_end'];
+    }
+
+    String? expiresAt;
+    if (rawExpiry != null) {
+      if (rawExpiry is int) {
+        final dt = rawExpiry > 100000000000
+            ? DateTime.fromMillisecondsSinceEpoch(rawExpiry)
+            : DateTime.fromMillisecondsSinceEpoch(rawExpiry * 1000);
+        expiresAt = dt.toIso8601String();
+      } else if (rawExpiry is num) {
+        final dt = DateTime.fromMillisecondsSinceEpoch(rawExpiry.toInt() * 1000);
+        expiresAt = dt.toIso8601String();
+      } else {
+        expiresAt = rawExpiry.toString();
+      }
+    }
+
+    // Extract status
+    dynamic rawStatus = userObj?['subscription_status'] ??
+        userObj?['status'] ??
+        data['subscription_status'] ??
+        data['status'];
+
+    if (rawStatus == null && data['subscription'] is Map) {
+      rawStatus = (data['subscription'] as Map)['status'];
+    }
+    if (rawStatus == null && userObj?['subscription'] is Map) {
+      rawStatus = (userObj!['subscription'] as Map)['status'];
+    }
+    final status = rawStatus?.toString();
+
+    // AI credits limit if present
+    int? aiCreditsLimit;
+    final rawCredits = userObj?['ai_credits_limit'] ?? data['ai_credits_limit'];
+    if (rawCredits is num) {
+      aiCreditsLimit = rawCredits.toInt();
+    }
+
+    await saveSubscriptionDetails(
+      planId: planId,
+      expiresAt: expiresAt,
+      status: status,
+      aiCreditsLimit: aiCreditsLimit,
+    );
   }
 
   static Future<String?> getSubscriptionStatus() async {
@@ -306,7 +428,9 @@ class StorageService {
       expiryDate = now.add(Duration(days: days));
     }
     await prefs.setString(_keyProExpiry, expiryDate.toIso8601String());
-    await savePlan('pro');
+    await prefs.setString(_keyPlan, 'pro');
+    await prefs.setString(_keySubscriptionStatus, 'active');
+    _notifyPlanUpdated();
   }
 
   static Future<DateTime?> getProExpiryDate() async {
@@ -329,17 +453,101 @@ class StorageService {
     await prefs.setInt(_keyReferralsCount, count + 1);
   }
 
-  static Future<bool> isProUser() async {
+  /// Checks whether user's Pro plan has expired, updates local storage to 'free' and notifies app state
+  static Future<bool> checkAndEnforcePlanExpiration() async {
     final prefs = await SharedPreferences.getInstance();
+    final plan = prefs.getString(_keyPlan) ?? 'free';
     final expiryStr = prefs.getString(_keyProExpiry);
-    if (expiryStr != null) {
+    final status = prefs.getString(_keySubscriptionStatus);
+
+    bool hasExpired = false;
+
+    if (expiryStr != null && expiryStr.isNotEmpty) {
       final expiry = DateTime.tryParse(expiryStr);
-      if (expiry != null && DateTime.now().isBefore(expiry)) {
-        return true;
+      if (expiry != null && (DateTime.now().isAfter(expiry) || DateTime.now().isAtSameMomentAs(expiry))) {
+        hasExpired = true;
       }
     }
-    final plan = await getPlan();
-    return plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro');
+
+    if (status != null &&
+        (status.toLowerCase() == 'expired' ||
+         status.toLowerCase() == 'inactive' ||
+         status.toLowerCase() == 'canceled' ||
+         status.toLowerCase() == 'cancelled')) {
+      hasExpired = true;
+    }
+
+    if (hasExpired && (plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro') || plan.toLowerCase() == 'teams')) {
+      await expireProPlan();
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Automatically downgrades Pro subscription to Free and notifies all controllers
+  static Future<void> expireProPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPlan, 'free');
+    await prefs.setString(_keySubscriptionStatus, 'expired');
+    _notifyPlanExpiration();
+  }
+
+  static Future<bool> isProUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final status = prefs.getString(_keySubscriptionStatus);
+
+    if (status != null &&
+        (status.toLowerCase() == 'expired' ||
+         status.toLowerCase() == 'inactive' ||
+         status.toLowerCase() == 'canceled' ||
+         status.toLowerCase() == 'cancelled')) {
+      await expireProPlan();
+      return false;
+    }
+
+    final expiryStr = prefs.getString(_keyProExpiry);
+    if (expiryStr != null && expiryStr.isNotEmpty) {
+      final expiry = DateTime.tryParse(expiryStr);
+      if (expiry != null) {
+        if (DateTime.now().isBefore(expiry)) {
+          return true;
+        } else {
+          // Expiration passed!
+          await expireProPlan();
+          return false;
+        }
+      }
+    }
+
+    final plan = prefs.getString(_keyPlan) ?? 'free';
+    return plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro') || plan.toLowerCase() == 'teams';
+  }
+
+  static void _notifyPlanExpiration() {
+    try {
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().handlePlanExpired();
+      }
+    } catch (_) {}
+    try {
+      if (Get.isRegistered<PlanController>()) {
+        Get.find<PlanController>().handlePlanExpired();
+      }
+    } catch (_) {}
+  }
+
+  static void _notifyPlanUpdated() {
+    try {
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().refreshUserProfile();
+      }
+    } catch (_) {}
+    try {
+      if (Get.isRegistered<SubscriptionService>()) {
+        Get.find<SubscriptionService>().onPlanUpdated();
+      }
+    } catch (_) {}
   }
 
   /// Applies a referral code to award 50 credits and unlock 1 month unlimited PRO access.

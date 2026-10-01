@@ -59,10 +59,22 @@ class PlanService {
       if (response.statusCode == 200) {
         final dynamic decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
+          await StorageService.processAndSaveSubscription(data: decoded);
           final plan = PlanModel.fromJson(decoded);
-          await StorageService.savePlan(plan.planId);
+          if (plan.isFree || decoded['status']?.toString().toLowerCase() == 'expired') {
+            await StorageService.expireProPlan();
+          }
           return plan;
         }
+      } else if (response.statusCode == 404 || response.statusCode == 403) {
+        // Backend reports no active subscription for this user (reverted to free)
+        await StorageService.expireProPlan();
+        return PlanModel(
+          planId: 'free',
+          name: 'Free',
+          priceMonthly: 0,
+          priceYearly: 0,
+        );
       } else {
         debugPrint('Current plan API error: ${response.statusCode} - ${response.body}');
       }

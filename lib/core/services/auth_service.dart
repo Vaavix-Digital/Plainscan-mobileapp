@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:plainscan/core/constants/api_constants.dart';
 import 'package:plainscan/core/controllers/alltool_controller.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/notification_service.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/services/subscription_service.dart';
 
 class AuthResult {
   final bool success;
@@ -102,11 +104,13 @@ class AuthService {
         final token = data['accessToken'] ?? '';
         final refreshToken = data['refreshToken'] ?? '';
         final userName = data['user']?['name'] ?? 'User';
-        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
         await StorageService.saveTokens(token: token, refreshToken: refreshToken);
         await StorageService.saveUser(email: email, name: userName);
-        await StorageService.savePlan(plan.toString());
+        await StorageService.processAndSaveSubscription(
+          data: data,
+          user: data['user'] is Map<String, dynamic> ? data['user'] as Map<String, dynamic> : null,
+        );
         await _refreshUserSessionState();
 
         return AuthResult(success: true, token: token, refreshToken: refreshToken);
@@ -163,7 +167,6 @@ class AuthService {
         final token = data['accessToken'] ?? '';
         final refreshToken = data['refreshToken'] ?? '';
         final userName = data['user']?['name'] ?? 'User';
-        final plan = data['user']?['plan_id'] ?? data['plan'] ?? 'free';
 
         final userObj = data['user'] is Map<String, dynamic> ? data['user'] as Map<String, dynamic> : <String, dynamic>{};
         final userId = userObj['user_id']?.toString() ?? userObj['id']?.toString() ?? '';
@@ -178,7 +181,7 @@ class AuthService {
           picture: picture,
           role: role,
         );
-        await StorageService.savePlan(plan.toString());
+        await StorageService.processAndSaveSubscription(data: data, user: userObj);
 
         final userReferralCode = userObj['referral_code']?.toString() ??
             data['referral_code']?.toString();
@@ -288,7 +291,6 @@ class AuthService {
         final name = user['name']?.toString() ?? 'User';
         final picture = user['picture']?.toString();
         final role = user['role']?.toString() ?? 'user';
-        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
 
         await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
         await StorageService.saveUser(
@@ -298,7 +300,7 @@ class AuthService {
           picture: picture,
           role: role,
         );
-        await StorageService.savePlan(plan);
+        await StorageService.processAndSaveSubscription(data: data, user: user);
 
         final userReferralCode = user['referral_code']?.toString() ??
             data['referral_code']?.toString();
@@ -386,7 +388,6 @@ class AuthService {
         final name = user['name']?.toString() ?? 'User';
         final picture = user['picture']?.toString();
         final role = user['role']?.toString() ?? 'user';
-        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
 
         await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
         await StorageService.saveUser(
@@ -396,7 +397,7 @@ class AuthService {
           picture: picture,
           role: role,
         );
-        await StorageService.savePlan(plan);
+        await StorageService.processAndSaveSubscription(data: data, user: user);
 
         final userReferralCode = user['referral_code']?.toString() ??
             data['referral_code']?.toString();
@@ -473,7 +474,6 @@ class AuthService {
         final name = user['name']?.toString() ?? 'User';
         final picture = user['picture']?.toString();
         final role = user['role']?.toString() ?? 'user';
-        final plan = user['plan_id']?.toString() ?? data['plan']?.toString() ?? 'free';
 
         await StorageService.saveTokens(token: tokenVal, refreshToken: refreshTokenVal);
         await StorageService.saveUser(
@@ -483,7 +483,7 @@ class AuthService {
           picture: picture,
           role: role,
         );
-        await StorageService.savePlan(plan);
+        await StorageService.processAndSaveSubscription(data: data, user: user);
 
         final userReferralCode = user['referral_code']?.toString() ??
             data['referral_code']?.toString();
@@ -573,8 +573,7 @@ class AuthService {
             ? responseData['data'] as Map<String, dynamic>
             : (responseData is Map<String, dynamic> ? responseData : <String, dynamic>{});
         if (data.isNotEmpty) {
-          final plan = data['plan_id'] ?? data['plan'] ?? 'free';
-          await StorageService.savePlan(plan.toString());
+          await StorageService.processAndSaveSubscription(data: data);
           final name = data['name']?.toString();
           if (name != null && name.isNotEmpty) {
             final email = data['email']?.toString() ?? await StorageService.getEmail() ?? '';
@@ -665,6 +664,21 @@ class AuthService {
           await Get.find<NotificationService>().onLogout();
         } else {
           await Get.find<NotificationService>().reloadForCurrentUser();
+        }
+      }
+      if (Get.isRegistered<SubscriptionService>()) {
+        if (isLogout) {
+          Get.find<SubscriptionService>().onLogout();
+        } else {
+          await Get.find<SubscriptionService>().checkSubscriptionStatus(syncBackend: true);
+        }
+      }
+      if (Get.isRegistered<ProfileController>()) {
+        if (isLogout) {
+          Get.find<ProfileController>().userPlan.value = 'free';
+          Get.find<ProfileController>().isPro.value = false;
+        } else {
+          await Get.find<ProfileController>().loadUserProfile();
         }
       }
     } catch (_) {}

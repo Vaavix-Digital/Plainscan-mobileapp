@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
 import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
@@ -210,6 +211,56 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                             _buildErrorCard(controller),
                             const SizedBox(height: 16),
                           ],
+                          if (!(tool.isFree ?? true))
+                            Obx(() {
+                              final profileCtrl = Get.isRegistered<ProfileController>()
+                                  ? Get.find<ProfileController>()
+                                  : Get.put(ProfileController());
+                              if (!profileCtrl.isPro.value) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFF59E0B)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 24),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Pro Subscription Required',
+                                              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF92400E), fontSize: 14),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${tool.name} is a Pro tool. Please upgrade your plan to run it.',
+                                              style: const TextStyle(color: Color(0xFFB45309), fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: profileCtrl.showUpgradeBottomSheet,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFD97706),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        child: const Text('UPGRADE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }),
                           ElevatedButton(
                             onPressed: controller.isExecutionDisabled
                                 ? null
@@ -4727,24 +4778,10 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'AI Tool',
-            style: TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+       
+        
         const Text(
-          'Free Chat with PDF Online — Ask Document Questions Now',
+          'Chat with PDF Online — Ask Document Questions Now',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
@@ -4754,28 +4791,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7A00),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 13),
-              SizedBox(width: 5),
-              Text(
-                'Pro Feature',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+       
         const SizedBox(height: 24),
       ],
     );
@@ -4923,7 +4939,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
+              // Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 18),
               SizedBox(width: 8),
               Text(
                 'Settings',
@@ -5000,7 +5016,7 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: controller.executeJobFlow,
-                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                    // icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
                     label: const Text(
                       'Process with AI',
                       style: TextStyle(
@@ -5101,11 +5117,14 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     BuildContext context,
     ToolExecutorController controller,
   ) {
+    final docTitle = controller.selectedFile?.name ?? 'your document';
     final messages = controller.chatPdfMessages.isNotEmpty
         ? controller.chatPdfMessages
         : [
-            {'role': 'user', 'text': 'what is the main topic ?'},
-            {'role': 'assistant', 'text': 'The main topic of the given text is "Voter Information".'},
+            {
+              'role': 'assistant',
+              'text': 'I have analyzed "$docTitle". What would you like to know? You can ask for a summary, key takeaways, action items, or specific questions about its content.',
+            },
           ];
 
     return Column(
@@ -8816,6 +8835,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
 
 
       case 'ai-summarize':
+      case 'summarize-long-pdfs':
+      case 'summarize-pdf':
         child = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -9109,6 +9130,42 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 DropdownMenuItem(value: 'academic', child: Text('Academic')),
               ],
               onChanged: (val) => controller.setAiHumanizeStyle(val!),
+            ),
+          ],
+        );
+        break;
+
+      case 'grammar-checker':
+      case 'grammar-correction':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Grammar & Spell Check Settings',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Checks syntax, punctuation, subject-verb agreements, and vocabulary in depth.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+        );
+        break;
+
+      case 'ai-detector':
+      case 'ai-detection':
+        child = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'AI Detection Engine',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Analyzes perplexity, burstiness, and stylistic patterns to determine human vs. AI authorship probability.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ],
         );
@@ -10653,6 +10710,12 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
   }
 
   Widget _buildSuccessCard(ToolExecutorController controller) {
+    final slug = controller.getSlug();
+    final hasAiSummary = (slug == 'summarize-long-pdfs' || slug == 'summarize-pdf' || slug == 'ai-summarize') && controller.generatedSummaryContent.isNotEmpty;
+    final hasDetector = (slug == 'ai-detector' || slug == 'ai-detection') && (controller.detectorResultMap != null || controller.generatedDetectorContent.isNotEmpty);
+    final hasHumanize = (slug == 'humanize-ai-content' || slug == 'humanize-ai') && controller.generatedHumanizeContent.isNotEmpty;
+    final hasGrammar = (slug == 'grammar-checker' || slug == 'grammar-correction') && controller.generatedGrammarContent.isNotEmpty;
+
     return Card(
       color: Colors.green.shade50,
       elevation: 0,
@@ -10666,10 +10729,10 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.green, size: 24),
-                SizedBox(width: 10),
-                Text(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                const SizedBox(width: 10),
+                const Text(
                   'Execution Successful!',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -10677,6 +10740,31 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                     fontSize: 14,
                   ),
                 ),
+                const Spacer(),
+                if (hasAiSummary)
+                  TextButton.icon(
+                    onPressed: controller.copySummaryContent,
+                    icon: const Icon(Icons.copy, size: 14, color: Colors.green),
+                    label: const Text('Copy', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  )
+                else if (hasDetector)
+                  TextButton.icon(
+                    onPressed: controller.copyDetectorResult,
+                    icon: const Icon(Icons.copy, size: 14, color: Colors.green),
+                    label: const Text('Copy Report', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  )
+                else if (hasHumanize)
+                  TextButton.icon(
+                    onPressed: controller.copyHumanizedContent,
+                    icon: const Icon(Icons.copy, size: 14, color: Colors.green),
+                    label: const Text('Copy', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  )
+                else if (hasGrammar)
+                  TextButton.icon(
+                    onPressed: controller.copyGrammarContent,
+                    icon: const Icon(Icons.copy, size: 14, color: Colors.green),
+                    label: const Text('Copy', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -10684,6 +10772,100 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
               'The tool finished processing. Output file "${controller.outputFileName}" has been generated and successfully registered in the Files Manager.',
               style: TextStyle(color: Colors.green.shade900, fontSize: 12),
             ),
+            if (hasDetector && controller.detectorResultMap != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade100),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Classification: ${controller.detectorResultMap!['classification'] ?? 'Analyzed'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${controller.detectorResultMap!['ai_probability_percentage'] ?? 0}% AI Risk',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: ((controller.detectorResultMap!['ai_probability_percentage'] as num?) ?? 0) > 50
+                                ? Colors.red.shade700
+                                : Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      controller.detectorResultMap!['summary']?.toString() ?? '',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (hasAiSummary) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade100),
+                ),
+                child: Text(
+                  controller.generatedSummaryContent,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)),
+                ),
+              ),
+            ] else if (hasHumanize) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade100),
+                ),
+                child: Text(
+                  controller.generatedHumanizeContent,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)),
+                ),
+              ),
+            ] else if (hasGrammar) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade100),
+                ),
+                child: Text(
+                  controller.generatedGrammarContent,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
