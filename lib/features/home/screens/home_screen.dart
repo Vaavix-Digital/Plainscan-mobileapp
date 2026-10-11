@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/app_update_service.dart';
+import 'package:plainscan/core/services/subscription_service.dart';
 import 'package:plainscan/features/ai/pages/ai_page.dart';
 import 'package:plainscan/features/alltools/all_tools.dart';
 import 'package:plainscan/features/home/pages/dashboard_page.dart';
@@ -16,6 +17,9 @@ class HomeScreenController extends GetxController {
     super.onInit();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AppUpdateService.checkOnAppStart();
+      if (Get.isRegistered<SubscriptionService>()) {
+        Get.find<SubscriptionService>().showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      }
     });
   }
 

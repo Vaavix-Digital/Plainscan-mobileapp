@@ -29,6 +29,8 @@ class StorageService {
   static const String _keySubscriptionStatus = 'subscription_status';
   static const String _keySubscriptionPlatform = 'subscription_platform';
   static const String _keyAiCreditsLimit = 'ai_credits_limit';
+  static const String _keyHasPreviouslySelectedPlan = 'has_previously_selected_plan';
+  static const String _keyHasShownExpiredNotice = 'has_shown_expired_notice';
 
   /// Generates a unique 6-character referral code per user/device
   static String generateUniqueReferralCode({String? seed}) {
@@ -82,6 +84,8 @@ class StorageService {
     if (plan.toLowerCase() == 'free') {
       _notifyPlanExpiration();
     } else {
+      await setHasPreviouslySelectedPlan(true);
+      await setHasShownExpiredNotice(false);
       _notifyPlanUpdated();
     }
   }
@@ -108,6 +112,11 @@ class StorageService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
+    final isPaidPlan = planId.toLowerCase() != 'free';
+    if (isPaidPlan || (expiresAt != null && expiresAt.isNotEmpty)) {
+      await prefs.setBool(_keyHasPreviouslySelectedPlan, true);
+    }
+
     bool isExpired = false;
     if (expiresAt != null && expiresAt.isNotEmpty) {
       final expiry = DateTime.tryParse(expiresAt);
@@ -125,6 +134,10 @@ class StorageService {
 
     final effectivePlan = isExpired ? 'free' : planId;
     final effectiveStatus = isExpired ? 'expired' : (status ?? 'active');
+
+    if (isPaidPlan && !isExpired) {
+      await prefs.setBool(_keyHasShownExpiredNotice, false);
+    }
 
     await prefs.setString(_keyPlan, effectivePlan);
     if (expiresAt != null && expiresAt.isNotEmpty) {
@@ -240,6 +253,90 @@ class StorageService {
   static Future<int?> getAiCreditsLimit() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_keyAiCreditsLimit);
+  }
+
+  /// Sets whether the user previously selected or purchased a plan
+  static Future<void> setHasPreviouslySelectedPlan(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasPreviouslySelectedPlan, value);
+  }
+
+  /// Sets whether the expired plan notification has already been shown for the current expired subscription
+  static Future<void> setHasShownExpiredNotice(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasShownExpiredNotice, value);
+  }
+
+  /// Checks whether the expired plan notification has already been displayed to the user
+  static Future<bool> hasShownExpiredNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasShownExpiredNotice) ?? false;
+  }
+
+  /// Checks if user previously selected a paid/pro plan (or had an expiry/platform recorded)
+  static Future<bool> hasPreviouslySelectedPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_keyHasPreviouslySelectedPlan) == true) {
+      return true;
+    }
+    final expiryStr = prefs.getString(_keyProExpiry);
+    if (expiryStr != null && expiryStr.isNotEmpty) {
+      return true;
+    }
+    final platform = prefs.getString(_keySubscriptionPlatform);
+    if (platform != null && platform.isNotEmpty) {
+      return true;
+    }
+    final plan = prefs.getString(_keyPlan);
+    if (plan != null &&
+        (plan.toLowerCase() == 'pro' ||
+         plan.toLowerCase().contains('pro') ||
+         plan.toLowerCase() == 'teams')) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Evaluates whether the user's subscription has expired based on their actual subscription status:
+  /// - False if user never selected a plan
+  /// - False if user is an active subscriber
+  /// - True only if user previously selected a plan and is now expired
+  static Future<bool> isSubscriptionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final hadPlan = await hasPreviouslySelectedPlan();
+    if (!hadPlan) {
+      return false;
+    }
+
+    final isPro = await isProUser();
+    if (isPro) {
+      return false;
+    }
+
+    final status = prefs.getString(_keySubscriptionStatus)?.toLowerCase();
+    if (status == 'expired' ||
+        status == 'inactive' ||
+        status == 'canceled' ||
+        status == 'cancelled') {
+      return true;
+    }
+
+    final expiryStr = prefs.getString(_keyProExpiry);
+    if (expiryStr != null && expiryStr.isNotEmpty) {
+      final expiry = DateTime.tryParse(expiryStr);
+      if (expiry != null &&
+          (DateTime.now().isAfter(expiry) || DateTime.now().isAtSameMomentAs(expiry))) {
+        return true;
+      }
+    }
+
+    final plan = prefs.getString(_keyPlan) ?? 'free';
+    if (plan.toLowerCase() == 'free') {
+      return true;
+    }
+
+    return false;
   }
 
   static Future<String> getMyReferralCode() async {
@@ -430,6 +527,8 @@ class StorageService {
     await prefs.setString(_keyProExpiry, expiryDate.toIso8601String());
     await prefs.setString(_keyPlan, 'pro');
     await prefs.setString(_keySubscriptionStatus, 'active');
+    await prefs.setBool(_keyHasPreviouslySelectedPlan, true);
+    await prefs.setBool(_keyHasShownExpiredNotice, false);
     _notifyPlanUpdated();
   }
 
@@ -478,6 +577,7 @@ class StorageService {
     }
 
     if (hasExpired && (plan.toLowerCase() == 'pro' || plan.toLowerCase().contains('pro') || plan.toLowerCase() == 'teams')) {
+      await setHasPreviouslySelectedPlan(true);
       await expireProPlan();
       return true;
     }
@@ -650,6 +750,8 @@ class StorageService {
     await prefs.remove(_keyUserId);
     await prefs.remove(_keyPicture);
     await prefs.remove(_keyRole);
+    await prefs.remove(_keyHasPreviouslySelectedPlan);
+    await prefs.remove(_keyHasShownExpiredNotice);
     await prefs.remove('is_guest');
   }
 

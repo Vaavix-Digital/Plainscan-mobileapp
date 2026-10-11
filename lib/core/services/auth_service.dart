@@ -670,7 +670,7 @@ class AuthService {
         if (isLogout) {
           Get.find<SubscriptionService>().onLogout();
         } else {
-          await Get.find<SubscriptionService>().checkSubscriptionStatus(syncBackend: true);
+          await Get.find<SubscriptionService>().checkSubscriptionStatus(syncBackend: true, isAppOpen: true);
         }
       }
       if (Get.isRegistered<ProfileController>()) {

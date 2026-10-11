@@ -61,14 +61,20 @@ class PlanService {
         if (decoded is Map<String, dynamic>) {
           await StorageService.processAndSaveSubscription(data: decoded);
           final plan = PlanModel.fromJson(decoded);
-          if (plan.isFree || decoded['status']?.toString().toLowerCase() == 'expired') {
+          final hadPlan = await StorageService.hasPreviouslySelectedPlan();
+          final isCurrentlyPro = await StorageService.isProUser();
+          if ((hadPlan || isCurrentlyPro) &&
+              (plan.isFree || decoded['status']?.toString().toLowerCase() == 'expired')) {
             await StorageService.expireProPlan();
           }
           return plan;
         }
       } else if (response.statusCode == 404 || response.statusCode == 403) {
-        // Backend reports no active subscription for this user (reverted to free)
-        await StorageService.expireProPlan();
+        // Backend reports no active subscription for this user (free user)
+        final isCurrentlyPro = await StorageService.isProUser();
+        if (isCurrentlyPro) {
+          await StorageService.expireProPlan();
+        }
         return PlanModel(
           planId: 'free',
           name: 'Free',

@@ -171,4 +171,183 @@ void main() {
       expect(isPro, isFalse);
     });
   });
+
+  group('Plan Expired Notification Requirements', () {
+    test('Free user who never selected a plan is not marked as expired and receives no notification', () async {
+      await StorageService.savePlan('free');
+      final subService = Get.put(SubscriptionService());
+
+      expect(await StorageService.hasPreviouslySelectedPlan(), isFalse);
+      expect(await StorageService.isSubscriptionExpired(), isFalse);
+      expect(await StorageService.isProUser(), isFalse);
+
+      final shown = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(shown, isFalse);
+      expect(subService.hasShownExpiredMessageInSession, isFalse);
+    });
+
+    test('Active subscriber is not marked as expired and receives no notification', () async {
+      final futureDate = DateTime.now().add(const Duration(days: 30)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: futureDate,
+        status: 'active',
+      );
+      final subService = Get.put(SubscriptionService());
+
+      expect(await StorageService.hasPreviouslySelectedPlan(), isTrue);
+      expect(await StorageService.isProUser(), isTrue);
+      expect(await StorageService.isSubscriptionExpired(), isFalse);
+
+      final shown = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(shown, isFalse);
+      expect(subService.hasShownExpiredMessageInSession, isFalse);
+    });
+
+    test('Expired plan user receives notification only once when opening app and prevents duplicates in session', () async {
+      final pastDate = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: pastDate,
+        status: 'expired',
+      );
+      final subService = Get.put(SubscriptionService());
+
+      expect(await StorageService.hasPreviouslySelectedPlan(), isTrue);
+      expect(await StorageService.isProUser(), isFalse);
+      expect(await StorageService.isSubscriptionExpired(), isTrue);
+
+      // 1. First app open: notification is eligible and shown
+      final firstShow = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(firstShow, isTrue);
+      expect(subService.hasShownExpiredMessageInSession, isTrue);
+
+      // 2. Duplicate check during the same session on app open: blocked
+      final duplicateShow = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(duplicateShow, isFalse);
+
+      // 3. Normal app usage (isAppOpen: false): blocked
+      final duringUsageShow = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: false);
+      expect(duringUsageShow, isFalse);
+    });
+
+    test('Normal app usage does not trigger notification even if user is expired', () async {
+      final pastDate = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: pastDate,
+        status: 'expired',
+      );
+      final subService = Get.put(SubscriptionService());
+
+      // Normal usage (e.g., navigating, using tools)
+      final shown = await subService.showExpiredPlanNoticeIfEligible(isAppOpen: false);
+      expect(shown, isFalse);
+      expect(subService.hasShownExpiredMessageInSession, isFalse);
+    });
+
+    test('Session flag persists across multiple checkSubscriptionStatus calls in same session', () async {
+      final pastDate = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: pastDate,
+        status: 'expired',
+      );
+      final subService = Get.put(SubscriptionService());
+
+      // Initial open
+      await subService.checkSubscriptionStatus(isAppOpen: true);
+      expect(subService.hasShownExpiredMessageInSession, isTrue);
+
+      // Second check (e.g. repeated login or navigation in same session)
+      await subService.checkSubscriptionStatus(isAppOpen: true);
+      expect(subService.hasShownExpiredMessageInSession, isTrue);
+    });
+
+    test('Free user checking subscription status on login never triggers notification', () async {
+      await StorageService.savePlan('free');
+      final subService = Get.put(SubscriptionService());
+
+      await subService.checkSubscriptionStatus(isAppOpen: true);
+      expect(subService.hasShownExpiredMessageInSession, isFalse);
+    });
+
+    test('Expiration message appears only once on first app open and does not appear when closing and reopening app', () async {
+      final pastDate = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: pastDate,
+        status: 'expired',
+      );
+
+      // Session 1: User opens app for the first time after expiration
+      final subService1 = Get.put(SubscriptionService());
+      final firstAppOpen = await subService1.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(firstAppOpen, isTrue);
+      expect(await StorageService.hasShownExpiredNotice(), isTrue);
+
+      // Session 2: User closes Plainscan and reopens it
+      Get.reset();
+      final subService2 = Get.put(SubscriptionService());
+      expect(subService2.hasShownExpiredMessageInSession, isFalse);
+
+      final reopenAppOpen = await subService2.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(reopenAppOpen, isFalse);
+
+      // Also verify via checkSubscriptionStatus on app restart
+      await subService2.checkSubscriptionStatus(isAppOpen: true);
+      expect(subService2.hasShownExpiredMessageInSession, isFalse);
+    });
+
+    test('New subscription renewal resets expired notice flag so next expiration shows notice once', () async {
+      final pastDate = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: pastDate,
+        status: 'expired',
+      );
+
+      final subService1 = Get.put(SubscriptionService());
+      await subService1.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(await StorageService.hasShownExpiredNotice(), isTrue);
+
+      // User renews / purchases Pro
+      final futureDate = DateTime.now().add(const Duration(days: 30)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: futureDate,
+        status: 'active',
+      );
+      expect(await StorageService.hasShownExpiredNotice(), isFalse);
+
+      // Later, the renewed plan expires
+      final secondPastDate = DateTime.now().subtract(const Duration(days: 1)).toIso8601String();
+      await StorageService.saveSubscriptionDetails(
+        planId: 'pro',
+        expiresAt: secondPastDate,
+        status: 'expired',
+      );
+
+      // First open after renewed plan expired: shows notice once
+      Get.reset();
+      final subService2 = Get.put(SubscriptionService());
+      final renewedExpireShown = await subService2.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(renewedExpireShown, isTrue);
+      expect(await StorageService.hasShownExpiredNotice(), isTrue);
+
+      // Reopening app again: do not show notice
+      Get.reset();
+      final subService3 = Get.put(SubscriptionService());
+      final reopenAfterRenewal = await subService3.showExpiredPlanNoticeIfEligible(isAppOpen: true);
+      expect(reopenAfterRenewal, isFalse);
+    });
+
+    test('Logout clears persistent hasShownExpiredNotice flag', () async {
+      await StorageService.setHasShownExpiredNotice(true);
+      expect(await StorageService.hasShownExpiredNotice(), isTrue);
+
+      await StorageService.logout();
+      expect(await StorageService.hasShownExpiredNotice(), isFalse);
+    });
+  });
 }
