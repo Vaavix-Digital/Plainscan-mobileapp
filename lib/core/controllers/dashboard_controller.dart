@@ -8,6 +8,8 @@ import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/core/services/referral_service.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/tool_model.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 
 class DashboardController extends GetxController {
   final searchController = TextEditingController();
@@ -165,7 +167,26 @@ class DashboardController extends GetxController {
     ),
   ];
 
-  void triggerToolAction(ToolModel tool) {
+  void triggerToolAction(ToolModel tool) async {
+    final hasSession = await StorageService.hasSession();
+    final isGuest = await StorageService.isGuestMode();
+
+    if (!hasSession && isGuest) {
+      final isScanTool = tool.id == 'doc_scan' || tool.id == 'id_scan' || tool.id == 'pdf-scanner';
+      if (isScanTool) {
+        final hasUsed = await StorageService.hasGuestUsedFreeScan();
+        if (hasUsed) {
+          await showGuestLoginRequiredDialog(isScanLimit: true);
+          return;
+        }
+        Get.find<ScanController>().openScanner();
+        return;
+      } else {
+        await showGuestLoginRequiredDialog(toolName: tool.name);
+        return;
+      }
+    }
+
     allToolsController.recordToolUsage(tool.id);
 
     final isFree = tool.isFree ?? true;

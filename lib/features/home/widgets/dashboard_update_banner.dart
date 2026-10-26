@@ -37,8 +37,13 @@ class DashboardUpdateBanner extends UpgradeCard {
 }
 
 class DashboardUpdateBannerState extends UpgradeCardState {
+  bool _dismissed = false;
+
   @override
   Widget buildUpgradeCard(BuildContext context, Key? key) {
+    if (_dismissed || !widget.upgrader.shouldDisplayUpgrade()) {
+      return const SizedBox.shrink();
+    }
     final appMessages = widget.upgrader.determineMessages(context);
     const title = 'Update Available';
     final storeVersion = widget.upgrader.currentAppStoreVersion ?? '';
@@ -158,7 +163,12 @@ class DashboardUpdateBannerState extends UpgradeCardState {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: onUserLater,
+                onPressed: () {
+                  onUserLater();
+                  setState(() {
+                    _dismissed = true;
+                  });
+                },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,

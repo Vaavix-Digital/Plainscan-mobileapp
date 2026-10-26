@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/app/routes.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/services/permission_service.dart';
+import 'package:plainscan/core/services/storage_service.dart';
 import 'package:plainscan/models/tool_model.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -146,7 +147,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         actions: [
           if (!_isReplay)
             TextButton(
-              onPressed: _finishOnboarding,
+              onPressed: () async {
+                await StorageService.setGuestMode(true);
+                await StorageService.setOnboarded(true);
+                Get.offAllNamed(AppRoutes.home);
+              },
               child: Text(
                 'Skip'.tr,
                 style: const TextStyle(
@@ -322,56 +327,141 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 color: Colors.white,
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
-              child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Indicators
-                Row(
-                  children: List.generate(_slides.length, (idx) {
-                    final isCurrent = _currentPage == idx;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      height: 8,
-                      width: isCurrent ? 24 : 8,
-                      decoration: BoxDecoration(
-                        color: isCurrent ? AppColors.primary : AppColors.border,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  }),
-                ),
+              child: _currentPage == _slides.length - 1 && !_isReplay
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Page Indicators
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(_slides.length, (idx) {
+                            final isCurrent = _currentPage == idx;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              height: 8,
+                              width: isCurrent ? 24 : 8,
+                              decoration: BoxDecoration(
+                                color: isCurrent ? AppColors.primary : AppColors.border,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 16),
+                        // Sign In and Sign Up buttons side-by-side
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  await StorageService.setOnboarded(true);
+                                  Get.offAllNamed(AppRoutes.auth, arguments: {'tab': 0});
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(color: AppColors.primary, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: Text(
+                                  'Sign In'.tr,
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await StorageService.setOnboarded(true);
+                                  Get.offAllNamed(AppRoutes.auth, arguments: {'tab': 1});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  'Sign Up'.tr,
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Skip Login Button
+                        TextButton(
+                          onPressed: () async {
+                            await StorageService.setGuestMode(true);
+                            await StorageService.setOnboarded(true);
+                            Get.offAllNamed(AppRoutes.home);
+                          },
+                          child: Text(
+                            'Skip Login (Explore as Guest)'.tr,
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Indicators
+                        Row(
+                          children: List.generate(_slides.length, (idx) {
+                            final isCurrent = _currentPage == idx;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              height: 8,
+                              width: isCurrent ? 24 : 8,
+                              decoration: BoxDecoration(
+                                color: isCurrent ? AppColors.primary : AppColors.border,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            );
+                          }),
+                        ),
 
-                // Next / Get Started Button
-                ElevatedButton(
-                  onPressed: _onNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _currentPage == _slides.length - 1
-                            ? (_isReplay ? 'Done' : 'Get Started').tr
-                            : 'Next'.tr,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        _currentPage == _slides.length - 1 ? Icons.check : Icons.arrow_forward_rounded,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                        // Next / Done Button
+                        ElevatedButton(
+                          onPressed: _onNext,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _currentPage == _slides.length - 1
+                                    ? (_isReplay ? 'Done' : 'Get Started').tr
+                                    : 'Next'.tr,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                _currentPage == _slides.length - 1 ? Icons.check : Icons.arrow_forward_rounded,
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-          ),
           ],
         ),
       ),

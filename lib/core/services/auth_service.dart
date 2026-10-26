@@ -649,6 +649,10 @@ class AuthService {
 
   static Future<void> _refreshUserSessionState({bool isLogout = false}) async {
     try {
+      if (!isLogout) {
+        await StorageService.migrateGuestFilesToUser();
+        await StorageService.setGuestMode(false);
+      }
       if (Get.isRegistered<ScanController>()) {
         if (isLogout) {
           Get.find<ScanController>().clearFiles();

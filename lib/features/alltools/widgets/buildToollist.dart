@@ -4,6 +4,9 @@ import 'package:plainscan/core/controllers/alltool_controller.dart';
 import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/tool_model.dart';
+import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 
 Widget buildToolList() {
   final AllToolsController controller = Get.find<AllToolsController>();
@@ -148,7 +151,26 @@ Widget _buildToolGridCard(ToolModel tool) {
     borderRadius: BorderRadius.circular(14),
     elevation: 0,
     child: InkWell(
-      onTap: () {
+      onTap: () async {
+        final hasSession = await StorageService.hasSession();
+        final isGuest = await StorageService.isGuestMode();
+
+        if (!hasSession && isGuest) {
+          final isScanTool = tool.id == 'doc_scan' || tool.id == 'id_scan' || tool.id == 'pdf-scanner';
+          if (isScanTool) {
+            final hasUsed = await StorageService.hasGuestUsedFreeScan();
+            if (hasUsed) {
+              await showGuestLoginRequiredDialog(isScanLimit: true);
+              return;
+            }
+            Get.find<ScanController>().openScanner();
+            return;
+          } else {
+            await showGuestLoginRequiredDialog(toolName: tool.name);
+            return;
+          }
+        }
+
         Get.find<AllToolsController>().recordToolUsage(tool.id);
 
         if (!isFree) {

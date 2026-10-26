@@ -4468,6 +4468,27 @@ class ToolExecutorController extends GetxController with WidgetsBindingObserver 
     } catch (_) {}
   }
 
+  void reorderSelectedFiles(int oldIndex, int newIndex) {
+    if (isRunning) return;
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    if (oldIndex < 0 || oldIndex >= selectedFiles.length || newIndex < 0 || newIndex >= selectedFiles.length) return;
+    final item = selectedFiles.removeAt(oldIndex);
+    selectedFiles.insert(newIndex, item);
+    clearPreviousResult(clearSelected: false);
+    update();
+  }
+
+  void moveSelectedFile(int fromIndex, int toIndex) {
+    if (isRunning) return;
+    if (fromIndex < 0 || fromIndex >= selectedFiles.length || toIndex < 0 || toIndex >= selectedFiles.length) return;
+    final item = selectedFiles.removeAt(fromIndex);
+    selectedFiles.insert(toIndex, item);
+    clearPreviousResult(clearSelected: false);
+    update();
+  }
+
   void removeSelectedFile(FileModel file) {
     if (isRunning) return;
     selectedFiles.removeWhere((f) => f.id == file.id);

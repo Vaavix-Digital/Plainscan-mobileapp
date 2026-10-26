@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/tool_executor_controller.dart';
 import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
@@ -164,6 +165,16 @@ class ScanController extends GetxController {
   /// Uses flutter_doc_scanner to capture document images and passes them directly
   /// to the JPG to PDF tool for immediate conversion without mock preview pages.
   Future<void> openScanner() async {
+    final hasSession = await StorageService.hasSession();
+    final isGuest = await StorageService.isGuestMode();
+    if (!hasSession && isGuest) {
+      final hasUsed = await StorageService.hasGuestUsedFreeScan();
+      if (hasUsed) {
+        await showGuestLoginRequiredDialog(isScanLimit: true);
+        return;
+      }
+    }
+
     final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
     try {

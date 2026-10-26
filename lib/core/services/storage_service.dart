@@ -732,6 +732,63 @@ class StorageService {
   }
 
   static const String _keyIsOnboarded = 'is_onboarded';
+  static const String _keyIsGuest = 'is_guest';
+  static const String _keyGuestFreeScanUsed = 'guest_free_scan_used';
+
+  static Future<bool> isGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsGuest) ?? false;
+  }
+
+  static Future<void> setGuestMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIsGuest, value);
+  }
+
+  static Future<bool> hasGuestUsedFreeScan() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyGuestFreeScanUsed) ?? false;
+  }
+
+  static Future<void> setGuestFreeScanUsed(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyGuestFreeScanUsed, value);
+  }
+
+  /// Migrates files scanned during guest session to newly logged in user account
+  static Future<void> migrateGuestFilesToUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final guestFiles = prefs.getStringList(_keyScannedFiles);
+      if (guestFiles == null || guestFiles.isEmpty) return;
+
+      final userKey = _getUserScannedFilesKey(prefs);
+      if (userKey == _keyScannedFiles) return;
+
+      final userFiles = prefs.getStringList(userKey) ?? [];
+      final existingIds = <String>{};
+      for (final f in userFiles) {
+        try {
+          final m = jsonDecode(f);
+          if (m is Map && m['id'] != null) existingIds.add(m['id'].toString());
+        } catch (_) {}
+      }
+
+      bool changed = false;
+      for (final f in guestFiles) {
+        try {
+          final m = jsonDecode(f);
+          if (m is Map && m['id'] != null && !existingIds.contains(m['id'].toString())) {
+            userFiles.add(f);
+            changed = true;
+          }
+        } catch (_) {}
+      }
+      if (changed) {
+        await prefs.setStringList(userKey, userFiles);
+      }
+    } catch (_) {}
+  }
 
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();

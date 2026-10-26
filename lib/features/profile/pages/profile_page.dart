@@ -454,40 +454,58 @@ class ProfilePage extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    TextButton.icon(
-                      onPressed: controller.logout,
-                      icon: const Icon(
-                        Icons.logout,
-                        color: AppColors.coral,
-                      ),
-                      label: Text(
-                        'Log Out'.tr,
-                        style: const TextStyle(
-                          color: AppColors.coral,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: controller.deleteAccount,
-                      icon: const Icon(
-                        Icons.delete_forever,
-                        color: Colors.red,
-                      ),
-                      label: Text(
-                        'Delete Account'.tr,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    Obx(
+                      () => controller.userEmail.value.isNotEmpty
+                          ? Column(
+                              children: [
+                                TextButton.icon(
+                                  onPressed: controller.logout,
+                                  icon: const Icon(
+                                    Icons.logout,
+                                    color: AppColors.coral,
+                                  ),
+                                  label: Text(
+                                    'Log Out'.tr,
+                                    style: const TextStyle(
+                                      color: AppColors.coral,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: controller.deleteAccount,
+                                  icon: const Icon(
+                                    Icons.delete_forever,
+                                    color: Colors.red,
+                                  ),
+                                  label: Text(
+                                    'Delete Account'.tr,
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: () => Get.toNamed(AppRoutes.auth),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.login, size: 18),
+                              label: Text('Sign In / Sign Up'.tr),
+                            ),
                     ),
                     const SizedBox(height: 16),
                     Obx(
                       () => controller.appVersion.value.isNotEmpty
                           ? Text(
-                              'Version ${controller.appVersion.value}',
+                              'Version ',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.secondaryText,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 import 'package:plainscan/core/services/app_update_service.dart';
 import 'package:plainscan/core/services/subscription_service.dart';
 import 'package:plainscan/features/ai/pages/ai_page.dart';
@@ -102,7 +104,16 @@ class HomeScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 8),
               child: FloatingActionButton(
-                onPressed: () {
+                onPressed: () async {
+                  final hasSession = await StorageService.hasSession();
+                  final isGuest = await StorageService.isGuestMode();
+                  if (!hasSession && isGuest) {
+                    final hasUsed = await StorageService.hasGuestUsedFreeScan();
+                    if (hasUsed) {
+                      await showGuestLoginRequiredDialog(isScanLimit: true);
+                      return;
+                    }
+                  }
                   Get.find<ScanController>().openScanner();
                 },
                 backgroundColor: AppColors.primary,

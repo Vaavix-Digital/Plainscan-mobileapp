@@ -47,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _checkSessionAndNavigate() async {
     final hasSession = await StorageService.hasSession();
+    final isGuest = await StorageService.isGuestMode();
     final isOnboarded = await StorageService.isOnboarded();
 
     // Display splash animations smoothly
@@ -60,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!isOnboarded) {
       Get.offNamed(AppRoutes.onboarding);
-    } else if (hasSession) {
+    } else if (hasSession || isGuest) {
       Get.offNamed(AppRoutes.home);
     } else {
       Get.offNamed(AppRoutes.auth);

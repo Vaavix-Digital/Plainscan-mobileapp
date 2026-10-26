@@ -36,6 +36,14 @@ class _AuthScreenState extends State<AuthScreen>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
     _captureReferralCodeFromUrlOrStorage();
+
+    final args = Get.arguments;
+    if (args is Map && args.containsKey('tab')) {
+      final tabIndex = args['tab'] as int;
+      if (tabIndex >= 0 && tabIndex <= 1) {
+        _tabController.index = tabIndex;
+      }
+    }
   }
 
   void _captureReferralCodeFromUrlOrStorage() async {
@@ -615,6 +623,24 @@ class _AuthScreenState extends State<AuthScreen>
                   ),
                 ),
               ],
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: () async {
+                    await StorageService.setGuestMode(true);
+                    await StorageService.setOnboarded(true);
+                    Get.offAllNamed(AppRoutes.home);
+                  },
+                  child: Text(
+                    'Skip Login (Explore as Guest)'.tr,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
             ],
           ),

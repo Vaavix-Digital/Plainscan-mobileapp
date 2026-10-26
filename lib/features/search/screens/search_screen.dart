@@ -6,6 +6,8 @@ import 'package:plainscan/core/controllers/profile_controller.dart';
 import 'package:plainscan/core/controllers/scan_controller.dart';
 import 'package:plainscan/features/alltools/tool_executor_page.dart';
 import 'package:plainscan/models/tool_model.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 
 class SearchScreenController extends GetxController {
   final searchController = TextEditingController();
@@ -89,7 +91,30 @@ class SearchScreenController extends GetxController {
     searchText.value = '';
   }
 
-  void triggerToolAction(ToolModel tool) {
+  void triggerToolAction(ToolModel tool) async {
+    final hasSession = await StorageService.hasSession();
+    final isGuest = await StorageService.isGuestMode();
+
+    if (!hasSession && isGuest) {
+      final isScanTool = tool.id == 'doc_scan' || tool.id == 'id_scan' || tool.id == 'scan-ocr' || tool.id == 'pdf-scanner';
+      if (isScanTool) {
+        final hasUsed = await StorageService.hasGuestUsedFreeScan();
+        if (hasUsed) {
+          await showGuestLoginRequiredDialog(isScanLimit: true);
+          return;
+        }
+        if (Get.isRegistered<ScanController>()) {
+          Get.find<ScanController>().openScanner();
+        } else {
+          Get.put(ScanController()).openScanner();
+        }
+        return;
+      } else {
+        await showGuestLoginRequiredDialog(toolName: tool.name);
+        return;
+      }
+    }
+
     allToolsController.recordToolUsage(tool.id);
 
     final isFree = tool.isFree ?? true;

@@ -90,7 +90,8 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       // Ensure permissions are triggered natively if not yet prompted
       await AppPermissionService.requestAppOpenPermissions();
       final hasSession = await StorageService.hasSession();
-      if (hasSession) {
+      final isGuest = await StorageService.isGuestMode();
+      if (hasSession || isGuest) {
         Get.offAllNamed(AppRoutes.home);
       } else {
         Get.offAllNamed(AppRoutes.auth);

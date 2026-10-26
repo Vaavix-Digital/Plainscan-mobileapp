@@ -10,6 +10,8 @@ import 'package:plainscan/features/home/widgets/dashboard_ad_banner.dart';
 import 'package:plainscan/models/file_model.dart';
 import 'package:plainscan/models/tool_model.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 
 class ToolExecutorPage extends StatefulWidget {
   final ToolModel tool;
@@ -39,6 +41,28 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
       initialFiles: widget.initialFiles,
       autoExecute: widget.autoExecute,
     ));
+    _checkGuestAccess();
+  }
+
+  void _checkGuestAccess() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final hasSession = await StorageService.hasSession();
+      final isGuest = await StorageService.isGuestMode();
+      if (!hasSession && isGuest) {
+        final hasUsed = await StorageService.hasGuestUsedFreeScan();
+        final isScanningTool = widget.tool.id == 'jpg-to-pdf' || widget.tool.id == 'pdf-scanner';
+        final isAllowedScanSession = isScanningTool && !hasUsed;
+        if (!isAllowedScanSession) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            await showGuestLoginRequiredDialog(
+              toolName: widget.tool.name,
+              isScanLimit: hasUsed && isScanningTool,
+            );
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -8135,41 +8159,117 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...controller.selectedFiles.map(
-          (file) => Container(
+        ...controller.selectedFiles.asMap().entries.map((entry) {
+          final index = entry.key;
+          final file = entry.value;
+          final hasPreview = file.path != null &&
+              File(file.path!).existsSync() &&
+              (file.fileType == 'JPG' || file.fileType == 'JPEG' || file.fileType == 'PNG');
+
+          return Container(
             margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.border),
             ),
             child: Row(
               children: [
-                Icon(
-                  _getFileIcon(file.fileType),
-                  color: _getFileColor(file.fileType),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                   child: Text(
-                    file.name,
+                    '#',
                     style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
+                if (hasPreview)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.file(
+                      File(file.path!),
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, st) => Icon(
+                        _getFileIcon(file.fileType),
+                        color: _getFileColor(file.fileType),
+                        size: 20,
+                      ),
+                    ),
+                  )
+                else
+                  Icon(
+                    _getFileIcon(file.fileType),
+                    color: _getFileColor(file.fileType),
+                    size: 20,
+                  ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        file.name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Page ',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (controller.selectedFiles.length > 1) ...[
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.arrow_upward_rounded,
+                      color: index > 0 ? AppColors.text : AppColors.border,
+                      size: 18,
+                    ),
+                    onPressed: index > 0 ? () => controller.moveSelectedFile(index, index - 1) : null,
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.arrow_downward_rounded,
+                      color: index < controller.selectedFiles.length - 1 ? AppColors.text : AppColors.border,
+                      size: 18,
+                    ),
+                    onPressed: index < controller.selectedFiles.length - 1
+                        ? () => controller.moveSelectedFile(index, index + 1)
+                        : null,
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon: const Icon(
                     Icons.close,
                     color: AppColors.coral,
-                    size: 16,
+                    size: 18,
                   ),
                   onPressed: () {
                     controller.removeSelectedFile(file);
@@ -8177,8 +8277,8 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
                 ),
               ],
             ),
-          ),
-        ),
+          );
+        }),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
@@ -8242,24 +8342,46 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
             style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => controller.pickFileFromDevice(isMulti),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => controller.pickFileFromDevice(isMulti),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.phone_android, size: 15),
+                  label: const Text(
+                    'Device Upload',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              icon: const Icon(Icons.phone_android, size: 15),
-              label: const Text(
-                'Device Upload',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => controller.scanDocumentWithCamera(isMulti),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.document_scanner_outlined, size: 15),
+                  label: const Text(
+                    'Scan Document',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -11170,10 +11292,16 @@ class _ToolExecutorPageState extends State<ToolExecutorPage> {
 
                         if (savePath != null) {
                           controller.markFileDownloaded();
+                          final isGuest = await StorageService.isGuestMode();
+                          if (isGuest) {
+                            await StorageService.setGuestFreeScanUsed(true);
+                          }
                           Get.rawSnackbar(
-                            messageText: const Text(
-                              'File saved successfully!',
-                              style: TextStyle(
+                            messageText: Text(
+                              isGuest
+                                  ? 'PDF saved successfully! Free guest scan completed.'
+                                  : 'File saved successfully!',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),

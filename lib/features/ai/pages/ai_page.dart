@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:plainscan/core/constants/app_colors.dart';
+import 'package:plainscan/core/services/storage_service.dart';
+import 'package:plainscan/core/utils/guest_dialog_helper.dart';
 
 class MessageModel {
   final String text;
@@ -39,8 +41,15 @@ class _AiPageState extends State<AiPage> {
     'Translate last scan to Spanish',
   ];
 
-  void _sendMessage(String text) {
+  void _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+
+    final hasSession = await StorageService.hasSession();
+    final isGuest = await StorageService.isGuestMode();
+    if (!hasSession && isGuest) {
+      await showGuestLoginRequiredDialog(toolName: 'AI Assistant'.tr);
+      return;
+    }
 
     setState(() {
       _messages.add(MessageModel(
